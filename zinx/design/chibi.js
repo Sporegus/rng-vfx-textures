@@ -551,6 +551,15 @@
           : B4[2];
         body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
       }
+      // suit lines carry on over the chest: an arc over the top of each breast and a
+      // V neckline running down to the cleavage
+      const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
+      for (let a = 200; a <= 335; a += 4) {
+        const t = a * Math.PI / 180, r = R - 1.6;
+        glowP(Math.round(midX + R + Math.cos(t) * r - 0.5), Math.round(cyP + Math.sin(t) * r * 0.95 - 0.5));
+      }
+      const neckTop = Math.round(cyP - R) - 3;
+      for (let k = 0; k <= 3; k++) glowP(midX + 3 - k, neckTop + k);
     }
     // props / effects
     if (p.panel) {
