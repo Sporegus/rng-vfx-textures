@@ -1,4 +1,4 @@
-// Every action Zinx can do, by name. The page asks for one of these through
+// Every action Zin can do, by name. The page asks for one of these through
 // preload.js; anything not listed here simply doesn't exist.
 const fs = require('fs');
 const path = require('path');
@@ -10,18 +10,19 @@ const clean = require('./clean');
 const wallpaper = require('./wallpaper');
 const system = require('./system');
 const windows = require('./windows');
+const apps = require('./apps');
 
 module.exports = function createActions(ctx) {
   const undoDir = () => path.join(ctx.app.getPath('userData'), 'undo');
-  const notesFile = () => path.join(ctx.app.getPath('documents'), 'Zinx Notes.txt');
+  const notesFile = () => path.join(ctx.app.getPath('documents'), 'Zin Notes.txt');
   const plans = new Map(); // organize plans waiting for a yes
-  const FOLDERS = { downloads: 'downloads', desktop: 'desktop', documents: 'documents', pictures: 'pictures' };
+  const FOLDERS = { downloads: 'downloads', desktop: 'desktop', documents: 'documents', pictures: 'pictures', music: 'music', videos: 'videos' };
 
   async function pickFolder() {
     const r = await dialog.showOpenDialog(ctx.getWin(), { properties: ['openDirectory'] });
     return r.canceled ? null : r.filePaths[0];
   }
-  // where did that Explorer window open? (so Zinx can run over and point at it)
+  // where did that Explorer window open? (so Zin can run over and point at it)
   async function activeWindowSoon(ms = 900) {
     if (process.platform !== 'win32') return null;
     await new Promise(r => setTimeout(r, ms));
@@ -33,6 +34,8 @@ module.exports = function createActions(ctx) {
     'files.find': ({ query }) => files.find(query),
     'files.recent': () => files.recent(),
     'files.big': () => files.big(),
+    'files.old': ({ folder }) => files.old({ folder }),
+    'files.recycle': ({ paths }) => files.recycle(Array.isArray(paths) ? paths : [], shell),
     'files.reveal': async ({ path: p }) => { shell.showItemInFolder(p); return { window: await activeWindowSoon() }; },
     'files.open': async ({ path: p }) => { const err = await shell.openPath(p); if (err) throw new Error(err); return {}; },
     'files.openFolder': async ({ folder }) => {
@@ -41,10 +44,10 @@ module.exports = function createActions(ctx) {
     },
 
     // ---- organize
-    'organize.plan': async ({ folder }) => {
+    'organize.plan': async ({ folder, mode }) => {
       const dir = folder === 'pick' ? await pickFolder() : ctx.app.getPath(FOLDERS[folder] || 'downloads');
       if (!dir) return { canceled: true };
-      const p = await organize.plan(dir);
+      const p = await organize.plan(dir, mode);
       const id = String(Date.now());
       plans.set(id, p);
       return { id, folder: dir, summary: p.summary, count: p.moves.length };
@@ -78,6 +81,18 @@ module.exports = function createActions(ctx) {
     'system.lock': () => system.lock(),
     'system.screenshot': () => system.screenshot(ctx.app),
 
+    // ---- apps, music and power
+    'apps.open': ({ name }) => apps.open(name),
+    'apps.close': ({ name }) => apps.close(name),
+    'media.key': ({ cmd }) => apps.media(cmd),
+    'volume': (args) => apps.volume(args || {}),
+    'music.play': ({ query, kind }) => apps.music({ query, kind }),
+    'power': ({ kind, delay }) => apps.power({ kind, delay }),
+    'web.open': async ({ url }) => {
+      if (!/^https:\/\/[a-z0-9.-]+(\/.*)?$/i.test(String(url))) throw new Error("That doesn't look like a website.");
+      await shell.openExternal(url); return {};
+    },
+
     // ---- tools
     'web.search': async ({ q, site }) => {
       const url = site === 'youtube'
@@ -91,7 +106,7 @@ module.exports = function createActions(ctx) {
       return { path: notesFile() };
     },
     'notes.open': async () => {
-      if (!fs.existsSync(notesFile())) await fs.promises.writeFile(notesFile(), `Zinx Notes${os.EOL}${os.EOL}`);
+      if (!fs.existsSync(notesFile())) await fs.promises.writeFile(notesFile(), `Zin Notes${os.EOL}${os.EOL}`);
       await shell.openPath(notesFile()); return {};
     },
   };

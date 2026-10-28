@@ -1,6 +1,6 @@
-# What Zinx can do
+# What Zin can do
 
-Zinx is a desktop helper who notices what is going on, decides what would help,
+Zin is a desktop helper who notices what is going on, decides what would help,
 and does it, either on her own or after asking, depending on how risky it is.
 
 ## How she thinks

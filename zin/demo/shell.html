@@ -1,9 +1,9 @@
-<title>Zinx Desktop Buddy</title>
+<title>Zin Desktop Buddy</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Silkscreen:wght@400;700&display=swap">
 <style>
-/* Layout: a full-screen pretend Windows desktop; Zinx's real UI floats on top. Single dark look on purpose. */
+/* Layout: a full-screen pretend Windows desktop; Zin's real UI floats on top. Single dark look on purpose. */
 :root {
   color-scheme: dark;
   --wall: radial-gradient(1200px 600px at 78% 8%, #3a1f73 0%, transparent 60%), radial-gradient(900px 500px at 10% 90%, #0f3b52 0%, transparent 60%), linear-gradient(180deg, #0b0718 0%, #130b2b 100%);
@@ -74,7 +74,7 @@ body.light { --chrome: #f3f1f8; --chrome-2: #e7e3f0; --line: #d2cce0; --text: #1
 .tray { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 #tray-btn { width: 38px; height: 38px; border: 0; border-radius: 4px; background: none; cursor: pointer; display: grid; place-items: center; }
 #tray-btn:hover { background: #2a2440; }
-#tray-zinx { width: 36px; height: 36px; image-rendering: pixelated; }
+#tray-zin { width: 36px; height: 36px; image-rendering: pixelated; }
 #clock { font-size: 12px; color: #d9d3ea; font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
 
 #toast {
@@ -90,23 +90,23 @@ body.light { --chrome: #f3f1f8; --chrome-2: #e7e3f0; --line: #d2cce0; --text: #1
   #win-explorer { left: 16px; top: auto; bottom: 16px; height: 34vh; }
   .task-btn .long { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { #zinx.glitch canvas { animation: none; } #desk { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #zin.glitch canvas { animation: none; } #desk { transition: none; } }
 </style>
 <style>/*APP_CSS*/</style>
 
 <div id="desk">
-  <section class="win" id="win-readme" data-title="Meet Zinx">
-    <div class="win-bar"><span class="win-title">Meet Zinx.txt</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
+  <section class="win" id="win-readme" data-title="Meet Zin">
+    <div class="win-bar"><span class="win-title">Meet Zin.txt</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
     <div class="readme">
-      <h1>ZINX</h1>
-      <p>Zinx is a holographic AI assistant that lives on your Windows desktop. This is a playable demo on a pretend desktop, so nothing here touches your files.</p>
+      <h1>ZIN</h1>
+      <p>Zin is a holographic AI assistant that lives on your Windows desktop. This is a playable demo on a pretend desktop, so nothing here touches your files.</p>
       <ul>
-        <li>Click Zinx to open the menu.</li>
-        <li>Grab Zinx and throw her.</li>
+        <li>Click Zin to open the menu.</li>
+        <li>Grab Zin and throw her.</li>
         <li>Try <b>Wallpaper › Synthwave</b>.</li>
         <li>Type <kbd>find resume</kbd> or <kbd>timer 1 min</kbd> in the menu.</li>
         <li>Close this window while she sits on it.</li>
-        <li>Double-click Zinx for some love.</li>
+        <li>Double-click Zin for some love.</li>
       </ul>
       <p class="fine">On your PC the same menu really cleans, sorts, finds and repaints.</p>
     </div>
@@ -116,19 +116,19 @@ body.light { --chrome: #f3f1f8; --chrome-2: #e7e3f0; --line: #d2cce0; --text: #1
     <div class="ex-path">This PC › Downloads</div>
     <div class="ex-list"></div>
   </section>
-  <section class="win" id="win-notes" data-title="Zinx Notes" hidden>
-    <div class="win-bar"><span class="win-title">Zinx Notes.txt</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
+  <section class="win" id="win-notes" data-title="Zin Notes" hidden>
+    <div class="win-bar"><span class="win-title">Zin Notes.txt</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
     <ol id="notes-list"></ol>
   </section>
 </div>
 
 <nav id="taskbar">
   <span class="start" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-  <button class="task-btn" data-win="win-readme">Meet<span class="long"> Zinx</span></button>
+  <button class="task-btn" data-win="win-readme">Meet<span class="long"> Zin</span></button>
   <button class="task-btn" data-win="win-explorer"><span class="long">File </span>Explorer</button>
   <button class="task-btn" data-win="win-notes">Notes</button>
   <div class="tray">
-    <button id="tray-btn" title="Zinx"><canvas id="tray-zinx" width="36" height="36"></canvas></button>
+    <button id="tray-btn" title="Zin"><canvas id="tray-zin" width="36" height="36"></canvas></button>
     <span id="clock"></span>
   </div>
 </nav>
@@ -137,12 +137,12 @@ body.light { --chrome: #f3f1f8; --chrome-2: #e7e3f0; --line: #d2cce0; --text: #1
 <div id="flash" hidden></div>
 
 <canvas id="fx"></canvas>
-<div id="zinx"><canvas id="sprite"></canvas></div>
+<div id="zin"><canvas id="sprite"></canvas></div>
 <div id="tag" class="hidden"></div>
 <div id="hi" class="hidden">hi</div>
 <div id="bubble" class="hidden">
   <div class="b-head">
-    <span class="b-name">ZINX</span>
+    <span class="b-name">ZIN</span>
     <span class="b-chip">ONLINE</span>
     <button class="b-x" title="Close">×</button>
   </div>
@@ -151,4 +151,5 @@ body.light { --chrome: #f3f1f8; --chrome-2: #e7e3f0; --line: #d2cce0; --text: #1
 </div>
 <script>/*SPRITES_JS*/</script>
 <script>/*DEMO_JS*/</script>
+<script>/*BRAIN_JS*/</script>
 <script>/*RENDERER_JS*/</script>

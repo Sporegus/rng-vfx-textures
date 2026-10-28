@@ -1,26 +1,26 @@
-// Zinx's brain and body: movement, physics, the speech bubble menus, and the
+// Zin's brain and body: movement, physics, the speech bubble menus, and the
 // little scripted "shows" that play while an action runs.
 'use strict';
 (async function () {
-  const S = window.ZinxSprites;
-  const api = window.zinx;
+  const S = window.ZinSprites;
+  const api = window.zin;
   let settings = await api.getSettings();
 
   const $ = (q) => document.querySelector(q);
-  const zEl = $('#zinx'), cv = $('#sprite'), ctx = cv.getContext('2d', { willReadFrequently: true });
+  const zEl = $('#zin'), cv = $('#sprite'), ctx = cv.getContext('2d', { willReadFrequently: true });
   const bubble = $('#bubble'), bText = $('#b-text'), bBody = $('#b-body'), bChip = $('.b-chip');
   const fxCv = $('#fx'), fx = fxCv.getContext('2d');
   const tagEl = $('#tag'), hiEl = $('#hi');
 
   // The demo page has a fake taskbar; in the real app the window already stops above it.
-  const bottomInset = window.ZINX_BOTTOM_INSET || 0;
+  const bottomInset = window.ZIN_BOTTOM_INSET || 0;
   let W = innerWidth, H = innerHeight - bottomInset;
   function resize() { W = innerWidth; H = innerHeight - bottomInset; fxCv.width = W; fxCv.height = innerHeight; }
   addEventListener('resize', resize);
   resize();
 
   const sc = () => settings.size || 3;
-  // heights above Zinx's feet, in sprite pixels
+  // heights above Zin's feet, in sprite pixels
   const CHEST = S.GROUND - 32, HEAD = S.GROUND - S.HEAD_TOP;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const rand = (a, b) => a + Math.random() * (b - a);
@@ -116,7 +116,7 @@
   }
 
   // ================================================================ surfaces
-  // Zinx stands on the bottom of the screen (just above the taskbar) or on
+  // Zin stands on the bottom of the screen (just above the taskbar) or on
   // top of the window you're using.
   function windowSurface() {
     const w = activeWin;
@@ -389,7 +389,7 @@
   // ================================================================ mouse: hover, click, drag, throw
   let captured = false;
   function setCapture(on) { if (on !== captured) { captured = on; api.capture(on); } }
-  function overZinx(cx, cy) {
+  function overZin(cx, cy) {
     const r = cv.getBoundingClientRect();
     const x = Math.floor(cx - r.left), y = Math.floor(cy - r.top);
     if (x < 0 || y < 0 || x >= r.width || y >= r.height) return false;
@@ -403,10 +403,10 @@
     if (samples.length > 6) samples.shift();
     if (press && !drag && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 5) startDrag();
     if (drag || press) return;
-    setCapture(overZinx(e.clientX, e.clientY) || !!e.target.closest('#bubble'));
+    setCapture(overZin(e.clientX, e.clientY) || !!e.target.closest('#bubble'));
   });
   cv.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || !overZinx(e.clientX, e.clientY)) return;
+    if (e.button !== 0 || !overZin(e.clientX, e.clientY)) return;
     press = { x: e.clientX, y: e.clientY };
     e.preventDefault();
   });
@@ -543,7 +543,7 @@
     if (!r.ok) throw new Error(r.error);
     return r;
   }
-  // Run an action while Zinx plays an animation, for at least `minMs`.
+  // Run an action while Zin plays an animation, for at least `minMs`.
   async function withShow(promise, anim, minMs = 1200) {
     play(anim, 60000);
     const [r] = await Promise.all([promise, sleep(minMs)]);
@@ -557,7 +557,7 @@
   async function mainMenu() {
     interaction();
     if (z.mode === 'stand' && !z.walk) z.facing = z.x > W / 2 ? -1 : 1;
-    const v = await ask(pick(['Hey! What do you need?', 'Zinx at your service.', 'What are we doing?', 'Ready when you are!']), [
+    const v = await ask(pick(['Hey! What do you need?', 'Zin at your service.', 'What are we doing?', 'Ready when you are!']), [
       { icon: '🧹', label: 'Clean up', value: 'clean' },
       { icon: '📦', label: 'Organize', value: 'organize' },
       { icon: '🔍', label: 'Find files', value: 'find' },
@@ -566,7 +566,7 @@
       { icon: '⏱️', label: 'Tools', value: 'tools' },
       { icon: '🎉', label: 'Fun', value: 'fun' },
       { icon: '✨', label: 'My look', value: 'look' },
-    ], { input: 'or type: "find resume", "timer 5 min"…' });
+    ], { input: 'or just tell me: "open spotify", "remind me in 10 min to stretch"…' });
     if (v == null) return;
     const menus = { clean: cleanMenu, organize: organizeMenu, find: findMenu, wall: wallpaperMenu, pc: pcMenu, tools: toolsMenu, fun: funMenu, look: lookMenu };
     if (menus[v]) return menus[v]();
@@ -638,9 +638,38 @@
     });
   }
 
+  // files you haven't touched in ages; they only ever go to the Recycle Bin
+  function oldFiles(folder) {
+    return task(async () => {
+      say('Digging through the old stuff…', { ms: 60000 });
+      const r = await withShow(act('files.old', { folder }), 'search', 1500);
+      if (!r.results.length) { play('cheer', 1500); return say('Nothing you\'ve left untouched for 6 months. Nice!'); }
+      const list = el('div', 'b-list');
+      const checks = [];
+      for (const f of r.results.slice(0, 12)) {
+        const row = el('label', 'b-row');
+        const cb = el('input'); cb.type = 'checkbox'; cb.checked = /[\\/]downloads[\\/]/i.test(f.path);
+        checks.push([cb, f.path]);
+        const age = Math.floor((Date.now() - f.mtime) / (365 * 86400000));
+        row.append(cb, el('span', 'grow', `${esc(f.name)}<small>${esc(shortDir(f.path))} · ${age >= 1 ? age + ' yr' : '6+ mo'} old</small>`), el('span', 'num', fmtBytes(f.size)));
+        list.append(row);
+      }
+      play('think', 900);
+      const v = await ask(`${r.total} files you haven't changed in 6+ months (${fmtBytes(r.bytes)}). Tick what can go. They go to the Recycle Bin, so you can get them back:`, [
+        { icon: '🗑️', label: 'Recycle ticked', value: 'go', primary: true }, { label: 'Keep all', value: 'no', ghost: true },
+      ], { content: list, wide: true });
+      if (v !== 'go') return v === 'no' && say('Okay, keeping everything.');
+      const paths = checks.filter(([cb]) => cb.checked).map(([, p]) => p);
+      if (!paths.length) return say('Nothing ticked, nothing moved!');
+      const res = await withShow(act('files.recycle', { paths }), 'sweep', 1200);
+      sfx('ok'); play('cheer', 1400);
+      await say(`Sent ${res.moved} file${res.moved === 1 ? '' : 's'} to the Recycle Bin.${res.failed.length ? ` ${res.failed.length} wouldn't budge.` : ''}`);
+    });
+  }
+
   // ---------------------------------------------------------------- organize
   async function organizeMenu() {
-    const v = await ask('Which folder should I sort? I group files by type into folders.', [
+    const v = await ask('Which folder should I sort? I group files by type into folders. (You can also type "sort my desktop A to Z" or "by date".)', [
       { icon: '⬇️', label: 'Downloads', value: 'downloads', primary: true },
       { icon: '🖥️', label: 'Desktop', value: 'desktop' },
       { icon: '📄', label: 'Documents', value: 'documents' },
@@ -652,14 +681,14 @@
     if (v === 'undo') return undoOrganize();
     if (v) return organize(v);
   }
-  function organize(folder) {
+  function organize(folder, mode = 'type') {
     return task(async () => {
       say('Let me look at what\'s in there…', { ms: 60000 });
-      const plan = await withShow(act('organize.plan', { folder }), 'think', 1200);
+      const plan = await withShow(act('organize.plan', { folder, mode }), 'think', 1200);
       if (plan.canceled) return closeBubble();
       if (!plan.count) { play('cheer', 1200); return say('Already tidy, nothing to sort!'); }
       const list = el('div', 'b-list');
-      Object.entries(plan.summary).sort((a, b) => b[1] - a[1]).forEach(([cat, n]) => list.append(el('div', 'b-row', `<span class="grow">📁 ${esc(cat)}</span><span class="num">${n}</span>`)));
+      Object.entries(plan.summary).sort((a, b) => mode === 'type' ? b[1] - a[1] : a[0].localeCompare(b[0])).forEach(([cat, n]) => list.append(el('div', 'b-row', `<span class="grow">📁 ${esc(cat)}</span><span class="num">${n}</span>`)));
       const v = await ask(`I'll move ${plan.count} files into these folders:`, [
         { icon: '📦', label: 'Do it!', value: 'go', primary: true }, { label: 'Nope', value: 'no', ghost: true },
       ], { content: list });
@@ -762,13 +791,16 @@
       back,
     ]);
     if (v === '__back') return mainMenu();
+    if (v) return wallpaperFrom(v);
+  }
+  function wallpaperFrom(v) {
     if (v === 'random' || v === 'pick' || v === 'restore') return task(async () => {
       say(v === 'restore' ? 'Putting it back…' : 'Ooh let me see…', { ms: 60000 });
       const r = await withShow(act('wallpaper.' + v), 'paint', 1000);
       if (r.canceled) return closeBubble();
       await paintShow();
     });
-    if (v) return paintWallpaper(v);
+    return paintWallpaper(v);
   }
   function paintWallpaper(style) {
     return task(async () => {
@@ -801,7 +833,7 @@
     const sk = S.skinOf(settings.skin);
     let seed = Date.now() % 100000;
     const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-    const zinxAt = (anim, frame, x, y, scale, ctx2 = g) => S.draw(ctx2, { anim, frame, skin: settings.skin, hat: settings.hat, x: Math.round(x), y: Math.round(y), scale, flip: false });
+    const zinAt = (anim, frame, x, y, scale, ctx2 = g) => S.draw(ctx2, { anim, frame, skin: settings.skin, hat: settings.hat, x: Math.round(x), y: Math.round(y), scale, flip: false });
     const stars = (n, maxY) => { for (let i = 0; i < n; i++) { g.globalAlpha = 0.3 + rnd() * 0.7; g.fillStyle = '#fff'; const s = rnd() < 0.1 ? 3 : 1.5; g.fillRect(rnd() * w, rnd() * maxY, s * dpr, s * dpr); } g.globalAlpha = 1; };
 
     if (style === 'synth') {
@@ -823,7 +855,7 @@
       for (let i = -24; i <= 24; i++) { g.beginPath(); g.moveTo(cx + i * w * 0.012, hz); g.lineTo(cx + i * w * 0.12, h); g.stroke(); }
       g.shadowBlur = 0;
       const zs = Math.max(2, Math.round(h / 240));
-      zinxAt('sit', 0, w * 0.18, hz - S.ANIMS.sit.footY * zs, zs);
+      zinAt('sit', 0, w * 0.18, hz - S.ANIMS.sit.footY * zs, zs);
     } else if (style === 'space') {
       const bg = g.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.7);
       bg.addColorStop(0, '#120a2e'); bg.addColorStop(1, '#03010a');
@@ -843,7 +875,7 @@
       g.fillStyle = pl; g.beginPath(); g.arc(px, py, pr, 0, Math.PI * 2); g.fill();
       g.strokeStyle = sk.light + 'aa'; g.lineWidth = 6 * dpr; g.beginPath(); g.ellipse(px, py, pr * 1.7, pr * 0.35, -0.3, 0, Math.PI * 2); g.stroke();
       const zs = Math.max(2, Math.round(h / 190));
-      zinxAt('cheer', 2, w * 0.2, h * 0.5, zs);
+      zinAt('cheer', 2, w * 0.2, h * 0.5, zs);
     } else if (style === 'hills') {
       const k = 4 * dpr, lw = Math.ceil(w / k), lh = Math.ceil(h / k);
       const lo = document.createElement('canvas'); lo.width = lw; lo.height = lh;
@@ -862,7 +894,7 @@
           if (li === 2 && x === Math.round(lw * 0.25)) top = y;
         }
       });
-      zinxAt('sit', 1, lw * 0.25 - S.W / 2, top - S.ANIMS.sit.footY + 1, 1, l);
+      zinAt('sit', 1, lw * 0.25 - S.W / 2, top - S.ANIMS.sit.footY + 1, 1, l);
       g.imageSmoothingEnabled = false;
       g.drawImage(lo, 0, 0, lw * k, lh * k);
     } else {
@@ -873,11 +905,11 @@
       const x = w / 2 - (S.W / 2) * zs, y = h / 2 - (S.H / 2) * zs;
       for (const [col, dx] of [['#ff2fd0', -10], ['#39f5ff', 10]]) {
         t.clearRect(0, 0, tmp.width, tmp.height);
-        zinxAt('idle', 0, 0, 0, zs, t);
+        zinAt('idle', 0, 0, 0, zs, t);
         t.globalCompositeOperation = 'source-in'; t.fillStyle = col; t.fillRect(0, 0, tmp.width, tmp.height); t.globalCompositeOperation = 'source-over';
         g.globalAlpha = 0.7; g.drawImage(tmp, x + dx * dpr, y); g.globalAlpha = 1;
       }
-      zinxAt('idle', 0, x, y, zs);
+      zinAt('idle', 0, x, y, zs);
       for (let i = 0; i < 26; i++) {
         const sy = rnd() * h, sh = (4 + rnd() * 40) * dpr, off = (rnd() - 0.5) * 120 * dpr;
         g.drawImage(c, 0, sy, w, sh, off, sy, w, sh);
@@ -886,9 +918,9 @@
       for (let yy = 0; yy < h; yy += 4 * dpr) g.fillRect(0, yy, w, 2 * dpr);
       g.font = `900 ${Math.round(h / 9)}px Consolas, monospace`;
       g.textAlign = 'center';
-      g.fillStyle = '#ff2fd0'; g.fillText('ZINX', w / 2 - 6 * dpr, h * 0.88);
-      g.fillStyle = '#39f5ff'; g.fillText('ZINX', w / 2 + 6 * dpr, h * 0.88);
-      g.fillStyle = '#fff'; g.fillText('ZINX', w / 2, h * 0.88);
+      g.fillStyle = '#ff2fd0'; g.fillText('ZIN', w / 2 - 6 * dpr, h * 0.88);
+      g.fillStyle = '#39f5ff'; g.fillText('ZIN', w / 2 + 6 * dpr, h * 0.88);
+      g.fillStyle = '#fff'; g.fillText('ZIN', w / 2, h * 0.88);
     }
     return c.toDataURL('image/png');
   }
@@ -959,7 +991,7 @@
       finally { zEl.style.visibility = ''; }
       sfx('ok');
       emit('sparkle', z.x, z.y - CHEST * sc(), 18);
-      await say('Got it! Saved in Pictures › Zinx Screenshots.');
+      await say('Got it! Saved in Pictures › Zin Screenshots.');
     });
   }
   async function appsMenu() {
@@ -1007,11 +1039,11 @@
       if (q) return webSearch(q, v === 'yt' ? 'youtube' : 'google');
     }
   }
-  function startTimer(secs, label) {
-    const t = { end: Date.now() + secs * 1000, label };
+  function startTimer(secs, label, opts = {}) {
+    const t = { end: Date.now() + secs * 1000, label, reminder: !!opts.reminder };
     timers.push(t);
     sfx('ok'); play('cheer', 900);
-    say(`${label} set for ${secs >= 60 ? Math.round(secs / 60) + ' min' : secs + ' sec'}. I'll yell when it's done!`, { ms: 3000 });
+    say(opts.text || `${label} set for ${secs >= 60 ? Math.round(secs / 60) + ' min' : secs + ' sec'}. I'll yell when it's done!`, { ms: 3000 });
   }
   setInterval(() => {
     if (!timers.length) { tagEl.classList.add('hidden'); return; }
@@ -1022,19 +1054,20 @@
     if (left <= 0) { timers.shift(); timerDone(t); }
   }, 500);
   async function timerDone(t) {
-    try { new Notification('Zinx', { body: `${t.label} is done!`, silent: true }); } catch {}
+    const msg = t.reminder ? `Hey! Time to ${t.label}` : `${t.label} is done!`;
+    try { new Notification('Zin', { body: msg, silent: true }); } catch {}
     for (let i = 0; i < 3; i++) setTimeout(() => sfx('ding'), i * 700);
     await goFloor();
     await walkTo(W / 2, { run: true });
     emit('confetti', z.x, z.y - CHEST * sc(), 30);
     play('cheer', 2500);
-    ask(`⏰ ${t.label} is done!`, [{ label: 'Thanks!', value: 'ok', primary: true }, { label: '+5 min', value: 'snooze' }]).then(v => { if (v === 'snooze') startTimer(300, t.label); else if (v) closeBubble(); });
+    ask(`⏰ ${msg}`, [{ label: 'Thanks!', value: 'ok', primary: true }, { label: '+5 min', value: 'snooze' }]).then(v => { if (v === 'snooze') startTimer(300, t.label, { reminder: t.reminder }); else if (v) closeBubble(); });
   }
   function addNote(text) {
     return task(async () => {
       const r = await withShow(act('notes.add', { text }), 'work', 900);
       sfx('ok');
-      const v = await ask('Wrote it down in Documents › Zinx Notes.txt ✍️', [{ label: 'Open notes', value: 'open' }]);
+      const v = await ask('Wrote it down in Documents › Zin Notes.txt ✍️', [{ label: 'Open notes', value: 'open' }]);
       if (v === 'open') { await act('notes.open'); closeBubble(); }
       return r;
     });
@@ -1084,7 +1117,7 @@
   async function joke() { play('talk', 1200); await say(pick(JOKES), { ms: 6000 }); }
   async function eightBall() { await play('think', 1200); sfx('pop'); play('cheer', 800); await say('🎱 ' + pick(EIGHT), { ms: 3500 }); }
   async function coin() { play('cheer', 1000); await sleep(900); sfx('ok'); await say(Math.random() < 0.5 ? '🪙 Heads!' : '🪙 Tails!'); }
-  async function dice() { play('dance', 900); await sleep(900); sfx('ok'); await say('🎲 You rolled a ' + (1 + Math.floor(Math.random() * 6)) + '!'); }
+  async function dice(sides = 6) { play('dance', 900); await sleep(900); sfx('ok'); await say('🎲 You rolled a ' + (1 + Math.floor(Math.random() * sides)) + (sides !== 6 ? ` (d${sides})` : '') + '!'); }
   async function teleportRandom() { closeBubble(); await teleportTo(rand(80, W - 80), H); play('cheer', 900); }
   async function hideAndSeek() {
     closeBubble();
@@ -1136,56 +1169,148 @@
     return lookMenu();
   }
 
-  // ================================================================ typed commands
-  // No AI needed: these patterns cover the common asks.
-  const APPS = { calc: 'calculator', calculator: 'calculator', notepad: 'notepad', paint: 'paint', explorer: 'explorer', files: 'explorer', 'file explorer': 'explorer', 'task manager': 'taskmgr', taskmgr: 'taskmgr', settings: 'settings', snip: 'snip', 'snipping tool': 'snip', store: 'store', bluetooth: 'bluetooth', sound: 'sound', display: 'display' };
-  const COMMANDS = [
-    [/^(?:find|search for|where(?:'s| is)(?: my)?|look for|locate)\s+(.+)/i, m => findFiles(m[1].replace(/^(my|the)\s+/i, ''))],
-    [/^(?:google|search)\s+(.+)/i, m => webSearch(m[1], 'google')],
-    [/^(?:youtube|yt)\s+(.+)/i, m => webSearch(m[1], 'youtube')],
-    [/(?:timer|remind me)\D*?(\d+(?:\.\d+)?)\s*(s|sec|secs|seconds?|m|min|mins|minutes?|h|hr|hours?)\b(?:\s+(?:to|for)\s+(.+))?/i, m => {
-      const n = parseFloat(m[1]), u = m[2][0].toLowerCase();
-      return startTimer(Math.round(n * (u === 'h' ? 3600 : u === 's' ? 1 : 60)), m[3] ? m[3] : 'Timer');
-    }],
-    [/^(?:note|write down|remember)[:\s]+(.+)/i, m => addNote(m[1])],
-    [/undo/i, () => undoOrganize()],
-    [/organi[sz]e|sort|tidy/i, (m, t) => { const f = (t.match(/downloads|desktop|documents/i) || [])[0]; return f ? organize(f.toLowerCase()) : organizeMenu(); }],
-    [/clean|junk|space|recycle/i, () => cleanScan()],
-    [/big(?:gest)? files|large files/i, () => bigFiles()],
-    [/recent/i, () => recentFiles()],
-    [/wallpaper|background/i, (m, t) => {
-      if (/old|back|restore|original/i.test(t)) return task(async () => { await act('wallpaper.restore'); await paintShow(); });
-      if (/random|my pic/i.test(t)) return task(async () => { await act('wallpaper.random'); await paintShow(); });
-      for (const s of ['synth', 'space', 'hills', 'glitch']) if (t.toLowerCase().includes(s)) return paintWallpaper(s);
-      return wallpaperMenu();
-    }],
-    [/dark mode|dark theme/i, () => setTheme('dark')],
-    [/light mode|light theme/i, () => setTheme('light')],
-    [/screenshot|screen shot/i, () => screenshot()],
-    [/lock/i, () => task(async () => { await say('Bye for now 👋', { ms: 1200 }); await act('system.lock'); })],
-    [/^open\s+(.+)/i, m => { const a = APPS[m[1].toLowerCase().trim()]; return a ? openApp(a) : say(`I don't know how to open "${m[1]}" yet.`); }],
-    [/stats|how.*(pc|computer)|cpu|ram|memory|battery|disk/i, () => pcStats()],
-    [/dance|party/i, () => dance()],
-    [/joke|funny/i, () => joke()],
-    [/coin/i, () => coin()],
-    [/dice|die\b|roll/i, () => dice()],
-    [/chase|follow/i, () => chase()],
-    [/hide/i, () => hideAndSeek()],
-    [/sleep|nap/i, () => { closeBubble(); z.asleep = true; }],
-    [/teleport/i, () => teleportRandom()],
-    [/^(?:should|will|is|am|are|can|do|does)\b.*\?$/i, () => eightBall()],
-    [/^(?:hi|hello|hey|yo|sup)\b/i, async () => { play('wave', 1500); await say(pick(['Hiii! 👋', 'Hey hey!', 'Yo!'])); }],
-    [/thank/i, async () => { pet(); await say('Anytime! 💙'); }],
-    [/help|what can you do/i, () => say('Try: "find resume", "clean up", "organize downloads", "synthwave wallpaper", "timer 5 min", "note buy milk", "dark mode", "open calculator", "dance"!', { ms: 9000 })],
-  ];
+  // ================================================================ typed requests
+  // Zin's brain (brain/brain.js) works out what you mean, offline and free;
+  // this part asks for anything missing, checks before risky things, then does it.
+  const B = window.ZinBrain;
+  let lastStep = null;
+  const sayStep = (step, opts) => { const t = B.replyFor(step); return t ? say(t, opts) : Promise.resolve(); };
+  const seconds = (s) => s >= 3600 ? `${+(s / 3600).toFixed(1)} hr` : s >= 60 ? `${Math.round(s / 60)} min` : `${s} sec`;
+  // seconds from now until a clock time like { h: 17, m: 30, day: 0 }
+  function secondsUntil(at) {
+    const now2 = new Date();
+    const at1 = (h) => { const d = new Date(now2); d.setHours(h, at.m || 0, 0, 0); d.setDate(d.getDate() + (at.day || 0)); if (d <= now2) d.setDate(d.getDate() + 1); return d; };
+    let when = at1(at.h);
+    if (at.vague && at.h < 12) { const pm = at1(at.h + 12); if (pm < when) when = pm; } // "at 5" means whichever 5 comes first
+    return Math.round((when - now2) / 1000);
+  }
+  async function confirmStep(step, yes) {
+    play('think', 1200);
+    const v = await ask(B.replyFor(step), [{ label: yes, value: 'go', primary: true }, { label: 'No', value: 'no', ghost: true }]);
+    if (v === 'no') say('Okay, I won\'t.', { ms: 1800 });
+    return v === 'go';
+  }
+
   async function command(text) {
-    for (const [re, fn] of COMMANDS) {
-      const m = text.match(re);
-      if (m) return fn(m, text);
+    interaction();
+    const r = B.understand(text, { last: lastStep });
+    if (r.unknown || !r.steps.length) {
+      play('think', 1500);
+      const v = await ask(r.reply, [...(r.suggestions || []).map(s => ({ label: s, value: 'try:' + s })), { icon: '📋', label: 'Show menu', value: 'menu', ghost: true }], { cols: 1, input: 'or try saying it another way' });
+      if (v === 'menu') return mainMenu();
+      if (v) return command(v.startsWith('try:') ? v.slice(4) : v);
+      return;
     }
-    play('think', 1500);
-    const v = await ask(`Hmm, I don't know "${text}" yet. Try "find …", "clean up", "organize downloads", "timer 5 min", or:`, [{ icon: '📋', label: 'Show menu', value: 'menu', primary: true }]);
-    if (v === 'menu') mainMenu();
+    for (let step of r.steps) {
+      if (!step.ready) { play('shrug', 1500); await say(B.replyFor(step), { ms: 3500 }); continue; }
+      // ask for details she still needs ("Which folder?")
+      for (let tries = 0; step.missing.length && tries < 3; tries++) {
+        const reply = await ask(B.replyFor(step), [], { input: 'type here…' });
+        if (!reply) return;
+        step = B.answer(step, reply).steps[0];
+      }
+      if (step.missing.length) return say('Sorry, I didn\'t catch that. Let\'s try again later!');
+      if (step.intent !== 'cancel' && !step.intent.startsWith('chat.')) lastStep = { intent: step.intent, slots: step.slots };
+      await doStep(step);
+    }
+  }
+
+  async function doStep(step) {
+    const s = step.slots;
+    switch (step.intent) {
+      // ---- files
+      case 'files.find': return findFiles(s.query);
+      case 'files.recent': return recentFiles();
+      case 'files.big': return bigFiles();
+      case 'files.old': return oldFiles(s.folder && s.folder !== 'pick' ? s.folder : null);
+      case 'folder.open': return task(async () => {
+        play('folder', 600);
+        const w = await act('files.openFolder', { folder: s.folder });
+        closeBubble();
+        if (w.window) await showWindow(w.window, s.folder + '!');
+      });
+      case 'organize': return organize(s.folder || 'downloads', s.mode);
+      case 'organize.undo': return undoOrganize();
+      case 'clean.junk': return cleanScan();
+
+      // ---- apps and the web
+      case 'app.open': return task(async () => {
+        play('wave', 700);
+        for (const name of s.apps) {
+          const w = await act('apps.open', { name });
+          if (!w.notFound) continue;
+          sfx('err'); play('shrug', 1500);
+          const v = await ask(`I couldn't find an app called "${name}" on your PC.${w.suggestions.length ? ' Did you mean:' : ''}`,
+            [...w.suggestions.map(n => ({ icon: '🚀', label: n, value: n })), { icon: '🔍', label: `Search the web for ${name}`, value: '__web' }], { cols: 1 });
+          if (v === '__web') await act('web.search', { q: name, site: 'google' });
+          else if (v) await act('apps.open', { name: v });
+        }
+        await sayStep(step, { ms: 2000 });
+      });
+      case 'app.close': return task(async () => {
+        if (!await confirmStep(step, 'Close it')) return;
+        for (const name of s.apps) {
+          const w = await act('apps.close', { name });
+          if (w.notRunning) await say(`${name} isn't open right now.`);
+          else { sfx('ok'); await say(`Closed ${w.closed.join(', ')}. 👋`); }
+        }
+      });
+      case 'web.open': return task(async () => {
+        play('wave', 700);
+        for (const site of s.sites) await act('web.open', { url: site.url });
+        await sayStep(step, { ms: 2000 });
+      });
+      case 'web.search': return webSearch(s.query, s.engine);
+
+      // ---- music and sound
+      case 'music.play': return task(async () => {
+        play('dance', 2500);
+        say(B.replyFor(step), { ms: 3500 });
+        const w = await act('music.play', { query: s.song, kind: s.kind });
+        if (w.opened === 'web') say('I opened Spotify in your browser, since the app isn\'t installed. 🎧', { ms: 4000 });
+        else if (s.song) say(`Found ${s.song} on Spotify. Hit play on the top result! 🎧`, { ms: 4000 });
+      });
+      case 'media.control': return task(async () => { await act('media.key', { cmd: s.cmd }); await sayStep(step, { ms: 1500 }); });
+      case 'volume': return task(async () => { play('cheer', 800); await act('volume', s); await sayStep(step, { ms: 1500 }); });
+
+      // ---- the PC
+      case 'pc.stats': return pcStats();
+      case 'theme': return setTheme(s.mode);
+      case 'wallpaper': return s.style ? wallpaperFrom(s.style) : wallpaperMenu();
+      case 'screenshot': return screenshot();
+      case 'pc.lock': return task(async () => { await say('Bye for now 👋', { ms: 1200 }); await act('system.lock'); });
+      case 'power': return task(async () => {
+        if (s.kind === 'cancel') { await act('power', { kind: 'cancel' }); return sayStep(step); }
+        const delay = s.delay || (s.at ? secondsUntil(s.at) : 0);
+        if (!await confirmStep(step, { shutdown: 'Shut down', restart: 'Restart', sleep: 'Sleep' }[s.kind])) return;
+        await act('power', { kind: s.kind, delay });
+        await say(delay ? `Okay! ${s.kind === 'sleep' ? 'Sleeping' : s.kind === 'restart' ? 'Restarting' : 'Shutting down'} in ${seconds(delay)}. Say "cancel the shutdown" to stop it.` : 'Here we go! 👋', { ms: 4000 });
+      });
+
+      // ---- time and notes
+      case 'timer': return startTimer(s.seconds, s.label === 'Timer' ? 'Timer' : s.label, { text: B.replyFor(step) });
+      case 'reminder': {
+        const secs = s.when.in || secondsUntil(s.when.at);
+        return startTimer(secs, s.text, { reminder: true, text: B.replyFor(step) });
+      }
+      case 'note.add': return addNote(s.text);
+      case 'notes.open': return task(() => act('notes.open').then(closeBubble));
+
+      // ---- fun and chat
+      case 'fun.dance': return dance();
+      case 'fun.joke': return joke();
+      case 'fun.coin': return coin();
+      case 'fun.dice': return dice(s.sides);
+      case 'fun.8ball': return eightBall();
+      case 'fun.teleport': return teleportTo(clamp(mouse.x, 40, W - 40), H);
+      case 'fun.sleep': closeBubble(); z.asleep = true; return;
+      case 'chat.hello': play('wave', 1500); return sayStep(step);
+      case 'chat.thanks': pet(); return sayStep(step);
+      case 'chat.how': play('cheer', 1200); return sayStep(step);
+      case 'help': return sayStep(step, { ms: 12000 });
+      case 'cancel': return sayStep(step, { ms: 1500 });
+      default: return sayStep(step);
+    }
   }
 
   // ================================================================ idle brain
@@ -1224,7 +1349,7 @@
       sfx('pop');
       await play('wave', 1600);
       hiEl.classList.add('hidden');
-      const v = await ask('I\'m Zinx! I live on your screen now. 💙\nClick me for a menu, drag me around, or hit Ctrl+Alt+Space anytime.', [
+      const v = await ask('I\'m Zin! I live on your screen now. 💙\nClick me for a menu, drag me around, or hit Ctrl+Alt+Space anytime.', [
         { label: 'Show me around', value: 'tour', primary: true }, { label: 'Got it', value: 'ok' },
       ]);
       settings = await api.setSettings({ introDone: true });
@@ -1252,5 +1377,5 @@
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools
-  window.zinxDebug = { z, mainMenu, command, say, play, makeWallpaper, intro };
+  window.zinDebug = { z, mainMenu, command, say, play, makeWallpaper, intro };
 })();

@@ -1,5 +1,6 @@
-// Sorts a folder's loose files into subfolders by type. Always makes a plan
-// first (so Zinx can show you what will happen), and writes an undo log.
+// Sorts a folder's loose files into subfolders: by type (Images, Documents...),
+// A to Z (a folder per first letter) or by date (a folder per month). Always
+// makes a plan first (so Zin can show you what will happen), and writes an undo log.
 const fs = require('fs');
 const path = require('path');
 
@@ -22,14 +23,20 @@ function categoryOf(file) {
   return null;
 }
 
-async function plan(folder) {
+const MONTHS = ['01 January', '02 February', '03 March', '04 April', '05 May', '06 June', '07 July', '08 August', '09 September', '10 October', '11 November', '12 December'];
+async function plan(folder, mode = 'type') {
   const entries = await fs.promises.readdir(folder, { withFileTypes: true });
   const moves = [];
   const summary = {};
   for (const e of entries) {
     if (!e.isFile() || KEEP.has(e.name.toLowerCase()) || e.name.startsWith('.')) continue;
     if (KEEP_EXT.has(path.extname(e.name).slice(1).toLowerCase())) continue;
-    const cat = categoryOf(e.name);
+    let cat;
+    if (mode === 'alpha') { const c = e.name[0].toUpperCase(); cat = /[A-Z]/.test(c) ? c : '#'; }
+    else if (mode === 'date') {
+      let t; try { t = (await fs.promises.stat(path.join(folder, e.name))).mtime; } catch { continue; }
+      cat = path.join(String(t.getFullYear()), MONTHS[t.getMonth()]);
+    } else cat = categoryOf(e.name);
     if (!cat) continue;
     moves.push({ from: path.join(folder, e.name), to: path.join(folder, cat, e.name), cat });
     summary[cat] = (summary[cat] || 0) + 1;
@@ -72,9 +79,11 @@ async function undoLast(undoDir) {
   for (const m of log.moves.reverse()) {
     try { await fs.promises.rename(m.from, freeName(m.to)); restored++; } catch {}
   }
-  // tidy up category folders that are now empty
-  for (const cat of Object.keys(CATEGORIES)) {
-    try { await fs.promises.rmdir(path.join(log.folder, cat)); } catch {}
+  // tidy up the folders the sort made, if they're empty now
+  const made = new Set(log.moves.map(m => path.dirname(m.from)));
+  for (const d of [...made].sort((a, b) => b.length - a.length)) {
+    try { await fs.promises.rmdir(d); } catch {}
+    try { if (path.dirname(d) !== log.folder) await fs.promises.rmdir(path.dirname(d)); } catch {}
   }
   await fs.promises.unlink(file);
   return { restored, folder: log.folder };

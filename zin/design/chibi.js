@@ -1,7 +1,7 @@
-// Zinx, chibi desktop-pet edition (Shimeji style): pixel art, a hand-pixeled
+// Zin, chibi desktop-pet edition (Shimeji style): pixel art, a hand-pixeled
 // twin-tail head on a body that is drawn from poses.
 // Frames are drawn from poses, so every animation works in every palette.
-// Works in the browser (window.ZinxChibi) and in Node (module.exports).
+// Works in the browser (window.ZinChibi) and in Node (module.exports).
 (function (root) {
   // Poses are written in a 56x56 "logical" grid; frames render at K times
   // that resolution so curves are smooth and the body gets real detail.
@@ -302,7 +302,7 @@
   };
 
   // ---------------------------------------------------------------- the character
-  function drawZinx(pose, palKey) {
+  function drawZin(pose, palKey) {
     const pal = palOf(palKey);
     const p = Object.assign({ view: 'front', bob: 0, dx: 0, eyes: 'open', mouth: 'smile', armA: 'down', armB: 'down', legA: 'stand', legB: 'stand' }, pose);
     const back = p.view === 'back';
@@ -660,7 +660,7 @@
     let px = cache.get(key);
     if (!px) {
       const pose = a.pose(f);
-      const buf = drawZinx(pose, pal);
+      const buf = drawZin(pose, pal);
       addFx(buf, pose, pal);
       px = new Uint8ClampedArray(W * H * 4);
       for (let i = 0; i < W * H; i++) {
@@ -690,5 +690,5 @@
 
   const api = { W, H, GROUND, PALETTES, ANIMS, frameRGBA, draw };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.ZinxChibi = api;
+  else root.ZinChibi = api;
 })(typeof window !== 'undefined' ? window : globalThis);

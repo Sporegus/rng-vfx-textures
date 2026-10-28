@@ -1,4 +1,4 @@
-// Reports the active (foreground) window's position so Zinx can sit on it,
+// Reports the active (foreground) window's position so Zin can sit on it,
 // follow it when you drag it, and fall off when you close it.
 const ps = require('./ps');
 

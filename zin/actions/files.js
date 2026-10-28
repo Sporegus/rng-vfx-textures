@@ -12,7 +12,7 @@ function userFolders() {
 }
 
 // Walks folders breadth-first and calls visit(fullPath, dirent, stat). Stops
-// after `limit` entries so a huge drive doesn't freeze Zinx.
+// after `limit` entries so a huge drive doesn't freeze Zin.
 async function walk(roots, visit, { maxDepth = 6, limit = 60000 } = {}) {
   let queue = roots.map(r => [r, 0]);
   let seen = 0;
@@ -78,4 +78,32 @@ async function big() {
   return { results: out.slice(0, 10) };
 }
 
-module.exports = { userFolders, walk, find, recent, big };
+// files you haven't changed in `days` (Windows doesn't reliably record when a
+// file was last opened, so "changed" is the safe measure), biggest first
+async function old({ folder, days = 180 } = {}) {
+  const since = Date.now() - days * 86400000;
+  const roots = folder ? userFolders().filter(p => path.basename(p).toLowerCase() === folder) : userFolders().filter(p => /Desktop|Documents|Downloads|Pictures|Videos/.test(p));
+  const found = [];
+  await walk(roots, (full, e) => { if (e.isFile()) found.push(full); }, { maxDepth: 3, limit: 30000 });
+  const out = [];
+  for (const f of found) {
+    const st = await stat(f);
+    if (st && st.mtimeMs < since && !/\.(lnk|url|ini)$/i.test(f)) out.push({ name: path.basename(f), path: f, size: st.size, mtime: st.mtimeMs });
+  }
+  out.sort((a, b) => b.size - a.size);
+  return { results: out.slice(0, 60), total: out.length, bytes: out.reduce((a, f) => a + f.size, 0) };
+}
+
+// sends files to the Recycle Bin (never deletes for good), only inside your own folders
+async function recycle(paths, shell) {
+  const roots = userFolders().map(r => r.toLowerCase() + path.sep);
+  let moved = 0; const failed = [];
+  for (const p of paths || []) {
+    const full = path.resolve(String(p));
+    if (!roots.some(r => full.toLowerCase().startsWith(r))) { failed.push(path.basename(full)); continue; }
+    try { await shell.trashItem(full); moved++; } catch { failed.push(path.basename(full)); }
+  }
+  return { moved, failed };
+}
+
+module.exports = { userFolders, walk, find, recent, big , old, recycle };

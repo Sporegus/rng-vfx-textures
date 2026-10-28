@@ -1,8 +1,8 @@
-// Zinx sprite engine: a holographic AI in pixel art.
+// Zin sprite engine: a holographic AI in pixel art.
 // Every frame is drawn from a "pose" (a little skeleton: where the hands, elbows,
 // knees and feet go, plus face, prop and effects), so one file gives us every
 // animation in every skin and accessory.
-// Works in the browser (window.ZinxSprites) and in Node (module.exports).
+// Works in the browser (window.ZinSprites) and in Node (module.exports).
 (function (root) {
   const W = 48, H = 80;
   const GROUND = 78;  // feet touch this row
@@ -342,7 +342,7 @@
     at(19, 26, s.glow); at(30, 26, s.glow); at(18, 41, s.glow); at(31, 41, s.glow);
   }
 
-  function drawZinx(pose, skinKey, hat) {
+  function drawZin(pose, skinKey, hat) {
     const s = skinOf(skinKey);
     const p = Object.assign({ bob: 0, dx: 0, legs: 'pose', front: 'hip', back: 'down', eyes: 'open', mouth: 'smile' }, pose);
     const sk = skeleton(p);
@@ -527,7 +527,7 @@
     let px = cache.get(key);
     if (!px) {
       const pose = Object.assign(a.pose(f), overrides || {});
-      const buf = drawZinx(pose, skin, hat);
+      const buf = drawZin(pose, skin, hat);
       px = new Uint8ClampedArray(W * H * 4);
       for (let i = 0; i < W * H; i++) {
         const c = buf.p[i];
@@ -560,7 +560,7 @@
     ctx.restore();
   }
 
-  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, handOf, frameRGBA, draw, drawZinx };
+  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, handOf, frameRGBA, draw, drawZin };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.ZinxSprites = api;
+  else root.ZinSprites = api;
 })(typeof window !== 'undefined' ? window : globalThis);

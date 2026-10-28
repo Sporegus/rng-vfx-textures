@@ -11,8 +11,9 @@ const html = read('demo/shell.html')
   .replace('/*APP_CSS*/', () => appCss.replace('--font: "Cascadia Mono", Consolas, "Courier New", monospace;', ''))
   .replace('/*SPRITES_JS*/', () => read('src/sprites.js'))
   .replace('/*DEMO_JS*/', () => read('demo/demo.js'))
+  .replace('/*BRAIN_JS*/', () => read('brain/intents.js') + '\n' + read('brain/brain.js'))
   .replace('/*RENDERER_JS*/', () => read('src/renderer.js'));
 
-const out = process.argv[2] || path.join(__dirname, 'zinx-demo.html');
+const out = process.argv[2] || path.join(__dirname, 'zin-demo.html');
 fs.writeFileSync(out, html);
 console.log('wrote', out, Math.round(html.length / 1024) + ' KB');

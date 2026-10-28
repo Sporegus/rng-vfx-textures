@@ -1,4 +1,4 @@
-// Zinx main process: owns the see-through overlay window, the tray menu,
+// Zin main process: owns the see-through overlay window, the tray menu,
 // global hotkeys, settings, and everything that touches the PC.
 const { app, BrowserWindow, Tray, Menu, ipcMain, screen, globalShortcut, nativeImage } = require('electron');
 const path = require('path');
@@ -61,7 +61,7 @@ function createOverlay() {
 }
 
 // ------------------------------------------------------------- window tracking
-// Zinx can sit on top of whatever window you're using. A small PowerShell
+// Zin can sit on top of whatever window you're using. A small PowerShell
 // helper reports the active window's position a couple of times a second.
 function startWatcher() {
   if (watcher || process.platform !== 'win32') return;
@@ -84,7 +84,7 @@ function toOverlay(w) {
 }
 
 // ------------------------------------------------------------- tray
-// The tray icon is drawn from the sprite engine, so it always matches Zinx's skin.
+// The tray icon is drawn from the sprite engine, so it always matches Zin's skin.
 function spriteIcon(size) {
   const W = sprites.W, H = sprites.H;
   const rgba = sprites.frameRGBA('idle', 0, settings.skin, settings.hat);
@@ -110,8 +110,8 @@ function buildTrayMenu() {
   const radio = (label, key, value) => ({ label, type: 'radio', checked: settings[key] === value, click: () => saveSettings({ [key]: value }) });
   const check = (label, key) => ({ label, type: 'checkbox', checked: !!settings[key], click: (m) => saveSettings({ [key]: m.checked }) });
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Zinx', enabled: false },
-    { label: 'Talk to Zinx', accelerator: 'Ctrl+Alt+Space', click: () => send('menu') },
+    { label: 'Zin', enabled: false },
+    { label: 'Talk to Zin', accelerator: 'Ctrl+Alt+Space', click: () => send('menu') },
     { label: 'Teleport to my mouse', click: () => send('teleport') },
     { label: 'Play the intro again', click: () => send('intro') },
     { type: 'separator' },
@@ -123,7 +123,7 @@ function buildTrayMenu() {
     check('Sit on my windows', 'followWindows'),
     check('Start with Windows', 'startWithWindows'),
     { type: 'separator' },
-    { label: win && win.isVisible() ? 'Hide Zinx' : 'Show Zinx', accelerator: 'Ctrl+Alt+Z', click: toggleVisible },
+    { label: win && win.isVisible() ? 'Hide Zin' : 'Show Zin', accelerator: 'Ctrl+Alt+Z', click: toggleVisible },
     { label: 'Quit', click: () => app.quit() },
   ]));
 }
@@ -148,11 +148,11 @@ ipcMain.handle('action', async (_, name, args) => {
 // ------------------------------------------------------------- startup
 app.whenReady().then(() => {
   loadSettings();
-  if (process.platform === 'win32') app.setAppUserModelId('com.zinx.desktop');
+  if (process.platform === 'win32') app.setAppUserModelId('com.zin.desktop');
   actions = createActions({ app, getWin: () => win, settings: () => settings, saveSettings, toOverlay });
   createOverlay();
   tray = new Tray(spriteIcon(32));
-  tray.setToolTip('Zinx');
+  tray.setToolTip('Zin');
   tray.on('click', () => { if (!win.isVisible()) toggleVisible(); send('menu'); });
   buildTrayMenu();
   globalShortcut.register('Control+Alt+Z', toggleVisible);

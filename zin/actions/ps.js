@@ -1,5 +1,5 @@
 // Runs a PowerShell snippet. User-provided values (paths, text) are passed
-// through environment variables (ZINX_ARG0, ZINX_ARG1, ...) and never pasted
+// through environment variables (ZIN_ARG0, ZIN_ARG1, ...) and never pasted
 // into the script, so a weird filename can't turn into a command.
 const { execFile, spawn } = require('child_process');
 
@@ -10,7 +10,7 @@ function encode(script) {
 function run(script, args = [], timeout = 30000) {
   if (process.platform !== 'win32') return Promise.reject(new Error('This only works on Windows.'));
   const env = { ...process.env };
-  args.forEach((a, i) => { env['ZINX_ARG' + i] = String(a); });
+  args.forEach((a, i) => { env['ZIN_ARG' + i] = String(a); });
   return new Promise((resolve, reject) => {
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(script)],
       { env, timeout, windowsHide: true, maxBuffer: 8 * 1024 * 1024 },

@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 public class ZWall { [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int SystemParametersInfo(int a, int b, string c, int d); }
 "@
 # 20 = SPI_SETDESKWALLPAPER, 3 = save to profile + tell every app
-[ZWall]::SystemParametersInfo(20, 0, $env:ZINX_ARG0, 3) | Out-Null
+[ZWall]::SystemParametersInfo(20, 0, $env:ZIN_ARG0, 3) | Out-Null
 `;
 
 async function get() {
@@ -39,9 +39,9 @@ async function random(ctx) {
 async function saveGenerated(dataUrl, ctx) {
   const m = /^data:image\/png;base64,(.+)$/.exec(dataUrl || '');
   if (!m) throw new Error('Bad image');
-  const dir = path.join(ctx.app.getPath('pictures'), 'Zinx Wallpapers');
+  const dir = path.join(ctx.app.getPath('pictures'), 'Zin Wallpapers');
   await fs.promises.mkdir(dir, { recursive: true });
-  const file = path.join(dir, `zinx-${Date.now()}.png`);
+  const file = path.join(dir, `zin-${Date.now()}.png`);
   await fs.promises.writeFile(file, Buffer.from(m[1], 'base64'));
   return set(file, ctx);
 }

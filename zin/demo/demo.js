@@ -1,8 +1,8 @@
-// Browser demo: a pretend Windows desktop plus a fake `window.zinx` API, so the
+// Browser demo: a pretend Windows desktop plus a fake `window.zin` API, so the
 // real renderer.js can run anywhere. Nothing here touches a real PC.
 (function () {
   const TASKBAR = 46;
-  window.ZINX_BOTTOM_INSET = TASKBAR;
+  window.ZIN_BOTTOM_INSET = TASKBAR;
   const $ = (q) => document.querySelector(q);
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const handlers = {};
@@ -12,10 +12,10 @@
   // ---------------------------------------------------------------- settings
   const DEFAULTS = { skin: 'holo', hat: 'none', size: 3, sound: true, wander: true, followWindows: true, introDone: false };
   let settings = { ...DEFAULTS };
-  try { Object.assign(settings, JSON.parse(localStorage.getItem('zinx-demo') || '{}')); } catch {}
-  if (!ZinxSprites.SKINS[settings.skin]) settings.skin = 'holo';
+  try { Object.assign(settings, JSON.parse(localStorage.getItem('zin-demo') || '{}')); } catch {}
+  if (!ZinSprites.SKINS[settings.skin]) settings.skin = 'holo';
   if (innerWidth < 600) settings.size = 2;
-  const save = () => { try { localStorage.setItem('zinx-demo', JSON.stringify(settings)); } catch {} };
+  const save = () => { try { localStorage.setItem('zin-demo', JSON.stringify(settings)); } catch {} };
 
   // ---------------------------------------------------------------- fake file system
   const HOME = 'C:\\Users\\you';
@@ -122,12 +122,12 @@
   const clock = () => { const d = new Date(); $('#clock').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   clock(); setInterval(clock, 10000);
   function drawTray() {
-    const c = $('#tray-zinx'), g = c.getContext('2d');
+    const c = $('#tray-zin'), g = c.getContext('2d');
     g.clearRect(0, 0, c.width, c.height);
-    ZinxSprites.draw(g, { anim: 'idle', frame: 0, skin: settings.skin, hat: settings.hat, x: -15, y: -3, scale: 1.4 });
+    ZinSprites.draw(g, { anim: 'idle', frame: 0, skin: settings.skin, hat: settings.hat, x: -15, y: -3, scale: 1.4 });
   }
   drawTray();
-  $('#tray-btn').addEventListener('click', () => { $('#zinx').hidden = false; fire('command', 'menu'); });
+  $('#tray-btn').addEventListener('click', () => { $('#zin').hidden = false; fire('command', 'menu'); });
 
   // ---------------------------------------------------------------- wallpaper
   const DEFAULT_WALL = getComputedStyle(document.documentElement).getPropertyValue('--wall');
@@ -149,11 +149,12 @@
     'files.big': async () => { await wait(900); return { results: FILES.filter(f => f.size > 50e6).sort((a, b) => b.size - a.size) }; },
     'files.reveal': async ({ path }) => { const f = FILES.find(x => x.path === path); showFolder(f ? f.folder : 'Downloads', path); await wait(300); return { window: rect('win-explorer') }; },
     'files.openFolder': async () => { showFolder('Downloads'); await wait(300); return { window: rect('win-explorer') }; },
-    'organize.plan': async ({ folder }) => {
+    'organize.plan': async ({ folder, mode }) => {
       if (folder !== 'downloads') { toast('In this demo only Downloads has files to sort.'); }
       if (organized) return { id: 'p', count: 0, summary: {} };
       const summary = {};
-      FILES.filter(f => f.folder === 'Downloads').forEach(f => { const c = cat(f.name); summary[c] = (summary[c] || 0) + 1; });
+      const group = (f) => mode === 'alpha' ? (/[a-z]/i.test(f.name[0]) ? f.name[0].toUpperCase() : '#') : mode === 'date' ? '2026\\10 October' : cat(f.name);
+      FILES.filter(f => f.folder === 'Downloads').forEach(f => { const c = group(f); summary[c] = (summary[c] || 0) + 1; });
       return { id: 'p', count: Object.values(summary).reduce((a, b) => a + b, 0), summary, folder: 'Downloads' };
     },
     'organize.apply': async () => { await wait(2200); organized = true; showFolder('Downloads'); return { moved: 12, failed: [] }; },
@@ -185,17 +186,26 @@
     'system.lock': async () => { const l = $('#lock'); l.hidden = false; setTimeout(() => { l.hidden = true; }, 2600); return {}; },
     'system.screenshot': async () => { const f = $('#flash'); f.hidden = false; setTimeout(() => { f.hidden = true; }, 180); return {}; },
     'web.search': async ({ q, site }) => { toast(`On your PC, this searches ${site === 'youtube' ? 'YouTube' : 'Google'} for "${q}".`); return {}; },
+    'files.old': async () => { await wait(1200); const old = FILES.filter(f => f.size > 20e6).map(f => ({ ...f, mtime: Date.now() - 400 * 86400000 })); return { results: old, total: old.length, bytes: old.reduce((a, f) => a + f.size, 0) }; },
+    'files.recycle': async ({ paths }) => { toast(`On your PC, ${paths.length} file${paths.length === 1 ? '' : 's'} would go to the Recycle Bin.`); return { moved: paths.length, failed: [] }; },
+    'apps.open': async ({ name }) => { toast(`On your PC, this opens ${name}.`); return { opened: name }; },
+    'apps.close': async ({ name }) => { toast(`On your PC, this closes ${name}.`); return { closed: [name] }; },
+    'web.open': async ({ url }) => { toast(`On your PC, this opens ${url}.`); return {}; },
+    'music.play': async ({ query }) => { toast(query ? `On your PC, Spotify opens on "${query}".` : 'On your PC, your music starts playing.'); return { opened: 'spotify' }; },
+    'media.key': async ({ cmd }) => { toast(`On your PC, this presses the ${cmd} media key.`); return {}; },
+    'volume': async ({ cmd, level }) => { toast(cmd === 'set' ? `On your PC, the volume goes to ${level}%.` : `On your PC, the volume goes ${cmd}.`); return {}; },
+    'power': async ({ kind, delay }) => { toast(kind === 'cancel' ? 'On your PC, this cancels the shutdown.' : `On your PC, this would ${kind === 'shutdown' ? 'shut down' : kind}${delay ? ' in ' + Math.round(delay / 60) + ' min' : ''}. Not in the demo!`); return {}; },
     'notes.add': async ({ text }) => { notes.push(text); renderNotes(); return {}; },
     'notes.open': async () => { renderNotes(); focusWin('win-notes'); syncTasks(); return {}; },
   };
   function renderNotes() {
     const ul = $('#notes-list');
     ul.innerHTML = '';
-    (notes.length ? notes : ['(empty) Ask Zinx: "note buy snacks"']).forEach(n => { const li = document.createElement('li'); li.textContent = n; ul.append(li); });
+    (notes.length ? notes : ['(empty) Ask Zin: "note buy snacks"']).forEach(n => { const li = document.createElement('li'); li.textContent = n; ul.append(li); });
   }
   renderNotes();
 
-  window.zinx = {
+  window.zin = {
     platform: 'demo',
     getSettings: async () => settings,
     setSettings: async (patch) => { settings = { ...settings, ...patch }; save(); drawTray(); fire('settings', settings); return settings; },
@@ -205,7 +215,7 @@
       try { return { ok: true, ...(await fn(args || {})) }; } catch (e) { return { ok: false, error: e.message }; }
     },
     capture() {}, focus() {}, blur() {},
-    hide() { $('#zinx').hidden = true; toast('Zinx is hiding. Click the tray icon to bring Zinx back.'); },
+    hide() { $('#zin').hidden = true; toast('Zin is hiding. Click the tray icon to bring Zin back.'); },
     onSettings: on('settings'), onCommand: on('command'), onActiveWindow: on('active-window'), onBounds: on('bounds'),
   };
   // the renderer subscribes after this file runs; send the first window once it's listening

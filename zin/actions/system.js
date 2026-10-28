@@ -34,7 +34,7 @@ async function theme(mode) {
   return { mode };
 }
 
-// Only these apps can be opened; Zinx can't launch anything else.
+// Only these apps can be opened; Zin can't launch anything else.
 const APPS = {
   calculator: 'calc.exe', notepad: 'notepad.exe', paint: 'mspaint.exe', explorer: 'explorer.exe',
   taskmgr: 'taskmgr.exe', settings: 'ms-settings:', snip: 'ms-screenclip:', store: 'ms-windows-store:',
@@ -58,7 +58,7 @@ async function screenshot(app) {
   const size = { width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
   const [src] = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
   if (!src) throw new Error("Couldn't grab the screen.");
-  const dir = path.join(app.getPath('pictures'), 'Zinx Screenshots');
+  const dir = path.join(app.getPath('pictures'), 'Zin Screenshots');
   await fs.promises.mkdir(dir, { recursive: true });
   const file = path.join(dir, `screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`);
   await fs.promises.writeFile(file, src.thumbnail.toPNG());

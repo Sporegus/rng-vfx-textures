@@ -1,8 +1,8 @@
-// The only bridge between Zinx's page and the PC. The page can ask for named
+// The only bridge between Zin's page and the PC. The page can ask for named
 // actions; it can't run arbitrary commands.
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('zinx', {
+contextBridge.exposeInMainWorld('zin', {
   platform: process.platform,
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),

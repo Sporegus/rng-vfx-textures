@@ -1,7 +1,7 @@
-// Sprite lab for the chibi Zinx: animated preview on a grid floor, the pixel
+// Sprite lab for the chibi Zin: animated preview on a grid floor, the pixel
 // dissolve teleport, and a sheet of every frame.
 (function () {
-  const Z = window.ZinxChibi;
+  const Z = window.ZinChibi;
   const cv = document.getElementById('stage');
   const ctx = cv.getContext('2d');
   const box = document.getElementById('stage-box');
@@ -255,5 +255,5 @@
   layout();
   drawSheet();
   requestAnimationFrame(tick);
-  window.zinxLab = { teleportTo, her, play: (k) => { anim = k; frame = 0; } };
+  window.zinLab = { teleportTo, her, play: (k) => { anim = k; frame = 0; } };
 })();

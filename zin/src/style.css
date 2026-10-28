@@ -19,8 +19,8 @@ html, body {
 
 #fx { position: fixed; inset: 0; pointer-events: none; }
 
-#zinx { position: fixed; left: 0; top: 0; will-change: transform; }
-#zinx canvas {
+#zin { position: fixed; left: 0; top: 0; will-change: transform; }
+#zin canvas {
   display: block; image-rendering: pixelated; cursor: grab; touch-action: none;
   /* hologram glow + an occasional flicker */
   filter: drop-shadow(0 0 3px var(--glow)) drop-shadow(0 0 10px color-mix(in srgb, var(--glow) 55%, transparent));
@@ -31,11 +31,11 @@ html, body {
   62% { opacity: .55; transform: translateX(1px); }
   89% { opacity: .75; }
 }
-@media (prefers-reduced-motion: reduce) { #zinx canvas { animation: none; } }
-#zinx.dragging canvas { cursor: grabbing; }
+@media (prefers-reduced-motion: reduce) { #zin canvas { animation: none; } }
+#zin.dragging canvas { cursor: grabbing; }
 
 /* teleport glitch: RGB split + slice jitter */
-#zinx.glitch canvas { animation: glitch 0.32s steps(2) infinite; }
+#zin.glitch canvas { animation: glitch 0.32s steps(2) infinite; }
 @keyframes glitch {
   0%   { filter: drop-shadow(4px 0 #ff2fd0) drop-shadow(-4px 0 #39f5ff); clip-path: inset(0 0 55% 0); transform: translateX(-6px); }
   25%  { filter: drop-shadow(-5px 0 #ff2fd0) drop-shadow(5px 0 #39f5ff); clip-path: inset(30% 0 20% 0); transform: translateX(7px); }
@@ -53,7 +53,7 @@ html, body {
 }
 @keyframes stamp { from { transform: scale(2) rotate(-8deg); opacity: 0; } }
 
-/* little status badge above Zinx (timers etc.) */
+/* little status badge above Zin (timers etc.) */
 #tag {
   position: fixed; left: 0; top: 0; padding: 3px 7px;
   font: 700 12px/1 var(--font); letter-spacing: 1px;
@@ -72,7 +72,7 @@ html, body {
   animation: pop 0.14s ease-out;
 }
 #bubble.wide { width: 380px; }
-#fx { z-index: 5; } #zinx { z-index: 10; } #tag, #hi { z-index: 11; } #bubble { z-index: 20; }
+#fx { z-index: 5; } #zin { z-index: 10; } #tag, #hi { z-index: 11; } #bubble { z-index: 20; }
 @keyframes pop { from { transform-origin: bottom; opacity: 0; scale: 0.85; } }
 .b-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .b-name { font-weight: 800; font-size: 11px; letter-spacing: 2px; color: var(--muted); }
