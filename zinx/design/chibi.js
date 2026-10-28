@@ -253,6 +253,20 @@
       else if (sgn > 0) t.glyph(ax - 1, ay, ['LMD.', 'MDDD'], shoe);
       else t.glyph(ax - 2, ay, ['.LMD', 'DDDM'], shoe);
     };
+    // front-view standing legs: straight inner edge with a thin gap, outer edge
+    // tapering from the hip to a flat rounded foot, glowing line down each leg
+    const drawStandLeg = (t, sgn) => {
+      const pts = [[2.05, 41.4], [4.9, 41.4], [5.35, 44.4], [5.05, 47.2], [4.6, 49.6], [4.1, 52.2], [3.95, 53.7], [3.3, 55], [2.3, 55], [2.05, 53.8]];
+      t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
+        const d = Math.abs(x + 0.5 - ox);         // distance from her center line
+        const outer = d > 4.05 + (y > 48 ? -0.6 : 0);
+        if (y >= 54) return B4[3];                  // sole
+        if (sgn < 0) return outer ? B4[1] : d < 3 ? B4[1] : B4[2];
+        return outer ? B4[3] : d < 3 ? B4[1] : B4[2];
+      });
+      for (const [x, y] of [[3, 45], [4, 46], [4, 47], [3, 49], [3, 50], [3, 52]]) t.set(ox + (sgn > 0 ? x : -x - 1), y + Math.min(0, oy), L);
+    };
+    const standing = (k) => k === 'stand' || k === 'apart';
     const drawArm = (t, arm, tones) => {
       t.limb(arm, [1.55, 1.1, 0.95], tones);
       t.limb([arm[2], arm[2]], [1.2, 1.2], tones);
@@ -282,10 +296,8 @@
     });
     if (!side) {
       // legs blend into the hips; a line only where the two legs meet
-      part(body, null, (t) => drawLeg(t, legA, B4, -1));
-      part(body, null, (t) => { drawLeg(t, legB, B4, 1); });
-      // soft shading where the thighs meet (no hard line)
-      for (let y = Math.round(44 + oy); y <= Math.round(46 + oy); y++) for (const x of [ox - 1, ox]) if (body.get(x, y)) body.set(x, y, B4[3]);
+      part(body, null, (t) => standing(p.legA) ? drawStandLeg(t, -1) : drawLeg(t, legA, B4, -1));
+      part(body, null, (t) => standing(p.legB) ? drawStandLeg(t, 1) : drawLeg(t, legB, B4, 1));
       redrawBust(body, ox, oy, B4, pal);
     }
     // hologram lines on the suit
