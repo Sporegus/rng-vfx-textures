@@ -222,12 +222,12 @@
 
     const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 5, 31.4 + oy];
     const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 5, 31.4 + oy];
-    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.6, 41.6 + oy];
-    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.6, 41.6 + oy];
+    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.8, 42.6 + oy];
+    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.8, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
     const joint = (base, preset, table, s, leg) => {
       const v = Array.isArray(preset) ? preset : table[preset] || table.down || table.stand;
-      const k = leg ? 1.03 : 1;
+      const k = leg ? (side ? 1.03 : 0.95) : 1;
       const e = mirror(v[0], s), h = mirror(v[1], s);
       const end = [base[0] + h[0], base[1] + h[1] * k];
       if (leg && oy > 0) end[1] -= oy; // feet stay planted when she bobs down
@@ -244,7 +244,7 @@
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.8, 2.15, 1.35, 1.5, 0.9], tones);
+      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [3.45, 2.45, 1.35, 1.5, 0.9], tones);
       // foot: a little shoe, wider than the ankle, toes pointing out (forward in side view)
       const ax = Math.round(ankle[0]), ay = Math.round(ankle[1]);
       const shoe = { L: tones[1], M: tones[2], D: tones[3] };
@@ -264,7 +264,7 @@
     const T = (pts) => pts.map(([x, y]) => [x + ox, 30.4 + (y - 30.4) * 0.86 + oy]);
     const torso = side
       ? T([[-3, 30.5], [1.5, 30.5], [3.4, 32], [5.8, 34.2], [5, 36.6], [2.1, 37.8], [2, 39.5], [2.9, 42], [2.4, 44.6], [-1, 45.6], [-5.6, 45.2], [-7, 42.6], [-5, 39.6], [-3.1, 38.4], [-3.2, 36], [-3.6, 33]])
-      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [5.4, 36.4], [4.2, 37.7], [3.3, 38.8], [3.2, 39.8], [3.8, 40.8], [5, 42], [5.9, 43.3], [6.1, 44.2], [5, 45.6], [2.6, 46.4], [0, 45.8], [-2.6, 46.4], [-5, 45.6], [-6.1, 44.2], [-5.9, 43.3], [-5, 42], [-3.8, 40.8], [-3.2, 39.8], [-3.3, 38.8], [-4.2, 37.7], [-5.4, 36.4], [-6.1, 34.6], [-5.4, 32]]);
+      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [5.4, 36.4], [4.2, 37.7], [3.3, 38.8], [3.2, 39.8], [3.7, 40.8], [4.6, 42], [5.1, 43.3], [5.1, 44.4], [4.4, 45.6], [2.6, 46.4], [0, 45.8], [-2.6, 46.4], [-4.4, 45.6], [-5.1, 44.4], [-5.1, 43.3], [-4.6, 42], [-3.7, 40.8], [-3.2, 39.8], [-3.3, 38.8], [-4.2, 37.7], [-5.4, 36.4], [-6.1, 34.6], [-5.4, 32]]);
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
@@ -276,7 +276,7 @@
         t.set(ox + 3, 33 + oy, B4[1]); t.set(ox + 4, 33 + oy, B4[0]); t.set(ox + 4, 32 + oy, B4[1]); t.rect(ox + 1, 35 + oy, 5, 1, B4[3]);  // bust
         t.set(ox - 6, 39 + oy, B4[1]); t.set(ox - 6, 40 + oy, B4[0]); t.set(ox - 5, 41 + oy, B4[1]);          // booty shine
       } else {
-        t.set(ox - 5, 41 + oy, B4[1]); t.set(ox - 5, 42 + oy, B4[1]);  // hip highlight
+        // (hip highlight now comes from the thigh shading)
       }
     });
     if (!side) {
