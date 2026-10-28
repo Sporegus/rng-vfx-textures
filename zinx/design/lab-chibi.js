@@ -229,7 +229,7 @@
   }
 
   // ---------------------------------------------------------------- controls
-  const LABELS = { idle: 'Idle', walk: 'Walk', run: 'Run', wave: 'Wave', talk: 'Talk', point: 'Point', think: 'Think', cheer: 'Cheer', sit: 'Sit', sleep: 'Sleep', cry: 'Cry', sad: 'Sad', dance: 'Dance', dangle: 'Picked up', fall: 'Fall', land: 'Land', work: 'Working', love: 'Love', angry: 'Angry', dizzy: 'Dizzy' };
+  const LABELS = { idle: 'Idle', side: 'Side view', back: 'Back view', walk: 'Walk', run: 'Run', wave: 'Wave', talk: 'Talk', point: 'Point', think: 'Think', cheer: 'Cheer', sit: 'Sit', sleep: 'Sleep', cry: 'Cry', sad: 'Sad', dance: 'Dance', dangle: 'Picked up', fall: 'Fall', land: 'Land', work: 'Working', love: 'Love', angry: 'Angry', dizzy: 'Dizzy' };
   const animRow = document.getElementById('anims');
   Object.keys(Z.ANIMS).forEach((k) => {
     const b = document.createElement('button');
