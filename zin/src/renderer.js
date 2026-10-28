@@ -1543,10 +1543,13 @@
   async function setupEleven() {
     if (!voice.service) return say('That only works in the app, not in this demo.');
     const k = await ask('Let\'s use your ElevenLabs voice! Paste your API key (ElevenLabs → My Account → API Keys). I keep it encrypted on this PC.',
-      settings.elevenVoiceId ? [{ label: 'Keep my saved key', value: '__keep' }] : [], { input: 'API key', quiet: true });
+      settings.elevenReady ? [{ label: 'Keep my saved key', value: '__keep' }] : [], { input: 'API key', quiet: true });
     if (k == null) return;
     const key = k === '__keep' ? '' : k;
-    const voiceId = await ask('Now the voice ID (ElevenLabs → Voices → your voice → ID).', [], { input: 'voice ID', value: settings.elevenVoiceId || '', quiet: true });
+    // the first time, use the voice made for Zin; when changing, the ID can be swapped too
+    const voiceId = settings.elevenReady || !settings.elevenVoiceId
+      ? await ask('Which voice? Paste its ID (ElevenLabs → Voices → your voice → ID), or keep this one.', [], { input: 'voice ID', value: settings.elevenVoiceId || '', quiet: true })
+      : settings.elevenVoiceId;
     if (!voiceId) return;
     const model = await ask('Which ElevenLabs model?', [
       { label: 'Quick', sub: 'starts talking fastest', value: 'quick', primary: true },
@@ -1580,9 +1583,9 @@
     }
     if (v === 'pick') {
       if (!voice.ready) return setupVoice();
-      const names = { ...(settings.elevenVoiceId ? { eleven: '🎤 My ElevenLabs voice' } : {}), tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
+      const names = { ...(settings.elevenReady ? { eleven: '🎤 My ElevenLabs voice' } : {}), tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
       const n = await ask('Which voice? I\'ll say hi in it. 🌟 ones are the most natural (they use your graphics card). ⭐ Pixie is my own quick voice. 💖 ones are expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
-        { label: settings.elevenVoiceId ? 'Change ElevenLabs voice…' : '🎤 Use my ElevenLabs voice…', value: '__eleven' },
+        { label: settings.elevenReady ? 'Change ElevenLabs voice…' : '🎤 Use my ElevenLabs voice…', value: '__eleven' },
         ...([...EMOTIONAL, ...OWN, ...NATURAL, 'eleven'].includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
       if (n === '__back' || !n) return n && voiceMenu();
       if (n === '__eleven') return setupEleven();

@@ -61,11 +61,11 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
       fs.writeFileSync(keyFile, safeStorage.encryptStringAsync ? await safeStorage.encryptStringAsync(k) : safeStorage.encryptString(k));
       keyCache = k;
     } else if (!readKey()) return { ok: false, error: 'No API key' };
-    saveSettings({ elevenVoiceId: voiceId, elevenModel: model || 'quick', voiceName: 'eleven', voice: true });
+    saveSettings({ elevenVoiceId: voiceId, elevenModel: model || 'quick', elevenReady: true, voiceName: 'eleven', voice: true });
     if (proc) proc.postMessage({ type: 'eleven', creds: eleven() });
     return { ok: true };
   });
-  ipcMain.handle('eleven:forget', () => { fs.rmSync(keyFile, { force: true }); keyCache = null; saveSettings({ elevenVoiceId: null, voiceName: 'pixie' }); if (proc) proc.postMessage({ type: 'eleven', creds: null }); return { ok: true }; });
+  ipcMain.handle('eleven:forget', () => { fs.rmSync(keyFile, { force: true }); keyCache = null; saveSettings({ elevenReady: false, voiceName: 'pixie' }); if (proc) proc.postMessage({ type: 'eleven', creds: null }); return { ok: true }; });
 
   function start() {
     proc = utilityProcess.fork(path.join(__dirname, 'service.js'), [], { serviceName: 'Zin voice', stdio: 'ignore' });

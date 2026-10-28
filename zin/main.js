@@ -20,7 +20,8 @@ const DEFAULTS = {
   // chatModel: your own model instead (a .gguf file or an hf: name), for tinkerers
   chat: false, chatModel: null, memory: [], userName: null, city: null, units: null,
   // your ElevenLabs voice (the API key itself is stored encrypted, separately)
-  elevenVoiceId: null, elevenModel: 'quick',
+  // (the voice ID is the one made for Zin; elevenReady means a key has been saved)
+  elevenVoiceId: 'X9FWmStt6EWpyHmBlB7C', elevenModel: 'quick', elevenReady: false,
 };
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 let settings = { ...DEFAULTS };
@@ -133,8 +134,8 @@ function buildTrayMenu() {
       check('Listen for "Zin"', 'listen'),
       { label: 'Push to talk', accelerator: 'Ctrl+Alt+V', click: () => send('ptt') },
       { type: 'separator' },
-      { label: 'My ElevenLabs voice (online)', type: 'radio', checked: settings.voiceName === 'eleven', enabled: !!settings.elevenVoiceId, click: () => saveSettings({ voiceName: 'eleven' }) },
-      { label: settings.elevenVoiceId ? 'Change my ElevenLabs voice…' : 'Set up my ElevenLabs voice…', click: () => { if (!win.isVisible()) toggleVisible(); send('eleven-setup'); } },
+      { label: 'My ElevenLabs voice (online)', type: 'radio', checked: settings.voiceName === 'eleven', enabled: !!settings.elevenReady, click: () => saveSettings({ voiceName: 'eleven' }) },
+      { label: settings.elevenReady ? 'Change my ElevenLabs voice…' : 'Set up my ElevenLabs voice…', click: () => { if (!win.isVisible()) toggleVisible(); send('eleven-setup'); } },
       { type: 'separator' },
       { label: 'Natural (needs a graphics card, 2.5 GB)', enabled: false },
       ...['tara', 'leah', 'jess', 'mia', 'zoe'].map(k => radio(k[0].toUpperCase() + k.slice(1), 'voiceName', k)),
