@@ -8,7 +8,8 @@ and does it, either on her own or after asking, depending on how risky it is.
 | Part | What it does |
 |---|---|
 | **Senses** | Watches for things worth acting on: a finished download, new email, low disk or battery, the app you are using, music playing, how long you have been away, reminders coming due |
-| **Brain** | Rules that are always on and free. With the optional free local AI (Ollama, runs on your PC, nothing leaves it) she also understands plain English, plans multi-step jobs ("tidy my desktop and put the screenshots in a Screenshots folder") and writes friendlier messages. Without it she falls back to simple phrase matching |
+| **Ears and voice** | Listens for "Zin" and answers out loud, with free speech models that run on your PC (Parakeet to hear, Kokoro to speak) |
+| **Brain** | Two parts, both free and on your PC. The command brain is always on and instant: it understands plain, messy English, typos and several requests at once. The optional chat brain (a local Qwen model) holds conversations, answers questions, remembers things about you and works out trickier requests, which it hands back to the command brain to do |
 | **Hands** | The actions below. The AI can only choose from these; it can't run anything else |
 | **Memory** | Your choices, saved on your PC: where each kind of download goes, how you like folders sorted, favorite songs and apps, quiet hours. She learns from your answers so she asks less over time |
 
@@ -61,7 +62,7 @@ hours, and each kind of nudge has a cooldown so she doesn't nag.
 
 ### Personality
 - Reacts to what you are doing: dances when music plays, types along when you code, dozes when you are away, cheers when a big job finishes
-- Chats, jokes and keeps you company (smarter with the AI on)
+- Chats, jokes and keeps you company, out loud if you like (a real conversation with the chat brain on)
 
 ## Every task uses her animations
 

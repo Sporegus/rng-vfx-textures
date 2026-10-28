@@ -288,7 +288,7 @@
       const r = z.hold.resolve; z.hold = null; r();
     }
     if (z.pointing) return 'point';
-    if (z.talking) return 'talk';
+    if (z.talking || (window.ZinVoiceIO && ZinVoiceIO.talking)) return 'talk';
     if (z.asleep) return 'sleep';
     if (z.sitting) return 'sit';
     return 'idle';
@@ -448,7 +448,7 @@
   }
 
   // ================================================================ speech bubble
-  let bubbleToken = 0, pending = null, typeToken = 0;
+  let bubbleToken = 0, pending = null, typeToken = 0, waitingOn = null;
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -460,15 +460,16 @@
     bubble.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   }
   function busyChip(on) { bChip.textContent = on ? 'WORKING' : 'ONLINE'; bChip.classList.toggle('busy', on); }
-  async function typeText(text) {
+  async function typeText(text, from = 0) {
     const my = ++typeToken;
-    bText.textContent = '';
+    bText.textContent = text.slice(0, from);
     z.talking = true;
     let i = 0;
-    for (const ch of text) {
+    const voiced = settings.voice && voice.ready; // her voice replaces the typing blips
+    for (const ch of text.slice(from)) {
       if (my !== typeToken) return;
       bText.textContent += ch;
-      if (ch !== ' ' && i++ % 2 === 0) sfx('blip');
+      if (!voiced && ch !== ' ' && i++ % 2 === 0) sfx('blip');
       await sleep(16);
     }
     z.talking = false;
@@ -479,6 +480,7 @@
     typeToken++;
     z.talking = false;
     if (pending) { const p = pending; pending = null; p(null); }
+    waitingOn = null;
     api.blur();
   }
   bubble.querySelector('.b-x').addEventListener('click', closeBubble);
@@ -494,8 +496,10 @@
     sfx('pop');
     return new Promise((resolve) => {
       pending = resolve;
-      const done = (v) => { if (pending === resolve) { pending = null; resolve(v); } };
-      typeText(text);
+      const done = (v) => { if (pending === resolve) { pending = null; waitingOn = null; resolve(v); } };
+      waitingOn = buttons.length || opts.input ? { buttons, input: !!opts.input, done, text } : null;
+      typeText(text, opts.from || 0);
+      if (!opts.quiet) speak(text);
       if (buttons.length || opts.input) busyChip(false); // waiting on you, not working
       if (opts.content) bBody.append(opts.content);
       if (opts.input) {
@@ -566,9 +570,10 @@
       { icon: '⏱️', label: 'Tools', value: 'tools' },
       { icon: '🎉', label: 'Fun', value: 'fun' },
       { icon: '✨', label: 'My look', value: 'look' },
+      { icon: '🎙️', label: 'Voice & chat', value: 'voice' },
     ], { input: 'or just tell me: "open spotify", "remind me in 10 min to stretch"…' });
     if (v == null) return;
-    const menus = { clean: cleanMenu, organize: organizeMenu, find: findMenu, wall: wallpaperMenu, pc: pcMenu, tools: toolsMenu, fun: funMenu, look: lookMenu };
+    const menus = { clean: cleanMenu, organize: organizeMenu, find: findMenu, wall: wallpaperMenu, pc: pcMenu, tools: toolsMenu, fun: funMenu, look: lookMenu, voice: voiceMenu };
     if (menus[v]) return menus[v]();
     return command(v);
   }
@@ -1046,7 +1051,11 @@
     say(opts.text || `${label} set for ${secs >= 60 ? Math.round(secs / 60) + ' min' : secs + ' sec'}. I'll yell when it's done!`, { ms: 3000 });
   }
   setInterval(() => {
-    if (!timers.length) { tagEl.classList.add('hidden'); return; }
+    if (!timers.length) {
+      if (voice.download) { tagEl.textContent = voice.download; tagEl.classList.remove('hidden'); }
+      else tagEl.classList.add('hidden');
+      return;
+    }
     timers.sort((a, b) => a.end - b.end);
     const t = timers[0], left = Math.max(0, Math.round((t.end - Date.now()) / 1000));
     tagEl.textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
@@ -1191,13 +1200,20 @@
     return v === 'go';
   }
 
-  async function command(text) {
+  async function command(text, opts = {}) {
     interaction();
+    if (opts.voice) voice.lastAsk = Date.now();
     const r = B.understand(text, { last: lastStep });
+    // not a command (just chatting, or a question): her chat brain answers, if she has it
+    const chatty = r.unknown || !r.steps.length || r.steps.every(s => s.intent.startsWith('chat.') || s.fallback);
+    if (chatty && voice.chat) return converse(text);
     if (r.unknown || !r.steps.length) {
       play('think', 1500);
-      const v = await ask(r.reply, [...(r.suggestions || []).map(s => ({ label: s, value: 'try:' + s })), { icon: '📋', label: 'Show menu', value: 'menu', ghost: true }], { cols: 1, input: 'or try saying it another way' });
+      const v = await ask(r.reply, [...(r.suggestions || []).map(s => ({ label: s, value: 'try:' + s })),
+        ...(voice.service && !settings.chat ? [{ icon: '🧠', label: 'Teach me to chat', value: 'chat' }] : []),
+        { icon: '📋', label: 'Show menu', value: 'menu', ghost: true }], { cols: 1, input: 'or try saying it another way' });
       if (v === 'menu') return mainMenu();
+      if (v === 'chat') return setupChat();
       if (v) return command(v.startsWith('try:') ? v.slice(4) : v);
       return;
     }
@@ -1260,10 +1276,17 @@
         for (const site of s.sites) await act('web.open', { url: site.url });
         await sayStep(step, { ms: 2000 });
       });
-      case 'web.search': return webSearch(s.query, s.engine);
+      case 'web.search':
+        // a guess from something you said: check before opening the browser
+        if (step.fallback && Date.now() - (voice.lastAsk || 0) < 15000) {
+          const v = await ask(`Want me to Google "${s.query}"?`, [{ icon: '🔍', label: 'Yes', value: 'go', primary: true }, { label: 'No', value: 'no', ghost: true }], { ms: 12000 });
+          if (v !== 'go') return v && closeBubble();
+        }
+        return webSearch(s.query, s.engine);
 
       // ---- music and sound
       case 'music.play': return task(async () => {
+        if (s.song && voice.chat && Date.now() - (voice.lastAsk || 0) < 15000) s.song = await fixName('song or artist', s.song);
         play('dance', 2500);
         say(B.replyFor(step), { ms: 3500 });
         const w = await act('music.play', { query: s.song, kind: s.kind });
@@ -1296,6 +1319,15 @@
       case 'note.add': return addNote(s.text);
       case 'notes.open': return task(() => act('notes.open').then(closeBubble));
 
+      // ---- everyday questions
+      case 'time': case 'math': play('think', 700); return sayStep(step, { ms: 5000 });
+      case 'weather': return weatherReport(s);
+
+      // ---- her voice
+      case 'voice.hush': ZinVoiceIO.stop(); if (api.voice) api.voice.send({ type: 'hush' }); closeBubble(); return;
+      case 'voice.off': settings = await api.setSettings({ listen: false }); syncMic(); return say(B.replyFor(step), { ms: 4000 });
+      case 'voice.on': return setupVoice();
+
       // ---- fun and chat
       case 'fun.dance': return dance();
       case 'fun.joke': return joke();
@@ -1311,6 +1343,244 @@
       case 'cancel': return sayStep(step, { ms: 1500 });
       default: return sayStep(step);
     }
+  }
+
+  // ================================================================ voice
+  // Talking out loud, listening for "Zin", and chatting. The AI runs in a
+  // background voice service (voice/service.js); this side handles the mic,
+  // the speaker, and what she does with what she hears.
+  const VIO = window.ZinVoiceIO, Wake = window.ZinWake;
+  const voice = { service: !!api.voice, have: false, ready: false, chat: false, follow: 0, ptt: 0, id: 0, chats: new Map(), waits: new Map(), queued: [], download: null };
+  const pitch = () => (settings.cute ? 1.1 : 1);
+  const voiceOpts = () => ({ voice: settings.voiceName, speed: 1 / pitch(), speak: !!(settings.voice && voice.ready) });
+
+  function speak(text) {
+    voice.asked = /\?\s*\S{0,3}$/.test(text || '');
+    if (!voice.service || !settings.voice || !voice.ready || !text) return;
+    VIO.stop();
+    api.voice.send({ type: 'hush' });
+    api.voice.send({ type: 'say', id: ++voice.id, text, opts: voiceOpts() });
+  }
+
+  // the mic is on while she's listening for her name, or for a few seconds after push-to-talk
+  async function syncMic() {
+    if (!voice.service) return;
+    const want = voice.ready && (settings.listen || Date.now() < voice.ptt);
+    api.voice.send({ type: 'listen', on: want });
+    if (want && !VIO.micOn) {
+      try { await VIO.startMic((samples) => api.voice.send({ type: 'audio', samples })); }
+      catch (e) { say('I can\'t reach your microphone. Is one plugged in, and is it allowed in Windows privacy settings? 🎙️', { ms: 6000 }); }
+    } else if (!want && VIO.micOn) VIO.stopMic();
+  }
+  setInterval(() => { if (voice.ptt && Date.now() > voice.ptt) { voice.ptt = 0; syncMic(); } }, 1000);
+
+  // after she answers something you said, keep listening a moment without needing her name
+  VIO.onIdle = () => {
+    // only after a question or in a conversation; "It's 6:28" needs no reply
+    if (Date.now() - (voice.lastAsk || 0) < 60000 && (voice.asked || voice.chatting || waitingOn)) {
+      voice.follow = Date.now() + 6000;
+      if (!settings.listen) { voice.ptt = voice.follow; syncMic(); }
+    }
+  };
+
+  function onHeard(text) {
+    const h = Wake.hear(text);
+    const open = Date.now() < voice.follow || Date.now() < voice.ptt;
+    if (!h.wake && !open) return; // not talking to her
+    const said = h.wake ? h.text : Wake.tidy(text);
+    // just "Zin": show she's listening, without talking over what comes next
+    if (!said) {
+      voice.follow = Date.now() + 8000; voice.lastAsk = Date.now();
+      sfx('pop'); play('wave', 900);
+      return ask(pick(['Yes? 👂', 'I\'m listening! 🎙️', 'Mm-hm? 👂']), [], { quiet: true, ms: 8000 });
+    }
+    // she asked something on screen: what you said answers it
+    if (waitingOn && answerAloud(said)) { voice.follow = 0; voice.ptt = 0; syncMic(); return; }
+    // a stray word or a cough while she was listening isn't a request
+    if (!h.wake && said.split(' ').length < 2 && !/^(yes|yeah|yep|no|nope|stop|next|skip|pause|play|thanks|cancel|louder|quieter)$/.test(said)) return;
+    voice.follow = 0; voice.ptt = 0; syncMic();
+    command(said, { voice: true });
+  }
+
+  function answerAloud(said) {
+    const w = waitingOn;
+    if (w.input) { w.done(said); return true; }
+    const norm = (t) => String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const yes = /^(yes|yeah|yep|yup|sure|ok|okay|do it|go|go ahead|please|yes please|of course|absolutely)\b/.test(said);
+    const no = /^(no|nope|nah|not now|cancel|dont|do not|never mind|stop)\b/.test(said);
+    const btn = (yes && (w.buttons.find(b => b.primary) || w.buttons[0])) || (no && (w.buttons.find(b => b.ghost) || w.buttons.find(b => /^(no|nope|nah|not now|keep)/i.test(b.label))))
+      || w.buttons.find(b => norm(b.label) && (norm(said).includes(norm(b.label)) || norm(b.label).includes(norm(said))));
+    if (!btn) return false;
+    sfx('blip');
+    w.done(btn.value !== undefined ? btn.value : btn.label);
+    return true;
+  }
+
+  // a conversation turn with her chat brain; she speaks each sentence as it's written
+  function converse(text) {
+    return new Promise((resolve) => {
+      const id = ++voice.id;
+      let shown = '';
+      play('think', 60000);
+      ask('…', [], { quiet: true });
+      voice.chats.set(id, {
+        sentence(t) {
+          const from = shown.length ? shown.length + 1 : 0;
+          shown = shown ? shown + ' ' + t : t;
+          if (z.hold) z.hold.until = 0;
+          ask(shown, [], { quiet: true, from });
+        },
+        async done(reply) {
+          voice.chats.delete(id);
+          voice.chatting = true; setTimeout(() => { voice.chatting = false; }, 30000);
+          if (z.hold) z.hold.until = 0;
+          if (!shown && reply) shown = reply;
+          if (!shown) { play('shrug', 1500); await say('Sorry, my brain glitched for a sec. Try again? 😵‍💫', { ms: 4000 }); }
+          else ask(shown, [], { quiet: true, from: shown.length, ms: Math.max(4000, shown.length * 70) });
+          // things she promised to do while chatting
+          const todo = voice.queued.splice(0);
+          for (const step of todo) { lastStep = { intent: step.intent, slots: step.slots }; await doStep(step); }
+          resolve();
+        },
+      });
+      api.voice.send({ type: 'chat', id, text, opts: voiceOpts() });
+    });
+  }
+
+  // the chat brain asked to do something ("open roblox"): it goes through the
+  // same command brain and safety checks as anything you type
+  function answerTask(m) {
+    const request = String((m.args && m.args.request) || '');
+    const r = B.understand(request, { last: lastStep });
+    const steps = r.steps.filter(st => !st.intent.startsWith('chat.') && !st.fallback && st.intent !== 'cancel');
+    if (!steps.length) return api.voice.answer(m.id, `Not done: "${request}" isn't something I can do yet.`);
+    const st = steps[0];
+    if (!st.ready) return api.voice.answer(m.id, 'Not done: I can\'t do that one yet.');
+    if (st.missing.length) return api.voice.answer(m.id, `Not done yet, I need to know: ${B.replyFor(st)}`);
+    voice.queued.push(...steps.filter(x => x.ready && !x.missing.length));
+    api.voice.answer(m.id, 'OK, doing it now' + (r.reply ? ': ' + r.reply.replace(/\?.*$/, '') : '.'));
+  }
+
+  function fixName(kind, text) {
+    return new Promise((resolve) => {
+      const id = ++voice.id;
+      voice.waits.set(id, resolve);
+      api.voice.send({ type: 'fix', id, kind, text });
+      setTimeout(() => { if (voice.waits.delete(id)) resolve(text); }, 4000);
+    });
+  }
+
+  async function weatherReport(s) {
+    return task(async () => {
+      play('think', 1200);
+      let r = await act('weather.get', { place: s.place, day: s.day });
+      if (r.needCity) {
+        const city = await ask('Which city are you in? I\'ll remember it for next time. 🏙️', [], { input: 'like Chicago' });
+        if (!city) return;
+        settings = await api.setSettings({ city });
+        r = await act('weather.get', { day: s.day });
+      }
+      const icon = r.now ? (s.day === 1 && r.days[1] ? r.days[1].icon : r.now.icon) : '🌤️';
+      play(/rain|storm|snow|umbrella/.test(r.text) ? 'think' : 'cheer', 1200);
+      await say(`${icon} ${r.text}`, { ms: Math.max(5000, r.text.length * 70) });
+    });
+  }
+
+  // ---------------------------------------------------------------- setting her up
+  const MB = (n) => (n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.round(n / 1e6) + ' MB');
+  async function setupVoice() {
+    if (!voice.service) return say('My voice only works in the app, not in this demo. 🎙️');
+    if (voice.ready) { settings = await api.setSettings({ voice: true, listen: true }); syncMic(); return say('I\'m all ears! Say "Zin" and then what you need. 🎙️', { ms: 5000 }); }
+    const v = voice.have ? 'go' : await ask('Want me to talk and listen? I need to download my voice and ears first (about 830 MB, one time). It all runs on your PC, so nothing you say leaves it.', [
+      { icon: '🎙️', label: 'Yes, download', value: 'go', primary: true }, { label: 'Not now', value: 'no', ghost: true }]);
+    settings = await api.setSettings({ voiceOffered: true });
+    if (v !== 'go') return v && say('Okay! You can turn it on any time in Voice & chat.', { ms: 3500 });
+    settings = await api.setSettings({ voice: true, listen: true });
+    voice.announce = true;
+    api.voice.send({ type: 'get', what: 'voice', light: settings.earsLight });
+    if (!voice.have) say('Downloading my voice… I\'ll tell you when I\'m ready! ⬇️', { ms: 4000 });
+  }
+  async function setupChat() {
+    if (!voice.service) return say('Chatting only works in the app, not in this demo. 🧠');
+    if (voice.chat) return say('My chat brain is already on! Just talk to me. 💬');
+    const v = await ask('I can learn to really chat and figure out trickier requests! It\'s a free AI that runs on your PC: a one-time download of 1 to 2.5 GB (I pick the size that suits your PC).', [
+      { icon: '🧠', label: 'Yes, download', value: 'go', primary: true }, { label: 'Not now', value: 'no', ghost: true }]);
+    if (v !== 'go') return;
+    settings = await api.setSettings({ chat: true });
+    voice.announceChat = true;
+    api.voice.send({ type: 'get', what: 'chat' });
+    say('Downloading my chat brain… this one is big, so it might take a while! ⬇️', { ms: 4000 });
+  }
+  async function voiceMenu() {
+    const on = (b) => (b ? 'on' : 'off');
+    const v = await ask('Voice & chat:', [
+      { icon: '🔊', label: `Talk out loud: ${on(settings.voice)}`, value: 'talk', on: settings.voice },
+      { icon: '👂', label: `Listen for "Zin": ${on(settings.listen)}`, value: 'listen', on: settings.listen },
+      { icon: '🎤', label: 'Change my voice', value: 'pick' },
+      { icon: '🧠', label: `Chat brain: ${voice.chat ? 'on' : settings.chat ? 'downloading' : 'off'}`, value: 'chat', on: voice.chat },
+      back,
+    ], { cols: 1 });
+    if (v === '__back') return mainMenu();
+    if (v === 'talk' || v === 'listen') {
+      if (!voice.ready) return setupVoice();
+      settings = await api.setSettings({ [v === 'talk' ? 'voice' : 'listen']: !settings[v === 'talk' ? 'voice' : 'listen'] });
+      syncMic();
+      return voiceMenu();
+    }
+    if (v === 'pick') {
+      if (!voice.ready) return setupVoice();
+      const names = { heart: 'Heart (sweet)', bella: 'Bella (bright)', nicole: 'Nicole (soft)', sky: 'Sky (airy)', aoede: 'Aoede (warm)', nova: 'Nova (clear)' };
+      const n = await ask('Which voice? I\'ll say hi in it.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
+        { label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }, back], { cols: 2 });
+      if (n === '__back' || !n) return n && voiceMenu();
+      settings = await api.setSettings(n === '__cute' ? { cute: !settings.cute } : { voiceName: n, voice: true });
+      await say(pick(['Hiii! Is this one cute? 💕', 'Hey! How do I sound now?', 'Ta-da! New voice, who dis? ✨']), { ms: 3000 });
+      return voiceMenu();
+    }
+    if (v === 'chat') return setupChat();
+  }
+
+  // ---------------------------------------------------------------- messages from the voice service
+  if (voice.service) api.voice.on(async (m) => {
+    switch (m.type) {
+      case 'status':
+        if (m.what === 'models') voice.have = m.have.voice;
+        if (m.what === 'voice') {
+          voice.ready = m.state === 'ready';
+          if (voice.ready) { voice.have = true; voice.download = null; syncMic(); }
+          if (voice.ready && voice.announce) { voice.announce = false; play('cheer', 1500); say('Hiii! Can you hear me? Say "Zin" and then what you need, like "Zin, open Roblox"! 🎙️', { ms: 7000 }); }
+        }
+        if (m.what === 'chat' && m.state === 'ready') {
+          voice.chat = true; voice.download = null;
+          if (voice.announceChat) { voice.announceChat = false; play('cheer', 1500); say('My chat brain is ready! Talk to me about anything. 💬', { ms: 5000 }); }
+        }
+        break;
+      case 'progress': {
+        const name = { listening: 'ears', ears: 'ears', voice: 'voice', chat: 'chat brain' }[m.what] || m.what;
+        voice.download = m.total && m.done < m.total ? `⬇ ${name} ${Math.floor(100 * m.done / m.total)}% of ${MB(m.total)}` : null;
+        break;
+      }
+      case 'error':
+        voice.download = null;
+        if (m.what === 'chat') settings = await api.setSettings({ chat: false });
+        say(`I couldn't set up my ${m.what === 'chat' ? 'chat brain' : 'voice'}: ${m.message}. Check your internet and try again? 😔`, { ms: 7000 });
+        break;
+      case 'audio': if (settings.voice) VIO.play(m.samples, m.sampleRate, pitch()); break;
+      case 'heard': onHeard(m.text); break;
+      case 'sentence': { const c = voice.chats.get(m.id); if (c) c.sentence(m.text); break; }
+      case 'replied': { const c = voice.chats.get(m.id); if (c) c.done(m.text); break; }
+      case 'fixed': { const w = voice.waits.get(m.id); if (w) { voice.waits.delete(m.id); w(m.text); } break; }
+      case 'ask': if (m.name === 'task') answerTask(m); break;
+    }
+  });
+  // push to talk (Ctrl+Alt+V): listen for a few seconds, no name needed
+  function pushToTalk() {
+    if (!voice.ready) return setupVoice();
+    VIO.stop(); api.voice.send({ type: 'hush' });
+    voice.ptt = Date.now() + 8000;
+    syncMic();
+    play('think', 1200);
+    ask('Listening… 🎙️', [], { quiet: true, ms: 8000 });
   }
 
   // ================================================================ idle brain
@@ -1364,16 +1634,26 @@
       } else if (v) closeBubble();
     } finally { busy--; }
   }
-  api.onSettings((s) => { settings = s; applyTheme(); lastKey = ''; });
+  api.onSettings((s) => {
+    const was = settings;
+    settings = s; applyTheme(); lastKey = '';
+    if (!voice.service) return;
+    if ((s.voice && !was.voice) || (s.listen && !was.listen)) { if (!voice.ready) { voice.announce = true; api.voice.send({ type: 'get', what: 'voice', light: s.earsLight }); } }
+    if (s.chat && !was.chat && !voice.chat) { voice.announceChat = true; api.voice.send({ type: 'get', what: 'chat' }); }
+    if (!s.voice) VIO.stop();
+    syncMic();
+  });
   api.onCommand((cmd) => {
     if (cmd === 'menu') mainMenu();
     if (cmd === 'intro') intro();
     if (cmd === 'teleport') teleportTo(clamp(mouse.x, 40, W - 40), mouse.y);
     if (cmd === 'teleport-in') teleportTo(z.x, z.y);
+    if (cmd === 'ptt') pushToTalk();
   });
 
   requestAnimationFrame(tick);
   if (!settings.introDone) setTimeout(intro, 600);
+  else if (voice.service && !settings.voiceOffered) setTimeout(() => { if (!busy && bubble.classList.contains('hidden')) setupVoice(); }, 5000);
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools

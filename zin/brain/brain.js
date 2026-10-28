@@ -126,14 +126,43 @@
     scores.sort((a, b) => b[1] - a[1]);
     const top = scores[0][1];
     const z = scores.reduce((a, [, s]) => a + Math.exp(s - top), 0);
-    return { ranked: scores.map(([c, s]) => [c, Math.exp(s - top) / z]), known: f.length };
+    const said = words.join(' ');
+    return { ranked: scores.map(([c, s]) => [c, Math.exp(s - top) / z]).filter(([c]) => !REQUIRE[c] || REQUIRE[c].test(said)), known: f.length };
   }
+  // some abilities only make sense if a key word is there ("what is a black hole" isn't asking the time)
+  const REQUIRE = {
+    weather: /\b(weather|forecast|rain\w*|snow\w*|sun\w*|hot|cold|warm|chilly|temperature|umbrella|jacket|coat|outside|degrees|humid\w*|wind\w*|storm\w*|cloudy)\b/,
+    time: /\b(time|date|day|month|year|today|clock)\b/,
+  };
 
   // ================================================================ picking out the details
   const NUMS = { zero: 0, one: 1, a: 1, an: 1, two: 2, couple: 2, three: 3, few: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
-    eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40, 'forty-five': 45, fifty: 50, sixty: 60, ninety: 90 };
-  const numberWords = (t) => t.replace(/\b(twenty|thirty|forty|fifty)[ -](one|two|three|four|five|six|seven|eight|nine)\b/g, (m, a, b) => NUMS[a] + NUMS[b])
-    .replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|ninety)\b/g, (w) => NUMS[w]);
+    eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+    twenty: 20, thirty: 30, forty: 40, 'forty-five': 45, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+  const numberWords = (t) => t.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[ -](one|two|three|four|five|six|seven|eight|nine)\b/g, (m, a, b) => NUMS[a] + NUMS[b])
+    .replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/g, (w) => NUMS[w]);
+
+  // ================================================================ math ("what's 15% of 80")
+  // A tiny calculator that understands words; it never runs code.
+  function calc(raw) {
+    let t = String(raw || '').toLowerCase().replace(/(\d),(?=\d{3}\b)/g, '$1').replace(/\ba(\d)/g, '$1'); // "a80": speech recognizers add stray letters
+    t = t.replace(/^(?:hey |ok |okay )?(?:zin[, ]+)?/, '').replace(/^(?:what(?:'s| is)|whats|calculate|calc|compute|solve|how much is|work out|tell me|quick math:?)\s+/, '')
+      .replace(/^(?:what|how much) (?:is|are|does)\s+/, '').replace(/\s*(?:equal|equals|make|come to)?\s*[?!=]*\s*$/, '').trim();
+    t = numberWords(t).replace(/\b(\d+) hundred\b/g, (m, n) => n * 100).replace(/\b(\d+) thousand\b/g, (m, n) => n * 1000);
+    t = t.replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+of\s+/g, '($1/100)*').replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)/g, '($1/100)')
+      .replace(/\b(?:the )?square root of\b|\bsqrt\b/g, ' r ').replace(/\bsquared\b/g, '^2').replace(/\bcubed\b/g, '^3')
+      .replace(/\bto the power of\b|\bto the\b|\*\*/g, '^').replace(/\bplus\b|\band\b/g, '+').replace(/\bminus\b|\btake away\b/g, '-')
+      .replace(/\btimes\b|\bmultiplied by\b|\bx\b|×/g, '*').replace(/\bdivided by\b|\bover\b|÷/g, '/').replace(/\s+/g, '');
+    if (!/^[\d.+\-*/^()r]+$/.test(t) || !/\d/.test(t) || !/[+\-*/^r]/.test(t.replace(/^-/, ''))) return null;
+    let i = 0;
+    const num = () => { const m = t.slice(i).match(/^\d*\.?\d+/); if (!m) throw 0; i += m[0].length; return +m[0]; };
+    const prim = () => { if (t[i] === '(') { i++; const v = expr(); if (t[i++] !== ')') throw 0; return v; } return num(); };
+    const unary = () => { if (t[i] === '-') { i++; return -unary(); } if (t[i] === 'r') { i++; return Math.sqrt(unary()); } return prim(); };
+    const pow = () => { const b = unary(); if (t[i] === '^') { i++; return Math.pow(b, pow()); } return b; };
+    const term = () => { let v = pow(); while (t[i] === '*' || t[i] === '/') { const o = t[i++]; const w = pow(); v = o === '*' ? v * w : v / w; } return v; };
+    const expr = () => { let v = term(); while (t[i] === '+' || t[i] === '-') { const o = t[i++]; const w = term(); v = o === '+' ? v + w : v - w; } return v; };
+    try { const v = expr(); return i === t.length && isFinite(v) ? +v.toPrecision(12) : null; } catch { return null; }
+  }
 
   function duration(t) {
     t = numberWords(t);
@@ -261,6 +290,12 @@
     'note.add': (t) => ({ text: rest(t, ['note to self', 'make a note that', 'make a note', 'take a note', 'write down', 'write', 'save a note', 'jot down', 'add to my notes', 'remember that', 'remember', 'note'])
       .replace(/^(that|:)\s*/, '') || null }),
     'fun.8ball': (t) => ({ question: t }),
+    'time': (t) => ({ what: /\b(date|day|month|year|today)\b/.test(t) ? 'date' : 'time' }),
+    'weather': (t) => {
+      const m = t.match(/\b(?:in|for|at|near)\s+([a-z][a-z .'-]*?)(?:\s+(?:today|tomorrow|tonight|this week(?:end)?|right now|now|later))?$/);
+      const place = m && !/^(the )?(morning|evening|afternoon|weekend|week|moment|future|bit)$/.test(m[1]) ? m[1].trim() : null;
+      return { place, day: /\btomorrow\b/.test(t) ? 1 : /\b(this week|weekend|next few days)\b/.test(t) ? 'week' : 0 };
+    },
     'fun.dice': (t) => { const m = t.match(/\bd(\d+)\b|\b(\d+)[ -]sided\b/); return { sides: m ? +(m[1] || m[2]) : 6 }; },
   };
 
@@ -298,6 +333,12 @@
     'fun.dance': () => pick(['Dance party! 💃', 'Watch this! 🎶']),
     'fun.joke': () => null, 'fun.coin': () => null, 'fun.dice': () => null, 'fun.8ball': () => null,
     'fun.teleport': () => 'Zoom! ✨',
+    'time': (s) => { const d = new Date(); return s.what === 'date' ? `It's ${d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} 📅` : `It's ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} ⏰`; },
+    'math': (s) => s.result == null ? 'Give me a sum, like "what\'s 15% of 80"! 🧮' : `That's ${s.result.toLocaleString('en-US', { maximumFractionDigits: 6 })}! 🧮`,
+    'weather': () => 'Checking the sky… ☁️',
+    'voice.hush': () => null,
+    'voice.off': () => 'Okay, I\'ll stop listening. Turn me back on from the tray or say it in the box. 🙉',
+    'voice.on': () => 'Yay, let\'s talk! 🎙️',
     'fun.sleep': () => 'Nap time… 💤',
     'chat.hello': () => pick(['Hiii! 👋', 'Hey hey!', 'Hi! What can I do for you?']),
     'chat.thanks': () => pick(['Anytime! ❤️', 'Happy to help! 💕', 'You got it! ✨']),
@@ -340,11 +381,13 @@
     }
     // "search for cheap flights" is a web search, not a file on your PC
     if (intent === 'files.find' && slots.query && WEBBY.test(slots.query)) { intent = 'web.search'; slots = { query: slots.query, engine: 'google' }; }
+    // a question nobody asked to search for is better answered by chatting, when she can
+    const fallback = intent === 'web.search' && !/\b(google|search|look up|look it up|bing|youtube|online|on the web|the internet)\b/.test(text);
     // "play" on its own just un-pauses
     if (intent === 'music.play' && !slots.song && /^(?:play|resume|unpause|continue)$/.test(text)) { intent = 'media.control'; slots = { cmd: 'play' }; }
     const d = INTENTS[intent];
     const needs = (d.needs || []).filter(k => slots[k] == null || (Array.isArray(slots[k]) && !slots[k].length));
-    return { intent, slots, confidence: +confidence.toFixed(3), risk: d.risk, ready: d.ready !== false, missing: needs };
+    return { intent, slots, confidence: +confidence.toFixed(3), risk: d.risk, ready: d.ready !== false, missing: needs, ...(fallback ? { fallback } : {}) };
   }
 
   function replyFor(step) {
@@ -364,6 +407,8 @@
     const text = normalize(input);
     const last = context.last;
     if (!text) return { steps: [], reply: 'Hm? 🙂' };
+    const sum = calc(input);
+    if (sum != null) { const step = { intent: 'math', slots: { result: sum }, confidence: 1, risk: 'auto', ready: true, missing: [] }; return { steps: [step], reply: replyFor(step) }; }
     if (REPEAT.test(text) && last) {
       const step = { ...last, confidence: 1, missing: [] };
       return { steps: [step], reply: replyFor(step) };
@@ -408,14 +453,18 @@
     [/^(?:crank|pump|turn) (?:it|the (?:volume|sound|music)) (?:up|down)\b/, 'volume'],
     [/^(?:shut ?down|turn off|power off|restart|reboot)\b(?! (?:spotify|chrome|discord|steam|the app|app))/, 'power', true],
     [/^(?:help|help me|help please|i need help)$/, 'help', true],
+    [/^(?:shut up|be quiet|stop talking|stop speaking|hush|shh+|zip it|quiet)$/, 'voice.hush', true],
+    [/\bstop listening\b|^turn off (?:your )?(?:mic|microphone|ears|voice)\b|^mute your (?:mic|microphone)\b/, 'voice.off', true],
+    [/\b(?:weather|forecast)\b|\b(?:rain|snow|sunny|umbrella|jacket)\b.*\b(?:today|tomorrow|tonight|outside|later)\b|\b(?:hot|cold|warm) (?:is it )?outside\b/, 'weather'],
+    [/^what (?:time|day|date|month|year) is it\b|^what is (?:the )?(?:time|date)\b|^(?:what is )?todays date$/, 'time', true],
     [/\bdance\b/, 'fun.dance'],
   ];
   // when unsure: a question is probably for the web, a yes/no question for the 8-ball
   const ASKS_WEB = /^(?:what|who|when|where|why|how|which)\b(?! (?:are|r) (?:you|u)\b)(?! (?:can|do) (?:you|i)\b)/;
   const ASKS_8BALL = /^(?:will|should|is|am|are|can|do|does|did|would|could)\s+(?:i|it|we|my|they|he|she)\b/;
   function unknown(text, cls) {
-    if (ASKS_8BALL.test(text)) { const step = readStep(text, 'fun.8ball', 0.5); return { steps: [step], reply: replyFor(step) }; }
-    if (ASKS_WEB.test(text) && text.split(' ').length >= 4) { const step = { ...readStep(text, 'web.search', 0.5) }; step.slots = { query: text, engine: 'google' }; return { steps: [step], reply: replyFor(step) }; }
+    if (ASKS_8BALL.test(text)) { const step = { ...readStep(text, 'fun.8ball', 0.5), fallback: true }; return { steps: [step], reply: replyFor(step) }; }
+    if (ASKS_WEB.test(text) && text.split(' ').length >= 4) { const step = { ...readStep(text, 'web.search', 0.5), fallback: true }; step.slots = { query: text, engine: 'google' }; return { steps: [step], reply: replyFor(step) }; }
     const suggestions = (cls.ranked || []).slice(0, 3).filter(([, p]) => p > 0.05).map(([c]) => INTENTS[c].examples.find(e => !e.includes('{')) || expand(INTENTS[c].examples[0])[0]);
     return { steps: [], unknown: true, reply: `Hmm, I'm not sure what you mean by "${text}". ${suggestions.length ? 'Did you mean one of these?' : 'Try "help" to see what I can do.'}`, suggestions };
   }
@@ -436,7 +485,7 @@
     return { steps: [next], reply: replyFor(next) };
   }
 
-  const api = { understand, answer, replyFor, normalize, classify, duration, clock, folder, siteOf, SITES, INTENTS };
+  const api = { understand, answer, replyFor, calc, normalize, classify, duration, clock, folder, siteOf, SITES, INTENTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ZinBrain = api;
 })(typeof window !== 'undefined' ? window : globalThis);

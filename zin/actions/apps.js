@@ -23,11 +23,18 @@ function editDistance(a, b) {
   for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
   return d[a.length][b.length];
 }
+// roughly how a name sounds, so a misheard "raw blocks" still finds "Roblox"
+const sound = (s) => norm(s).replace(/ /g, '').replace(/ph/g, 'f').replace(/ck|q|c(?=[aoukrl])/g, 'k').replace(/x/g, 'ks')
+  .replace(/ight/g, 'ite').replace(/aw|au|ow|oa/g, 'o').replace(/ee|ea|ie/g, 'i').replace(/z/g, 's').replace(/(.)\1+/g, '$1');
 // how well a typed name fits an app's name, 0..100
 function fit(want, name) {
   const w = norm(want), n = norm(name);
   if (!w || !n) return 0;
   if (n === w) return 100;
+  const sw = sound(w), sn = sound(n);
+  if (sw === sn && sw.length >= 4) return 88;
+  const parts = n.split(' ');
+  if (sw.length >= 4 && parts.some((_, k) => sound(parts.slice(0, k + 1).join(' ')) === sw)) return 84;
   if (n.startsWith(w + ' ') || n.endsWith(' ' + w)) return 90;
   if (n.split(' ').includes(w)) return 85;
   if (n.startsWith(w)) return 80;
@@ -35,7 +42,8 @@ function fit(want, name) {
   const words = w.split(' ');
   if (words.length > 1 && words.every(x => n.includes(x))) return 75;
   const dist = Math.min(editDistance(w, n), ...n.split(' ').map(p => editDistance(w, p)));
-  return dist <= Math.max(1, Math.floor(w.length / 5)) ? 65 - dist * 5 : 0;
+  if (dist <= Math.max(1, Math.floor(w.length / 5))) return 65 - dist * 5;
+  return sw.length >= 5 && editDistance(sw, sn) <= 1 ? 66 : 0;
 }
 
 let appCache = null, appCacheAt = 0;
@@ -51,7 +59,9 @@ async function startApps() {
 async function findApp(name) {
   const want = ALIASES[norm(name)] || norm(name);
   const apps = await startApps();
-  const ranked = apps.map(a => ({ a, s: fit(want, a.Name) })).filter(x => x.s >= 60).sort((x, y) => y.s - x.s || x.a.Name.length - y.a.Name.length);
+  // "roblox" means Roblox Player, not Roblox Studio or the uninstaller
+  const extra = (n) => (n.match(/\b(uninstall\w*|setup|help|readme|documentation|manual|website|release notes|studio|server|safe mode|beta|debug)\b/gi) || []).filter(x => !want.includes(x.toLowerCase())).length * 15;
+  const ranked = apps.map(a => ({ a, s: fit(want, a.Name) - extra(a.Name) })).filter(x => x.s >= 60).sort((x, y) => y.s - x.s || x.a.Name.length - y.a.Name.length);
   return { best: ranked[0] && ranked[0].s >= 65 ? ranked[0].a : null, suggestions: ranked.slice(0, 3).map(x => x.a.Name), want };
 }
 

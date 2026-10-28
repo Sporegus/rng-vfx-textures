@@ -65,13 +65,61 @@ anything risky (closing apps, shutting down). If she isn't sure what you mean,
 she says so and suggests what you might have meant instead of guessing.
 
 To teach her a new phrasing, add an example to that ability in
-`brain/intents.js` and run `node brain/test.js` (plus `brain/fresh.js` and
-`brain/fresh2.js`, which are requests she was never trained on).
+`brain/intents.js` and run `npm test` (which also runs requests she was never
+trained on, and what the speech models actually heard when saying her name).
 
 Apps open by their name in your Start menu, so anything installed works. Music
 opens Spotify on your song (or its website if the app isn't installed); hit
 play on the top result. Starting songs by itself needs Spotify Premium and is
 coming next.
+
+She also answers everyday questions straight away: "what time is it",
+"what's 15% of 80", "what's the weather" (she asks your city once and
+remembers it).
+
+### Talk to her
+
+Say **"Zin"** and then what you want, like Siri:
+
+```
+Zin, play God Did by DJ Khaled         Zin, open Roblox
+Hey Zin, what's the weather tomorrow?  Zin, remind me at 5pm to call mom
+Zin… (she says "Yes?") …what time is it?
+```
+
+She answers out loud in a cute voice, and after she answers she keeps listening
+for a few seconds so you can reply without saying her name again. Turn it on
+from **Voice & chat** in her menu or **Voice** in the tray. Other ways to talk:
+**Ctrl+Alt+V** listens once without her name (push to talk), and "stop talking"
+or "stop listening" do what they say.
+
+The first time, she downloads her ears and voice (about 830 MB, once). They are
+free, open models that run on your PC, so nothing you say is sent anywhere:
+
+| Part | Model | Notes |
+|---|---|---|
+| Notices talking | Silero VAD | Tiny; only listens for when speech starts and stops |
+| Ears | NVIDIA Parakeet TDT 0.6B (int8) | The most accurate one we tested; a 3 s request takes about 0.4 s. **Smaller speech model** in the tray switches to Moonshine tiny for slow PCs |
+| Voice | Kokoro v1.0 | 6 voices to pick from, plus a higher, cuter pitch |
+
+While she listens, Windows shows its microphone icon in the taskbar. The sound
+stays in memory just long enough to be turned into text, and is never saved.
+
+### Chat brain (optional)
+
+With the chat brain on, she can actually hold a conversation, answer general
+questions, remember things you tell her ("my name is Sam", "I love DJ Khaled"),
+and work out trickier requests ("do I need an umbrella?" checks the weather).
+It's a free open AI model (Qwen) that runs on your PC through llama.cpp, a
+one-time download of about 1 GB, or 2.5 GB on PCs with 12 GB of memory or more.
+It uses your graphics card if it can and the processor if not.
+
+The chat brain can't do anything by itself: when it wants something done, it
+writes a plain request ("open roblox") that goes through the same command brain
+and safety rules as anything you type. Simple commands skip it entirely, so they
+stay instant. Turn it on in **Voice & chat**; **Forget what I told her** in the
+tray clears her memory. Tinkerers can set `chatModel` in `settings.json` to any
+`.gguf` file or `hf:` model name.
 
 ## Safety rules built in
 
@@ -82,6 +130,7 @@ coming next.
 - Old installers go to the Recycle Bin. Only temp files older than a day are deleted outright, and files in use are skipped.
 - Every organize writes an undo log, so **Undo** puts files back.
 - Paths and text are passed to PowerShell as environment variables, never pasted into the script.
+- Voice and chat run on your PC. The only things that go online are the one-time model downloads and, when you ask about the weather, the name of your city.
 
 ## How it's built
 
@@ -92,7 +141,9 @@ coming next.
 | `src/sprites.js` | The pixel-art engine. Every frame of every animation is drawn in code, so skins and hats are just data |
 | `brain/` | Understands typed requests: `intents.js` is everything she can do, `brain.js` works out which one you mean |
 | `src/renderer.js` | Physics, walking, sitting on windows, drag-and-throw, menus, the action "shows", and running typed requests |
-| `actions/*.js` | The real work: files, organize, clean, wallpaper, system, apps, music, volume, power, active-window tracking (PowerShell + Win32) |
+| `voice/` | Her voice: `wake.js` spots her name, `speech.js` is her ears and mouth, `mind.js` the chat brain, `service.js` runs them in a background process, `models.js` downloads them |
+| `src/voice.js` | Microphone in and speaker out for the page |
+| `actions/*.js` | The real work: files, organize, clean, wallpaper, system, apps, music, volume, power, weather, active-window tracking (PowerShell + Win32) |
 | `demo/` | A browser version on a fake desktop (`node demo/build.js` builds `demo/zin-demo.html`) |
 
 ### Animations
@@ -109,7 +160,6 @@ hair, suit, panel and boots plus a glow color (`holo: true` makes it see-through
 
 - Spotify Premium: start songs straight away through the Spotify Web API.
 - Email alerts, and moving new downloads to a folder you choose.
-- An optional local AI model (runs on your PC, still free) for requests the built-in brain can't handle.
 - Multi-monitor support.
 - Reacting to Claude Code hooks like the TikTok helper does (a tiny local server Zin listens on).
 - More props: watering can for "clean", rocket for "speed up my PC".

@@ -6,12 +6,18 @@ const fs = require('fs');
 const sprites = require('./src/sprites');
 const createActions = require('./actions');
 const windowWatcher = require('./actions/windows');
+const startVoice = require('./voice');
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const DEFAULTS = {
   skin: 'holo', hat: 'none', size: 3, sound: true,
   wander: true, followWindows: true, startWithWindows: false, introDone: false,
+  // voice: talk out loud, listen for "Zin", which voice, a little higher pitch, the smaller speech model
+  voice: false, listen: false, voiceName: 'heart', cute: true, earsLight: false, voiceOffered: false,
+  // chat: the local AI model for conversation; what she remembers about you
+  // chatModel: your own model instead (a .gguf file or an hf: name), for tinkerers
+  chat: false, chatModel: null, memory: [], userName: null, city: null, units: null,
 };
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 let settings = { ...DEFAULTS };
@@ -28,7 +34,7 @@ function saveSettings(patch) {
   else buildTrayMenu();
 }
 
-let win = null, tray = null, actions = null, watcher = null;
+let win = null, tray = null, actions = null, watcher = null, voice = null;
 
 // ------------------------------------------------------------- overlay window
 function createOverlay() {
@@ -119,6 +125,18 @@ function buildTrayMenu() {
     { label: 'Accessory', submenu: sprites.HATS.map(h => radio(h === 'none' ? 'None' : h[0].toUpperCase() + h.slice(1), 'hat', h)) },
     { label: 'Size', submenu: [radio('Small', 'size', 2), radio('Medium', 'size', 3), radio('Large', 'size', 4), radio('Huge', 'size', 5)] },
     check('Sound', 'sound'),
+    { label: 'Voice', submenu: [
+      check('Talk out loud', 'voice'),
+      check('Listen for "Zin"', 'listen'),
+      { label: 'Push to talk', accelerator: 'Ctrl+Alt+V', click: () => send('ptt') },
+      { type: 'separator' },
+      ...[['heart', 'Heart (sweet)'], ['bella', 'Bella (bright)'], ['nicole', 'Nicole (soft)'], ['sky', 'Sky (airy)'], ['aoede', 'Aoede (warm)'], ['nova', 'Nova (clear)']].map(([k, l]) => radio(l, 'voiceName', k)),
+      check('Higher, cuter pitch', 'cute'),
+      { type: 'separator' },
+      check('Smaller speech model (for slower PCs)', 'earsLight'),
+      check('Chat brain (free, runs on your PC)', 'chat'),
+      { label: 'Forget what I told her', enabled: !!((settings.memory || []).length || settings.userName), click: () => saveSettings({ memory: [], userName: null }) },
+    ] },
     check('Wander around when idle', 'wander'),
     check('Sit on my windows', 'followWindows'),
     check('Start with Windows', 'startWithWindows'),
@@ -158,6 +176,8 @@ app.whenReady().then(() => {
   globalShortcut.register('Control+Alt+Z', toggleVisible);
   globalShortcut.register('Control+Alt+Space', () => { if (!win.isVisible()) toggleVisible(); send('menu'); });
   if (settings.followWindows) startWatcher();
+  voice = startVoice({ app, getWin: () => win, settings: () => settings, saveSettings, actions });
+  globalShortcut.register('Control+Alt+V', () => { if (!win.isVisible()) toggleVisible(); send('ptt'); });
 });
 app.on('second-instance', () => send('menu'));
 app.on('will-quit', () => { globalShortcut.unregisterAll(); stopWatcher(); });

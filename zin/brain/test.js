@@ -54,7 +54,7 @@ const CASES = [
   ['take me to netflix', 'web.open'],
   ['open github.com', 'web.open', s => s.sites[0].url === 'https://github.com'],
   ['google how to tie a tie', 'web.search', s => s.query === 'how to tie a tie' && s.engine === 'google'],
-  ['look up the weather in chicago', 'web.search', s => /weather in chicago/.test(s.query)],
+  ['look up the weather in chicago', 'weather', s => s.place === 'chicago'],
   ['search youtube for lofi hip hop', 'web.search', s => s.engine === 'youtube' && /lofi/.test(s.query)],
   ['how do i fix a flat tire', 'web.search'],
 
@@ -131,6 +131,27 @@ const CASES = [
   ['what can u do', 'help'],
   ['nvm', 'cancel'],
   ['never mind', 'cancel'],
+
+  // everyday questions
+  ['what time is it', 'time', s => s.what === 'time'],
+  ['whats the date today', 'time', s => s.what === 'date'],
+  ["what's 15% of 80", 'math', s => s.result === 12],
+  ['what is 12 times 7', 'math', s => s.result === 84],
+  ['2+2*3', 'math', s => s.result === 8],
+  ['whats the square root of 81', 'math', s => s.result === 9],
+  ['100 divided by 8', 'math', s => s.result === 12.5],
+  ['what is twenty five plus seventeen', 'math', s => s.result === 42],
+  ['whats the weather', 'weather', s => s.place === null && s.day === 0],
+  ['will it rain tomorrow', 'weather', s => s.day === 1],
+  ['weather in new york', 'weather', s => s.place === 'new york'],
+  ['do i need a jacket today', 'weather'],
+  ['how hot is it outside', 'weather'],
+
+  // her voice
+  ['stop talking', 'voice.hush'],
+  ['shut up', 'voice.hush'],
+  ['stop listening', 'voice.off'],
+  ['turn on your voice', 'voice.on'],
 
   // more than one thing at once
   ['open spotify and play drake', ['app.open', 'music.play']],

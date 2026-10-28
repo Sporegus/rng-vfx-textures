@@ -11,6 +11,7 @@ const wallpaper = require('./wallpaper');
 const system = require('./system');
 const windows = require('./windows');
 const apps = require('./apps');
+const weather = require('./weather');
 
 module.exports = function createActions(ctx) {
   const undoDir = () => path.join(ctx.app.getPath('userData'), 'undo');
@@ -91,6 +92,14 @@ module.exports = function createActions(ctx) {
     'web.open': async ({ url }) => {
       if (!/^https:\/\/[a-z0-9.-]+(\/.*)?$/i.test(String(url))) throw new Error("That doesn't look like a website.");
       await shell.openExternal(url); return {};
+    },
+
+    // ---- weather (uses the city you told her; °F in the US)
+    'weather.get': async ({ place, day }) => {
+      const st = ctx.settings();
+      const fahrenheit = st.units ? st.units === 'F' : ['US', 'LR', 'MM'].includes(ctx.app.getLocaleCountryCode());
+      const r = await weather.get({ place: place || st.city, fahrenheit });
+      return { ...r, text: weather.summary(r, day || 0) };
     },
 
     // ---- tools

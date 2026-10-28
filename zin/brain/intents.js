@@ -15,6 +15,7 @@
     dur: ['5 minutes', '10 min', 'an hour', '30 seconds', 'half an hour', '2 hours', '20 mins', '45 minutes'],
     time: ['at 3pm', 'at 5', 'at 7:30', 'tomorrow at 9am', 'at noon', 'tonight at 8'],
     todo: ['call mom', 'take out the trash', 'drink water', 'check the oven', 'start my homework', 'stretch', 'join the meeting', 'feed the cat'],
+    city: ['chicago', 'new york', 'london', 'tokyo', 'los angeles', 'paris', 'miami', 'toronto', 'seattle', 'dallas'],
     note: ['buy milk', 'pick up dry cleaning', 'idea for a game about cats', 'the wifi password is on the router', 'dentist on friday'],
   };
 
@@ -107,6 +108,13 @@
     'note.add': { risk: 'auto', needs: ['text'], examples: [
       'note {note}', 'write down {note}', 'take a note {note}', 'make a note that {note}', 'save a note {note}', 'jot down {note}',
       'add to my notes {note}', 'remember that {note}', 'note to self {note}'] },
+    'time': { risk: 'auto', examples: ['what time is it', 'whats the time', 'what is the date', 'what day is it', 'what is todays date', 'tell me the time',
+      'what time is it right now', 'what month is it', 'what is the date today', 'do you know what time it is', 'what year is it'] },
+    'math': { risk: 'auto', examples: ['calculate this', 'do some math', 'can you do math', 'help me with math', 'calculator mode'] },
+    'weather': { risk: 'auto', examples: [
+      'whats the weather', 'what is the weather like', 'is it going to rain', 'will it rain tomorrow', 'how hot is it outside', 'do i need a jacket',
+      'do i need an umbrella today', 'weather in {city}', 'whats the forecast', 'is it cold outside', 'what is the temperature outside', 'weather tomorrow',
+      'is it going to snow', 'how is the weather in {city}', 'forecast for {city}', 'is it sunny', 'whats it like outside'] },
     'notes.open': { risk: 'auto', examples: ['open my notes', 'show my notes', 'what are my notes', 'read my notes', 'where are my notes'] },
 
     // ---------------------------------------------------------------- email
@@ -119,13 +127,16 @@
     'fun.joke': { risk: 'auto', examples: ['tell me a joke', 'make me laugh', 'say something funny', 'joke', 'got any jokes', 'i need a laugh'] },
     'fun.coin': { risk: 'auto', examples: ['flip a coin', 'heads or tails', 'coin toss', 'toss a coin'] },
     'fun.dice': { risk: 'auto', examples: ['roll a dice', 'roll a die', 'roll dice', 'give me a random number', 'roll'] },
-    'fun.8ball': { risk: 'auto', examples: ['should i play games', 'will it rain tomorrow', 'should i go to bed', 'is today my lucky day', 'magic 8 ball', 'should i eat pizza'] },
+    'fun.8ball': { risk: 'auto', examples: ['should i play games', 'should i go to bed', 'is today my lucky day', 'magic 8 ball', 'should i eat pizza'] },
     'fun.teleport': { risk: 'auto', examples: ['teleport', 'teleport somewhere', 'come here', 'go somewhere else', 'move over there', 'teleport to my mouse'] },
     'fun.sleep': { risk: 'auto', examples: ['go to sleep', 'take a nap', 'sleep', 'rest for a bit', 'go to bed zin'] },
-    'chat.hello': { risk: 'auto', examples: ['hi', 'hello', 'hey', 'yo', 'sup', 'good morning', 'hey zin', 'hiya', 'whats up', 'good evening'] },
+    'chat.hello': { risk: 'auto', examples: ['hi', 'hello', 'hey', 'yo', 'sup', 'good morning', 'hey zin', 'hiya', 'whats up', 'good evening', 'hello there', 'hi there', 'hey there'] },
     'chat.thanks': { risk: 'auto', examples: ['thanks', 'thank you', 'thx', 'ty', 'thanks zin', 'appreciate it', 'you are the best', 'good job'] },
     'chat.how': { risk: 'auto', examples: ['how are you', 'how are you doing', 'hows it going', 'are you ok', 'how do you feel'] },
     'chat.who': { risk: 'auto', examples: ['who are you', 'what are you', 'whats your name', 'what is your name', 'tell me about yourself'] },
+    'voice.hush': { risk: 'auto', examples: ['stop talking', 'be quiet', 'shut up', 'quiet please', 'hush', 'shh', 'stop speaking', 'zip it', 'you talk too much'] },
+    'voice.off': { risk: 'auto', examples: ['stop listening', 'turn off your microphone', 'stop listening to me', 'mute your mic', 'turn off voice', 'dont listen to me', 'turn your ears off'] },
+    'voice.on': { risk: 'auto', examples: ['start listening', 'turn on your voice', 'talk to me', 'can you talk', 'i want to talk to you', 'turn on voice mode', 'enable voice', 'listen to me', 'turn on your mic'] },
     'help': { risk: 'auto', examples: ['help', 'what can you do', 'what can i ask you', 'show me commands', 'how do i use you', 'what are your abilities', 'menu'] },
     'cancel': { risk: 'auto', examples: ['cancel', 'never mind', 'nevermind', 'stop', 'forget it', 'no', 'nope', 'dont'] },
   };

@@ -15,4 +15,10 @@ contextBridge.exposeInMainWorld('zin', {
   onCommand: (cb) => ipcRenderer.on('command', (_, cmd, arg) => cb(cmd, arg)),
   onActiveWindow: (cb) => ipcRenderer.on('active-window', (_, w) => cb(w)),
   onBounds: (cb) => ipcRenderer.on('bounds', (_, b) => cb(b)),
+  // her voice: send audio and requests to the voice service, hear back from it
+  voice: {
+    send: (m) => ipcRenderer.send('voice', m),
+    answer: (id, result) => ipcRenderer.send('voice:answer', id, result),
+    on: (cb) => ipcRenderer.on('voice', (_, m) => cb(m)),
+  },
 });

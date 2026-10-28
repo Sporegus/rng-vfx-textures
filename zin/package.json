@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "dist": "electron-builder --win portable nsis"
+    "dist": "electron-builder --win portable nsis",
+    "test": "node brain/test.js && node brain/fresh.js && node brain/fresh2.js && node voice/wake.test.js"
   },
   "devDependencies": {
     "electron": "^45.1.0",
@@ -17,8 +18,37 @@
   "build": {
     "appId": "com.zin.desktop",
     "productName": "Zin",
-    "files": ["main.js", "preload.js", "actions/**", "brain/intents.js", "brain/brain.js", "src/**", "assets/**"],
-    "win": { "icon": "assets/icon.png" },
-    "nsis": { "oneClick": true, "perMachine": false }
+    "files": [
+      "main.js",
+      "preload.js",
+      "actions/**",
+      "brain/intents.js",
+      "brain/brain.js",
+      "voice/**",
+      "!voice/*.test.js",
+      "src/**",
+      "assets/**",
+      "!node_modules/@node-llama-cpp/*cuda*/**",
+      "!node_modules/@node-llama-cpp/{linux,mac}-*/**",
+      "!node_modules/sherpa-onnx-{linux,darwin}-*/**"
+    ],
+    "win": {
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "asarUnpack": [
+      "node_modules/sherpa-onnx-*/**",
+      "node_modules/node-llama-cpp/**",
+      "node_modules/@node-llama-cpp/**"
+    ]
+  },
+  "dependencies": {
+    "node-llama-cpp": "^3.22.2",
+    "sherpa-onnx-node": "^1.13.8",
+    "tar": "^7.5.22",
+    "unbzip2-stream": "^1.4.3"
   }
 }

@@ -188,6 +188,8 @@
     'web.search': async ({ q, site }) => { toast(`On your PC, this searches ${site === 'youtube' ? 'YouTube' : 'Google'} for "${q}".`); return {}; },
     'files.old': async () => { await wait(1200); const old = FILES.filter(f => f.size > 20e6).map(f => ({ ...f, mtime: Date.now() - 400 * 86400000 })); return { results: old, total: old.length, bytes: old.reduce((a, f) => a + f.size, 0) }; },
     'files.recycle': async ({ paths }) => { toast(`On your PC, ${paths.length} file${paths.length === 1 ? '' : 's'} would go to the Recycle Bin.`); return { moved: paths.length, failed: [] }; },
+    'weather.get': async ({ day }) => ({ now: { temp: 64, icon: '⛅' }, days: [{ icon: '⛅' }, { icon: '🌧️' }],
+      text: day === 1 ? 'Tomorrow in Chicago, Illinois: rainy, high of 58°F and low of 45°F. 80% chance of rain, so bring an umbrella! (Sample weather in the demo.)' : "It's 64°F and partly cloudy in Chicago, Illinois. Today's high is 67°F. (Sample weather in the demo.)" }),
     'apps.open': async ({ name }) => { toast(`On your PC, this opens ${name}.`); return { opened: name }; },
     'apps.close': async ({ name }) => { toast(`On your PC, this closes ${name}.`); return { closed: [name] }; },
     'web.open': async ({ url }) => { toast(`On your PC, this opens ${url}.`); return {}; },
