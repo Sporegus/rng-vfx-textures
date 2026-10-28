@@ -115,6 +115,10 @@
     bang:  ['X', 'X', 'X', '.', 'X'],
     drop:  ['.X.', 'XXX', 'XXX', '.X.'],
     dot:   ['X'],
+    star:  ['..X..', '.XXX.', 'XXXXX', '.XXX.', '..X..'],
+    heartS:['X.X', 'XXX', '.X.'],
+    vein:  ['XX.XX', 'X...X', '.....', 'X...X', 'XX.XX'],
+    sweat: ['.X', 'XX', 'XX'],
   };
 
   // ---------------------------------------------------------------- head
@@ -266,8 +270,23 @@
   PX_EYES.blink = PX_EYES.closed;
   // smaller mouths that suit this face
   const PX_MOUTHS = { open: ['MMMMMM', '.MIIM.', '..MM..'], wail: ['MMMMMM', 'MIIIIM', 'MITTIM', '.MMMM.'], grin: ['MMMMMM', '.MIIM.', '..MM..'] };
+  // Twin tails swing: shear the tail pixels sideways, more toward the tips.
+  // ts is the shift at the tips in pixels; tails stay put where they are tied.
+  function swayTails(rows, ts, view) {
+    if (!ts) return rows;
+    const n = rows[0].length, top = view === 'side' ? 24 : 6, len = 35 - top;
+    const inTail = (x, y) => y >= top && (x <= 13 || (view !== 'side' && x >= n - 14));
+    const out = rows.map(r => r.slice()), moved = [];
+    rows.forEach((r, y) => r.forEach((c, x) => { if (c !== '.' && inTail(x, y)) { moved.push([x, y, c]); out[y][x] = '.'; } }));
+    for (const [x, y, c] of moved) {
+      const nx = x + Math.round(ts * (y - top) / len);
+      if (nx >= 0 && nx < n && out[y][nx] === '.') out[y][nx] = c;
+    }
+    return out;
+  }
   function drawPixelHead(b, p, pal, hx, hy) {
     // the head is not scaled with the body: it sits 1:1 on top of the scaled neck
+    const lag = Math.round(p.hdy || 0);                    // the head trails the body a little
     const H4 = pal.hair, F4 = pal.skin || pal.body, rib = pal.ribbon || ['#ffd0da', '#ff8aa6'];
     const col = { O: pal.lash, H: H4[1], M: H4[2], D: H4[3], E: pal.hairLine, S: F4[1], p: F4[2], s: pal.blush || pal.cheek, T: rib[0], t: rib[1], W: '#ffffff', N: pal.mouth };
     if (p.view === 'back' || p.view === 'side') {
@@ -281,8 +300,8 @@
         if (['open', 'grin', 'wail', 'o', 'tongue'].includes(p.mouth)) for (const [x, y] of [[32, 28], [33, 28], [32, 29]]) rows[y][x] = 'N';
       }
       col.i = pal.iris[1]; col.j = pal.iris[2];
-      const X0 = Math.round(tx(hx) * K) - (back ? 31 : 22), Y0 = Math.round(ty(hy + 23.2) * K) - 32;
-      rows.forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
+      const X0 = Math.round(tx(hx) * K) - (back ? 31 : 22), Y0 = Math.round(ty(hy + 23.2) * K) - 32 + lag;
+      swayTails(rows, p.tails, p.view).forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
       return;
     }
     const rows = PX_HEAD.map(r => r.split(''));
@@ -310,8 +329,8 @@
       for (let j = 0; j < PX_MOUTH.h; j++) for (let i = 0; i < PX_MOUTH.w; i++) if (rows[PX_MOUTH.y + j][PX_MOUTH.x + i] === 'N') rows[PX_MOUTH.y + j][PX_MOUTH.x + i] = 'S';
       mouth = PX_MOUTHS[mk] || MOUTHS[mk];
     }
-    const X0 = Math.round(tx(hx) * K) - 31, Y0 = Math.round(ty(hy + 23.2) * K) - 32;
-    rows.forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
+    const X0 = Math.round(tx(hx) * K) - 31, Y0 = Math.round(ty(hy + 23.2) * K) - 32 + lag;
+    swayTails(rows, p.tails, p.view).forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
     if (mouth) b.glyphP(X0 + 31 - Math.floor(mouth[0].length / 2), Y0 + PX_MOUTH.y, mouth, { M: pal.mouth, I: pal.mouthIn || pal.mouth, T: pal.cheek, W: '#ffffff' });
   }
 
@@ -322,12 +341,13 @@
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
+    tap: [[2, 4], [-0.6, -0.4]], gesture: [[2, 4], [5, 3]], low: [[2.4, 3.6], [3.6, 7.2]], type2: [[2, 5], [5.4, 4.4]],
   };
   const LEGS = {
     stand: [[0.5, 5.4], [0.7, 10.6]], apart: [[0.9, 5.4], [1.7, 10.6]],
     stepF: [[2, 5], [4, 10.5]], stepB: [[-1.5, 5], [-4, 10]], pass: [[1.5, 4.5], [0, 9]],
     runF: [[4, 4], [7, 9]], runB: [[-3, 5], [-7, 8]], runUp: [[4, 3], [2, 7]],
-    sit: [[0.6, 2.5], [1, 9]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
+    sit: [[0.6, 2.5], [1, 9]], sitA: [[0.9, 2.0], [1.1, 7.6]], sitB: [[0.9, 2.0], [1.6, 6.2]], squat: [[1.6, 4.0], [1.0, 8.4]], lift: [[1.3, 3.4], [1.0, 7.6]], kick: [[0.5, 5.0], [1.6, 9.6]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
   };
 
   // ---------------------------------------------------------------- the character
@@ -532,7 +552,11 @@
       const x = armB[2][0] + 2, y = armB[2][1] - 9;
       fx.rect(x, y, 10, 7, B4[0] + '70'); fx.rect(x, y, 10, 1, B4[0]); fx.rect(x + 2, y + 2, 5 + (p.panel % 2) * 2, 1, B4[0]); fx.rect(x + 2, y + 4, 4, 1, B4[0]);
     }
-    if (p.tears) p.tears.forEach(([x, y]) => fx.glyph(ox + x, y + oy, G.drop, pal.tear));
+    // tears: [dx, dy] in real pixels from her center line and the top of her head
+    if (p.tears) {
+      const headY = Math.round(ty(6 + oy + 23.2) * K) - 32 + Math.round(p.hdy || 0);
+      p.tears.forEach(([x, y]) => fx.glyphP(midX + x, headY + y, ['.X.', 'XXX', 'XXX', '.X.'], { X: '#bfe9ff' }));
+    }
     const out = outline(body, pal.outline);
     // standing, the legs touch with a thin line between them
     if (!side && standing(p.legA) && standing(p.legB)) {
@@ -544,7 +568,11 @@
   // floating effects (sparkles, hearts, zzz) are added after any rotation
   function addFx(out, pose, palKey) {
     const pal = palOf(palKey);
-    (pose.fx || []).forEach(([g, x, y, c]) => out.glyph(x, y, G[g], c === 'hair' ? pal.hair[1] : c === 'line' ? pal.line : c));
+    // positions are in the unscaled 56 x 56 grid, so effects keep their size
+    (pose.fx || []).forEach(([g, x, y, c]) => {
+      const col = c === 'hair' ? pal.hair[1] : c === 'line' ? pal.line : c;
+      G[g].forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') for (let v = 0; v < K; v++) for (let u = 0; u < K; u++) out.setP(Math.round((x + i) * K) + u, Math.round((y + j) * K) + v, col); });
+    });
   }
   
 
@@ -564,39 +592,70 @@
       : [[u * swing * 0.4, 4.4], [u * swing, 8.4 - Math.abs(u) * 0.6]];
     return {
       view: 'side', sway: run ? -1.2 : -0.6, dx: 1,
-      bob: Math.abs(c) > 0.6 ? -1 : 0,
+      bob: Math.abs(c) > 0.6 ? -1 : 0, hdy: Math.abs(c) > 0.6 ? 1 : 0,
+      tails: (run ? -2.5 : -1.2) - Math.abs(u) * (run ? 1 : 0.6),        // twin tails stream out behind
       legA: leg(u, Math.max(0, c)), legB: leg(-u, Math.max(0, -c)),
       armA: arm(-u), armB: arm(u),
       mouth: run ? 'grin' : 'smile',
     };
   }
+  // Effects ([glyph, x, y, color]) use the unscaled 56 x 56 grid: her head spans
+  // about x 13..43, y 22..40 there, so the space above it is free for effects.
+  const SIN = (f, n, ph = 0) => Math.sin((f / n) * Math.PI * 2 + ph), COS = (f, n, ph = 0) => Math.cos((f / n) * Math.PI * 2 + ph);
   const ANIMS = {
-    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'down', armB: 'down', sway: [0, 0.4, 0, -0.4][f] }) },
+    // breathing: the body rises, the head follows a beat later, the tails sway, a blink
+    idle:  { frames: 6, fps: 4, pose: f => ({ bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 0, 1, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], eyes: f === 5 ? 'blink' : 'open', armA: 'down', armB: 'down' }) },
     walk:  { frames: 8, fps: 10, pose: f => stride(f, 8, false) },
-    side:  { frames: 4, fps: 3, pose: f => ({ view: 'side', bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: [[0.4, 4.3], [0.6, 8.4]], armB: [[0.4, 4.3], [0.6, 8.4]], legA: [[0.2, 5.4], [0.2, 10.6]], legB: [[0.2, 5.4], [0.2, 10.6]] }) },
-    back:  { frames: 4, fps: 3, pose: f => ({ view: 'back', bob: f === 2 ? 1 : 0, armA: 'down', armB: 'down' }) },
+    side:  { frames: 6, fps: 4, pose: f => ({ view: 'side', bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 0, 1, 1, 0][f], tails: [0, -0.5, -1, -0.5, 0, 0][f], eyes: f === 5 ? 'blink' : 'open', armA: [[0.4, 4.3], [0.6, 8.4]], armB: [[0.4, 4.3], [0.6, 8.4]], legA: [[0.2, 5.4], [0.2, 10.6]], legB: [[0.2, 5.4], [0.2, 10.6]] }) },
+    back:  { frames: 6, fps: 4, pose: f => ({ view: 'back', bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 0, 1, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], armA: 'down', armB: 'down' }) },
     run:   { frames: 8, fps: 14, pose: f => stride(f, 8, true) },
-    wave:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open' }) },
-    talk:  { frames: 4, fps: 7, pose: f => ({ mouth: ['smile', 'open', 'smile', 'o'][f], armB: f % 2 ? 'hold' : 'down', armA: 'hip' }) },
-    point: { frames: 2, fps: 3, pose: f => ({ armB: 'point', armA: 'hip', eyes: f ? 'open' : 'wink', mouth: 'grin' }) },
-    think: { frames: 4, fps: 3, pose: f => ({ armB: 'chin', armA: 'heart', eyes: 'open', mouth: 'flat', fx: [['q', 42, 2 + (f % 2), 'line']] }) },
-    cheer: { frames: 4, fps: 8, pose: f => ({ bob: [0, -3, -4, -2][f], legA: f ? 'tuck' : 'stand', legB: f ? 'tuck' : 'stand', armA: 'up', armB: 'up', eyes: 'happy', mouth: 'open', fx: f % 2 ? [['spark', 4, 6, 'line'], ['spark2', 46, 10, '#ffffff']] : [['spark2', 6, 10, '#ffffff'], ['spark', 44, 4, 'line']] }) },
-    sit:   { frames: 4, fps: 3, footY: 44, pose: f => ({ legA: 'sit', legB: 'sit', armA: [[1, 5], [2, 9]], armB: [[1, 5], [2, 9]], bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open' }) },
-    sleep: { frames: 4, fps: 2, lie: true, pose: f => ({ eyes: 'closed', mouth: 'o', armA: 'down', armB: 'down', legB: 'apart', bob: 0, fx: [['z', 14, 27 - f, 'line'], ['zBig', 19, 20 - (f % 2), 'line']].slice(0, 1 + (f % 2)) }) },
-    cry:   { frames: 4, fps: 5, pose: f => ({ armA: 'eyes', armB: 'eyes', eyes: 'cry', mouth: 'wail', bob: f % 2, tears: [[-9, 25 + (f % 2) * 3], [7, 26 + ((f + 1) % 2) * 3]] }) },
-    sad:   { frames: 2, fps: 2, pose: f => ({ armA: 'down', armB: 'back', eyes: 'sad', mouth: 'frown', bob: 1, tears: f ? [[-8, 27]] : [] }) },
-    dance: { frames: 8, fps: 8, pose: f => ({ dx: [0, 1, 2, 1, 0, -1, -2, -1][f], bob: f % 2, armA: f < 4 ? 'up' : 'hip', armB: f < 4 ? 'hip' : 'up', legB: f % 4 === 1 ? 'stepF' : 'stand', eyes: 'happy', mouth: f % 2 ? 'open' : 'smile', fx: [['note', f < 4 ? 3 : 46, 8 + (f % 4), 'line']] }) },
-    dangle:{ frames: 2, fps: 5, pose: f => ({ armA: 'up', armB: 'up', legA: 'dangle', legB: 'dangle', eyes: 'wide', mouth: 'o', dx: f ? 1 : 0 }) },
-    fall:  { frames: 2, fps: 10, pose: f => ({ armA: 'flail', armB: f ? 'up' : 'flail', legA: 'tuck', legB: f ? 'pass' : 'tuck', eyes: 'wide', mouth: 'wail' }) },
-    land:  { frames: 2, fps: 8, loop: false, pose: f => ({ bob: f ? 0 : 2, legA: f ? 'stand' : 'kneel', legB: f ? 'stand' : 'kneel', armA: f ? 'down' : 'out', armB: f ? 'down' : 'out', eyes: f ? 'open' : 'closed', mouth: 'flat' }) },
-    work:  { frames: 4, fps: 6, pose: f => ({ armB: 'type', armA: 'hold', eyes: 'open', mouth: 'flat', panel: f + 1 }) },
-    love:  { frames: 4, fps: 5, pose: f => ({ armA: 'heart', armB: 'heart', eyes: 'happy', blush: true, bob: f % 2, fx: [['heart', 40 + (f % 2), 6 - f, '#ff8fb0'], ['heart', 8, 10 - ((f + 2) % 4), '#ff8fb0']] }) },
-    angry: { frames: 2, fps: 6, pose: f => ({ armA: 'hip', armB: 'hip', eyes: 'angry', mouth: 'frown', dx: f ? 1 : 0, fx: [['bang', 44, 6, '#ffffff']] }) },
-    dizzy: { frames: 4, fps: 6, pose: f => ({ eyes: 'x', mouth: 'wail', dx: [-1, 0, 1, 0][f], armA: 'out', armB: 'out', fx: [['spark2', 18 + f * 3, 2, '#ffe14d'], ['spark2', 34 - f * 3, 3, '#ffe14d']] }) },
+    // a big friendly wave: the hand swings, the tails swing the other way, sparkles
+    wave:  { frames: 4, fps: 5, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open', bob: f % 2 ? 0.5 : 0, tails: f % 2 ? -1.5 : 1.5, fx: [['spark2', 46, 23 + (f % 2) * 2, '#ffffff']].concat(f % 2 ? [] : [['star', 49, 27, 'line']]) }) },
+    // chatting: mouth flaps, little hand gestures, a bounce
+    talk:  { frames: 4, fps: 7, pose: f => ({ mouth: ['smile', 'open', 'o', 'open'][f], armB: f % 2 ? 'gesture' : 'hold', armA: 'hip', bob: f % 2 ? 0.5 : 0, tails: [0, 0.5, 0, -0.5][f] }) },
+    // "over there!": point, wink, a twinkle at the fingertip
+    point: { frames: 4, fps: 4, pose: f => ({ armB: 'point', armA: 'hip', eyes: f < 2 ? 'wink' : 'open', mouth: 'grin', bob: f === 1 ? -0.5 : 0, tails: [0, 1, 0.5, 0][f], fx: f % 2 ? [['spark2', 47, 37, '#ffffff']] : [['star', 46, 36, 'line']] }) },
+    // tapping her chin, a question mark and thought dots floating up
+    think: { frames: 4, fps: 3, pose: f => ({ armB: f % 2 ? 'tap' : 'chin', armA: 'heart', eyes: 'open', mouth: 'flat', tails: [0, 0.5, 0, -0.5][f], fx: [['q', 44, 14 + (f % 2), 'line'], ['dot', 41, 21 - f, 'line'], ['dot', 39, 24 - f, 'line']] }) },
+    // crouch, jump, tuck at the top, land in a squash, pop up, with sparkles
+    cheer: { frames: 6, fps: 6, pose: f => [
+      { bob: 2, hdy: 1, legA: 'squat', legB: 'squat', armA: 'low', armB: 'low', eyes: 'happy', mouth: 'smile' },
+      { bob: -3, legA: 'stand', legB: 'stand', armA: 'up', armB: 'up', eyes: 'happy', mouth: 'open', tails: 1, fx: [['spark2', 8, 30, '#ffffff']] },
+      { bob: -6, hdy: -1, legA: 'tuck', legB: 'tuck', armA: 'up', armB: 'up', eyes: 'happy', mouth: 'open', tails: -1, fx: [['star', 6, 22, 'line'], ['star', 46, 18, 'line'], ['spark2', 26, 14, '#ffffff']] },
+      { bob: -3, legA: 'kick', legB: 'kick', armA: 'up', armB: 'up', eyes: 'happy', mouth: 'open', tails: 1, fx: [['spark2', 47, 26, '#ffffff'], ['spark2', 6, 18, '#ffffff']] },
+      { bob: 2, hdy: 1, legA: 'squat', legB: 'squat', armA: 'low', armB: 'low', eyes: 'happy', mouth: 'grin', tails: -0.5 },
+      { bob: 0, legA: 'stand', legB: 'stand', armA: 'down', armB: 'down', eyes: 'happy', mouth: 'smile' },
+    ][f] },
+    // perched on an edge, swinging her legs
+    sit:   { frames: 4, fps: 3, footY: 44, pose: f => ({ legA: f % 2 ? 'sitB' : 'sitA', legB: f % 2 ? 'sitA' : 'sitB', armA: [[1, 5], [2, 9]], armB: [[1, 5], [2, 9]], bob: f === 2 ? 0.5 : 0, tails: [0, 0.5, 0, -0.5][f], eyes: f === 3 ? 'blink' : 'open' }) },
+    sleep: { frames: 4, fps: 2, lie: true, pose: f => ({ eyes: 'closed', mouth: 'o', armA: 'down', armB: 'down', legB: 'apart', bob: 0, fx: [['z', 16, 22 - f, 'line'], ['zBig', 21, 15 - (f % 2), 'line']].slice(0, 1 + (f % 2)) }) },
+    // sobbing: shoulders shake and tears stream down
+    cry:   { frames: 4, fps: 6, pose: f => ({ armA: 'eyes', armB: 'eyes', eyes: 'cry', mouth: 'wail', dx: f % 2 ? 0.4 : -0.4, bob: f % 2 ? 0.5 : 0, tails: f % 2 ? 1 : -1, tears: [[-11, 24 + (f * 3) % 9], [8, 24 + ((f + 2) * 3) % 9]] }) },
+    // slumped, one tear rolling down
+    sad:   { frames: 4, fps: 2, pose: f => ({ armA: 'down', armB: 'back', eyes: 'sad', mouth: 'frown', bob: [1, 1.5, 1.5, 1][f], hdy: 1, tears: f ? [[-11, 23 + f * 2]] : [] }) },
+    // hips swing, arms trade places, a knee pops on the beat, notes float up
+    dance: { frames: 8, fps: 6, pose: f => ({ dx: SIN(f, 8) * 1.6, bob: f % 2 ? 1 : 0, tails: -SIN(f, 8) * 2, armA: f < 4 ? 'up' : 'hip', armB: f < 4 ? 'hip' : 'up', legA: f === 5 ? 'lift' : 'stand', legB: f === 1 ? 'lift' : 'stand', eyes: 'happy', mouth: f % 2 ? 'open' : 'smile', fx: [['note', f < 4 ? 6 : 46, 32 - (f % 4) * 3, 'line'], ['note', f < 4 ? 46 : 6, 22 - (f % 4) * 2, 'line']] }) },
+    // picked up: legs kick, a nervous sweat drop
+    dangle:{ frames: 4, fps: 6, pose: f => ({ armA: 'up', armB: 'up', legA: f % 2 ? 'kick' : 'dangle', legB: f % 2 ? 'dangle' : 'kick', eyes: 'wide', mouth: 'o', dx: SIN(f, 4) * 0.6, tails: -SIN(f, 4) * 1.5, fx: [['sweat', 44, 24 + (f % 2), '#cfefff']] }) },
+    fall:  { frames: 4, fps: 10, pose: f => ({ armA: f % 2 ? 'up' : 'flail', armB: f % 2 ? 'flail' : 'up', legA: f % 2 ? 'pass' : 'tuck', legB: f % 2 ? 'tuck' : 'pass', eyes: 'wide', mouth: 'wail', tails: f % 2 ? 2 : -2, fx: [['sweat', 45, 22, '#cfefff'], ['sweat', 9, 25, '#cfefff']] }) },
+    // landing: squash, then spring back up
+    land:  { frames: 3, fps: 8, loop: false, pose: f => [
+      { bob: 3, hdy: 1, legA: 'squat', legB: 'squat', armA: 'out', armB: 'out', eyes: 'closed', mouth: 'flat', tails: -1 },
+      { bob: 1, legA: 'squat', legB: 'squat', armA: 'low', armB: 'low', eyes: 'open', mouth: 'flat', tails: 0.5 },
+      { bob: 0, legA: 'stand', legB: 'stand', armA: 'down', armB: 'down', eyes: 'open', mouth: 'smile' },
+    ][f] },
+    work:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'type2' : 'type', armA: f % 2 ? 'hold' : 'type2', eyes: f === 3 ? 'blink' : 'open', mouth: 'flat', panel: f + 1, hdy: f % 2 }) },
+    // swaying with her hands on her heart while hearts float up
+    love:  { frames: 6, fps: 5, pose: f => ({ armA: 'heart', armB: 'heart', eyes: 'happy', blush: true, dx: SIN(f, 6) * 0.5, bob: [0, 0.5, 1, 0.5, 0, 0][f], tails: -SIN(f, 6) * 1.2, fx: [['heart', 40, 28 - f * 2, '#ff8fb0'], ['heartS', 12, 30 - ((f + 3) % 6) * 2, '#ff8fb0'], ['heartS', 27, 18 - (f % 3), '#ffb3c8']] }) },
+    // stomping, with a throbbing anger mark
+    angry: { frames: 4, fps: 8, pose: f => ({ armA: 'hip', armB: 'hip', eyes: 'angry', mouth: 'frown', bob: f % 2 ? 1 : 0, dx: [0, 0.5, 0, -0.5][f], tails: f % 2 ? 1 : -1, fx: [f % 2 ? ['vein', 39, 22, '#ff3b4f'] : ['spark2', 40, 23, '#ff3b4f'], ['bang', 46, 18, '#ffffff']] }) },
+    // wobbling in a circle while stars orbit her head
+    dizzy: { frames: 8, fps: 8, pose: f => ({ eyes: 'x', mouth: 'wail', dx: SIN(f, 8), bob: COS(f, 8) * 0.5, tails: -SIN(f, 8) * 1.5, armA: 'out', armB: 'out',
+      fx: [0, 1, 2].map(k => { const a = (f / 8 + k / 3) * Math.PI * 2; return [Math.sin(a) > 0 ? 'star' : 'spark2', Math.round(26 + Math.cos(a) * 14), Math.round(19 + Math.sin(a) * 2.5), '#ffe14d']; }) }) },
   };
   // Smoother motion: these animations get in-between frames, with limbs, bob and
   // drift blended between key poses (faces and effects come from the nearer key).
-  const SMOOTH = { idle: 2, side: 2, back: 2, wave: 2, think: 2, cheer: 2, cry: 2, sad: 2, dance: 2, dangle: 2, fall: 2, land: 2, love: 2, angry: 2, dizzy: 2 };
+  const SMOOTH = { idle: 2, side: 2, back: 2, wave: 2, point: 2, think: 2, cheer: 2, sit: 2, cry: 2, sad: 2, dance: 2, dangle: 2, land: 2, love: 2 };
   const resolve = (v, table) => Array.isArray(v) ? v : table[v];
   const mix = (a, b, t) => a.map((pt, i) => pt.map((x, j) => x + (b[i][j] - x) * t));
   function blendPose(p0, p1, t) {
@@ -606,7 +665,7 @@
       const a = p0[k] || def, b = p1[k] || def;
       if (a !== b) out[k] = mix(resolve(a, table), resolve(b, table), t);
     }
-    for (const k of ['bob', 'dx', 'sway']) out[k] = (p0[k] || 0) + ((p1[k] || 0) - (p0[k] || 0)) * t;
+    for (const k of ['bob', 'dx', 'sway', 'tails', 'hdy']) out[k] = (p0[k] || 0) + ((p1[k] || 0) - (p0[k] || 0)) * t;
     return out;
   }
   for (const [k, sub] of Object.entries(SMOOTH)) {
