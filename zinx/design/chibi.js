@@ -449,25 +449,29 @@
 
     // the bust sits in front of her upper arms
     if (!back) {
-      // two round breasts, hand-pixeled (her right one; the left is mirrored): L shine,
-      // M mid, D shadow, O outline down the cleavage and in a U under each breast
-      const BREAST = [
-        'O..MMM..',
-        'OMMLLMM.',
-        'OMMLLMMM',
-        'OMMMMMMD',
-        'OMMMMMDD',
-        'OMMMMDDO',
-        '.OMDDDO.',
-        '..OOOO..',
-      ];
-      const cyP = Math.round(ty(34.6 + oy) * K), Y0 = cyP - 4, bc = { L: B4[1], M: B4[2], D: B4[3], O: pal.outline };
-      body.glyphP(midX, Y0, BREAST, bc);
-      // mirrored, but with a single dark line down the middle
-      body.glyphP(midX - BREAST[0].length, Y0, BREAST.map(r => (r[0] === 'O' ? 'M' : r[0]) + r.slice(1)), bc, true);
+      // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
+      // shine up top, shadow underneath, and a dark outline round the bottom
+      // each breast is a little narrower than it is tall, so the pair sit close together
+      const R = 4.1, RX = 3.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
+      const inB = (i, Y) => Math.hypot((i + 0.5 - RX) / RX, (Y + 0.5 - cyP) / R) <= 1;
+      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * RX + 1; i++) {
+        if (!inB(i, Y)) continue;
+        const X = midX + i, nx = (i + 0.5 - RX) / RX, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
+        // the lowest pixel of each column, and the outermost pixels below the middle, are outline
+        const c = (ny > 0.05 && (!inB(i, Y + 1) || !inB(i - 1, Y) || !inB(i + 1, Y))) ? pal.outline
+          : ny > 0.35 && r > 0.55 ? B4[3]
+          : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
+          : B4[2];
+        body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
+      }
+      // suit lines carry on over the chest: an arc over the top of each breast and a
+      // V neckline running down to the cleavage
       const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
-      // a V neckline running down to the cleavage
-      const neckTop = Y0 - 3;
+      for (let a = 200; a <= 335; a += 4) {
+        const t = a * Math.PI / 180, r = R - 1.6;
+        glowP(Math.round(midX + RX + Math.cos(t) * (RX - 1.4) - 0.5), Math.round(cyP + Math.sin(t) * r * 0.95 - 0.5));
+      }
+      const neckTop = Math.round(cyP - R) - 3;
       for (let k = 0; k <= 3; k++) glowP(midX + 3 - k, neckTop + k);
     }
     // props / effects
