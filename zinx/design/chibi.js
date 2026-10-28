@@ -303,7 +303,8 @@
     const pal = palOf(palKey);
     const p = Object.assign({ view: 'front', bob: 0, dx: 0, eyes: 'open', mouth: 'smile', armA: 'down', armB: 'down', legA: 'stand', legB: 'stand' }, pose);
     const back = p.view === 'back';
-    const ox = CX + p.dx, oy = p.bob;
+    // bob and drift snap to whole real pixels, so the suit pattern is identical in every frame
+    const ox = CX + Math.round(p.dx * BODY_SX * K) / (BODY_SX * K), oy = Math.round(p.bob * BODY_SY * K) / (BODY_SY * K);
     const B4 = pal.suit || pal.body;
     const body = new Buf();
     const fx = new Buf();
@@ -475,6 +476,10 @@
         body.setP(X, Y, a); body.setP(2 * midX - 1 - X, Y, b);
         body.setP(X, Y - 1, pal.outline); body.setP(2 * midX - 1 - X, Y - 1, pal.outline);
       });
+      // the cleavage line runs two pixels further up between them
+      let top = Infinity;
+      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) if (body.getP(midX, Y) === pal.outline) top = Math.min(top, Y);
+      for (let Y = top - 2; Y < top; Y++) { body.setP(midX - 1, Y, pal.outline); body.setP(midX, Y, pal.outline); }
       // suit lines carry on over the chest: an arc over the top of each breast and a
       // V neckline running down to the cleavage
       const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
