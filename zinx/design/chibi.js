@@ -375,7 +375,7 @@
     // front-view standing legs: straight inner edge with a thin gap, outer edge
     // tapering from the hip to a flat rounded foot
     const drawStandLeg = (t, sgn) => {
-      const pts = [[0.6, 43.4], [5.1, 42.6], [5.2, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [0.6, 55], [0.6, 53.8]];
+      const pts = [[0.3, 43.4], [5.1, 42.6], [5.2, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [0.3, 55], [0.3, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
         const outer = d > (y < 47 ? 4.4 : 3.2);
@@ -522,9 +522,9 @@
     }
     if (p.tears) p.tears.forEach(([x, y]) => fx.glyph(ox + x, y + oy, G.drop, pal.tear));
     const out = outline(body, pal.outline);
-    // standing, a clean 2-pixel gap between the legs, without outline inside it
+    // standing, a 1-pixel gap between the legs
     if (!side && standing(p.legA) && standing(p.legB)) {
-      for (let Y = Math.round(ty(44.6 + Math.min(0, oy)) * K); Y < H; Y++) for (const X of [midX - 1, midX]) if (out.getP(X, Y) === pal.outline) out.setP(X, Y, null), out.p[Y * W + X] = null;
+      for (let Y = Math.round(ty(44.8 + Math.min(0, oy)) * K); Y < H; Y++) out.p[Y * W + midX] = null;
     }
     for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = fx.p[i];
     return out;
