@@ -119,6 +119,9 @@
     heartS:['X.X', 'XXX', '.X.'],
     vein:  ['XX.XX', 'X...X', '.....', 'X...X', 'XX.XX'],
     sweat: ['.X', 'XX', 'XX'],
+    bub1:  ['.X.', 'X.X', '.X.'],
+    bub2:  ['.XXX.', 'X...X', 'X...X', 'X...X', '.XXX.'],
+    bub3:  ['..XXX..', '.X...X.', 'X.....X', 'X.....X', 'X.....X', '.X...X.', '..XXX..'],
   };
 
   // ---------------------------------------------------------------- head
@@ -289,7 +292,7 @@
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
-    tap: [[2, 4], [-0.6, -0.4]], gesture: [[2, 4], [5, 3]], low: [[2.4, 3.6], [3.6, 7.2]], type2: [[2, 5], [5.4, 4.4]],
+    tap: [[2, 4], [-0.6, -0.4]], typeL: [[2.4, 4.4], [-0.4, 6.4]], hug: [[2.4, 4.8], [-2.2, 7.6]], typeLd: [[2.4, 4.8], [-0.2, 7.2]], gesture: [[2, 4], [5, 3]], low: [[2.4, 3.6], [3.6, 7.2]], type2: [[2, 5], [5.4, 4.4]],
   };
   const LEGS = {
     stand: [[0.5, 5.4], [0.7, 10.6]], apart: [[0.9, 5.4], [1.7, 10.6]],
@@ -491,9 +494,36 @@
       for (let k = 0; k <= 3; k++) glowP(midX + 3 - k, neckTop + k);
     }
     // props / effects
-    if (p.panel) {
-      const x = armB[2][0] + 2, y = armB[2][1] - 9;
-      fx.rect(x, y, 10, 7, B4[0] + '70'); fx.rect(x, y, 10, 1, B4[0]); fx.rect(x + 2, y + 2, 5 + (p.panel % 2) * 2, 1, B4[0]); fx.rect(x + 2, y + 4, 4, 1, B4[0]);
+    // a floating hologram keyboard at her hands and a screen beside her head,
+    // drawn translucent over her (keys light up where she presses)
+    if (p.keys) {
+      const G0 = B4[0], G1 = B4[1], Yk = Math.round(ty(38.4 + oy) * K);
+      // her hands rest on top of the keys
+      const skin = new Set([SK[1], SK[2]]), kp = (X, Y, c) => { if (!skin.has(body.getP(X, Y))) fx.setP(X, Y, c); };
+      for (let r = 0; r < 8; r++) {
+        const hw = 15 + Math.round(r * 0.5), Y = Yk + r;
+        for (let x = -hw; x < hw; x++) kp(midX + x, Y, (r === 0 || r === 7 || x === -hw || x === hw - 1) ? G1 + 'f0' : G1 + '50');
+        if (r === 2 || r === 4) {
+          let k = 0;
+          for (let x = -hw + 2; x + 3 <= hw - 2; x += 4, k++) {
+            const on = p.keys.some(([kr, ki]) => kr === r && ki === k);
+            for (let u = 0; u < 3; u++) kp(midX + x + u, Y, on ? '#ffffff' : G0 + 'c0');
+          }
+        }
+        if (r === 5) for (let x = -6; x < 6; x++) kp(midX + x, Y, p.keys.some(([kr]) => kr === 5) ? '#ffffff' : G0 + 'c0');   // space bar
+      }
+      const headY = Math.round(ty(6 + oy + 23.2) * K) - 32, sx = midX + 34, sy = headY + 6, LENS = [12, 7, 10, 5, 13, 8, 6, 11];
+      for (let y = 0; y < 17; y++) for (let x = 0; x < 20; x++) fx.setP(sx + x, sy + y, (y === 0 || y === 16 || x === 0 || x === 19) ? G1 + 'f0' : G1 + '40');
+      for (let k = 0; k < 4; k++) {
+        const len = LENS[(k + (p.screen || 0)) % LENS.length];
+        for (let x = 0; x < len; x++) fx.setP(sx + 3 + x, sy + 3 + k * 3, G0 + 'c8');
+        if (k === 3 && (p.screen || 0) % 2 === 0) { fx.setP(sx + 4 + len, sy + 2 + k * 3, '#ffffff'); fx.setP(sx + 4 + len, sy + 3 + k * 3, '#ffffff'); }   // cursor
+      }
+    }
+    // a sleep bubble at her nose that swells, then pops
+    if (p.bubble) {
+      const headY = Math.round(ty(6 + oy + 23.2) * K) - 32 + Math.round(p.hdy || 0), g = G[p.bubble > 3 ? 'spark2' : 'bub' + p.bubble];
+      fx.glyphP(midX + 3, headY + 29 - g.length, g, { X: '#e4f6ffe0' });
     }
     // tears: [dx, dy] in real pixels from her center line and the top of her head
     if (p.tears) {
@@ -505,8 +535,15 @@
     if (standing(p.legA) && standing(p.legB)) {
       for (let Y = Math.round(ty(44.8 + Math.min(0, oy)) * K); Y < H; Y++) if (out.p[Y * W + midX]) out.p[Y * W + midX] = pal.outline;
     }
-    for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = fx.p[i];
+    for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = over(out.p[i], fx.p[i]);
     return out;
+  }
+  // paint a '#rrggbbaa' color over another; over nothing it stays translucent
+  function over(base, top) {
+    if (top.length !== 9 || !base) return top;
+    const a = parseInt(top.slice(7), 16) / 255, t = parseInt(top.slice(1, 7), 16), b = parseInt(base.slice(1, 7), 16);
+    const ch = (sh) => Math.round(((t >> sh) & 255) * a + ((b >> sh) & 255) * (1 - a));
+    return '#' + [16, 8, 0].map(sh => ch(sh).toString(16).padStart(2, '0')).join('');
   }
   // floating effects (sparkles, hearts, zzz) are added after any rotation
   function addFx(out, pose, palKey) {
@@ -546,7 +583,11 @@
     ][f] },
     // perched on an edge, swinging her legs
     sit:   { frames: 4, fps: 3, footY: 44, pose: f => ({ legA: f % 2 ? 'sitB' : 'sitA', legB: f % 2 ? 'sitA' : 'sitB', armA: [[1, 5], [2, 9]], armB: [[1, 5], [2, 9]], bob: f === 2 ? 0.5 : 0, tails: [0, 0.5, 0, -0.5][f], eyes: f === 3 ? 'blink' : 'open' }) },
-    sleep: { frames: 4, fps: 2, lie: true, pose: f => ({ eyes: 'closed', mouth: 'o', armA: 'down', armB: 'down', legB: 'apart', bob: 0, fx: [['z', 16, 22 - f, 'line'], ['zBig', 21, 15 - (f % 2), 'line']].slice(0, 1 + (f % 2)) }) },
+    // dozing off sitting on the floor, hugging her knees: her head nods, a bubble
+    // swells at her nose and pops, and Zzz drift up and away
+    sleep: { frames: 6, fps: 2, pose: f => ({ eyes: 'closed', mouth: 'o', bob: 3, legA: 'squat', legB: 'squat', armA: 'hug', armB: 'hug', blush: true,
+      hdy: [0, 1, 2, 2, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], bubble: [1, 2, 3, 3, 4, 0][f],
+      fx: [['z', 40, 22 - f * 2, 'line'], ['zBig', 44, 14 - ((f + 3) % 6) * 2, 'line']] }) },
     // sobbing: shoulders shake and tears stream down
     cry:   { frames: 4, fps: 6, pose: f => ({ armA: 'eyes', armB: 'eyes', eyes: 'cry', mouth: 'wail', dx: f % 2 ? 0.4 : -0.4, bob: f % 2 ? 0.5 : 0, tails: f % 2 ? 1 : -1, tears: [[-11, 24 + (f * 3) % 9], [8, 24 + ((f + 2) * 3) % 9]] }) },
     // slumped, one tear rolling down
@@ -562,7 +603,9 @@
       { bob: 1, legA: 'squat', legB: 'squat', armA: 'low', armB: 'low', eyes: 'open', mouth: 'flat', tails: 0.5 },
       { bob: 0, legA: 'stand', legB: 'stand', armA: 'down', armB: 'down', eyes: 'open', mouth: 'smile' },
     ][f] },
-    work:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'type2' : 'type', armA: f % 2 ? 'hold' : 'type2', eyes: f === 3 ? 'blink' : 'open', mouth: 'flat', panel: f + 1, hdy: f % 2 }) },
+    // typing on a hologram keyboard: hands take turns, keys flash, code scrolls on the screen
+    work:  { frames: 8, fps: 6, pose: f => ({ armA: f % 2 ? 'typeLd' : 'typeL', armB: f % 2 ? 'typeL' : 'typeLd', eyes: f === 7 ? 'blink' : 'open', mouth: f === 4 ? 'smile' : 'flat', hdy: f % 4 === 1 ? 1 : 0, tails: [0, 0.5, 0, -0.5][f % 4],
+      keys: [[f % 2 ? 2 : 4, (f * 3) % 7], f === 3 || f === 7 ? [5, 0] : [f % 2 ? 4 : 2, (f * 5 + 2) % 7]], screen: f }) },
     // swaying with her hands on her heart while hearts float up
     love:  { frames: 6, fps: 5, pose: f => ({ armA: 'heart', armB: 'heart', eyes: 'happy', blush: true, dx: SIN(f, 6) * 0.5, bob: [0, 0.5, 1, 0.5, 0, 0][f], tails: -SIN(f, 6) * 1.2, fx: [['heart', 40, 28 - f * 2, '#ff8fb0'], ['heartS', 12, 30 - ((f + 3) % 6) * 2, '#ff8fb0'], ['heartS', 27, 18 - (f % 3), '#ffb3c8']] }) },
     // stomping, with a throbbing anger mark
@@ -609,18 +652,6 @@
   Object.keys(ANIMS).forEach(k => { const a = ANIMS[k]; if (a.loop === undefined) a.loop = true; a.footY = Math.round(ty((a.footY || GROUND) + 1) * K) - 1; });
 
   // ---------------------------------------------------------------- rendering
-  // lying poses are drawn standing, then turned on their side
-  function lieDown(buf) {
-    // rotate -90deg (head to the left, feet to the right), then slide her down
-    // and left so she rests on the ground near the middle of the frame
-    const pts = [];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = buf.getP(x, y); if (c) pts.push([y, W - 1 - x, c]); }
-    const minX = Math.min(...pts.map(q => q[0])), maxX = Math.max(...pts.map(q => q[0])), maxY = Math.max(...pts.map(q => q[1]));
-    const dx = Math.round((W - (maxX - minX + 1)) / 2) - minX, dy = H - 1 - maxY;
-    const out = new Buf();
-    for (const [x, y, c] of pts) out.setP(x + dx, y + dy, c);
-    return out;
-  }
   const cache = new Map();
   function frameRGBA(anim, frame, pal) {
     const a = ANIMS[anim] || ANIMS.idle;
@@ -629,8 +660,7 @@
     let px = cache.get(key);
     if (!px) {
       const pose = a.pose(f);
-      let buf = drawZinx(pose, pal);
-      if (a.lie) buf = lieDown(buf);
+      const buf = drawZinx(pose, pal);
       addFx(buf, pose, pal);
       px = new Uint8ClampedArray(W * H * 4);
       for (let i = 0; i < W * H; i++) {
