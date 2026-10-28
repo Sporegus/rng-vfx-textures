@@ -318,7 +318,7 @@
   // ---------------------------------------------------------------- skeleton presets
   // arm/leg presets are [elbow|knee, hand|ankle] offsets from the shoulder/hip
   const ARMS = {
-    down: [[2.4, 4.0], [4.0, 7.9]], out: [[3, 3], [6, 5]], wave1: [[4, -1.5], [8.4, -4.6]], wave2: [[3.6, -2.6], [5.6, -7.6]],
+    down: [[1.5, 4.2], [2.3, 8.1]], out: [[3, 3], [6, 5]], wave1: [[4, -1.5], [8.4, -4.6]], wave2: [[3.6, -2.6], [5.6, -7.6]],
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
@@ -340,8 +340,8 @@
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 4.6, 32.0 + oy];
-    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 4.6, 32.0 + oy];
+    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 4.2, 32.0 + oy];
+    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 4.2, 32.0 + oy];
     const hipA = side ? [ox - 1.4, 42.6 + oy] : [ox - 2.5, 42.6 + oy];
     const hipB = side ? [ox - 0.4, 42.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
@@ -485,26 +485,10 @@
       for (const [lg, key, sg, hip] of [[legA, p.legA, -1, hipA], [legB, p.legB, 1, hipB]])
         part(body, null, (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8]]);
     }
-    // bust: a soft shadow under each curve, a little shine on top, a cleavage line
-    // (the outlines under the breasts are drawn after the glow lines)
+    // from the back, a soft line where the legs meet; in profile, the near leg
     if (back) {
       body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
-    } else if (!side) {
-      // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
-      // shine up top, shadow underneath, and a dark outline round the bottom
-      const R = 4.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
-      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * R + 1; i++) {
-        const X = midX + i, nx = (i + 0.5 - R) / R, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
-        if (r > 1) continue;
-        // the lowest pixel of each column, and the outermost pixels below the middle, are outline
-        const below = Math.hypot(nx, (Y + 1.5 - cyP) / R) > 1, side = ny > 0 && (Math.hypot((i - 0.5 - R) / R, ny) > 1 || Math.hypot((i + 1.5 - R) / R, ny) > 1);
-        const c = (ny > 0.05 && (below || side)) ? pal.outline
-          : ny > 0.35 && r > 0.55 ? B4[3]
-          : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
-          : B4[2];
-        body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
-      }
-    } else {
+    } else if (side) {
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1), [[hipB[0] - 0.6, hipB[1] - 0.6, 3.4]]);
     }
     if (side) {
@@ -526,6 +510,23 @@
     if (!side) part(body, pal.outline, (t) => { drawArm(t, armA, B4); limbGlow(t, armA, 0.5); }, [[shA[0], shA[1], 2.4]]);
     part(body, pal.outline, (t) => { drawArm(t, armB, B4); limbGlow(t, armB, -0.5); }, [[shB[0], shB[1], 2.4]]);
 
+    // the bust sits in front of her upper arms
+    if (!side && !back) {
+      // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
+      // shine up top, shadow underneath, and a dark outline round the bottom
+      const R = 4.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
+      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * R + 1; i++) {
+        const X = midX + i, nx = (i + 0.5 - R) / R, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
+        if (r > 1) continue;
+        // the lowest pixel of each column, and the outermost pixels below the middle, are outline
+        const below = Math.hypot(nx, (Y + 1.5 - cyP) / R) > 1, side = ny > 0 && (Math.hypot((i - 0.5 - R) / R, ny) > 1 || Math.hypot((i + 1.5 - R) / R, ny) > 1);
+        const c = (ny > 0.05 && (below || side)) ? pal.outline
+          : ny > 0.35 && r > 0.55 ? B4[3]
+          : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
+          : B4[2];
+        body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
+      }
+    }
     // props / effects
     if (p.panel) {
       const x = armB[2][0] + 2, y = armB[2][1] - 9;
