@@ -1,0 +1,59 @@
+{
+  "name": "nova",
+  "productName": "Nova",
+  "version": "0.1.0",
+  "description": "Nova - a little desktop buddy that lives on your screen and helps out.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win portable nsis",
+    "test": "node brain/test.js && node brain/fresh.js && node brain/fresh2.js && node voice/wake.test.js && node voice/orpheus.test.js && node voice/eleven.test.js && node voice/pronounce.test.js",
+    "voice-check": "node voice/check.js"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.nova.desktop",
+    "productName": "Nova",
+    "files": [
+      "main.js",
+      "preload.js",
+      "actions/**",
+      "brain/intents.js",
+      "brain/brain.js",
+      "voice/**",
+      "!voice/*.test.js",
+      "!voice/check.js",
+      "src/**",
+      "assets/**",
+      "!node_modules/@node-llama-cpp/*cuda*/**",
+      "!node_modules/@node-llama-cpp/{linux,mac}-*/**",
+      "!node_modules/sherpa-onnx-{linux,darwin}-*/**"
+    ],
+    "win": {
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "asarUnpack": [
+      "node_modules/sherpa-onnx-*/**",
+      "node_modules/node-llama-cpp/**",
+      "node_modules/@node-llama-cpp/**",
+      "voice/emotions/**",
+      "voice/nova/**"
+    ]
+  },
+  "dependencies": {
+    "node-llama-cpp": "^3.22.2",
+    "onnxruntime-node": "^1.22.0",
+    "sherpa-onnx-node": "^1.13.8",
+    "tar": "^7.5.22",
+    "unbzip2-stream": "^1.4.3"
+  }
+}

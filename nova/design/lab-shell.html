@@ -1,0 +1,121 @@
+<title>Nova Sprite Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Layout: one dark "grid" stage up top with Nova on it, a slim control rail under it, short review notes last. Single dark look on purpose (Tron). */
+:root {
+  color-scheme: dark;
+  --void: #03050a;
+  --panel: #0a0e17;
+  --line: #1b2433;
+  --ink: #e9f3ff;
+  --muted: #8796ad;
+  --glow: #ff4a52;
+  --display: "Chakra Petch", "Segoe UI", sans-serif;
+  --mono: "Share Tech Mono", "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--display); }
+[hidden] { display: none !important; }
+.wrap {
+  max-width: 1100px; margin: 0 auto;
+  padding-block: 18px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+h1 { margin: 0; font-weight: 700; font-size: 26px; letter-spacing: 3px; text-wrap: balance; }
+h1 span { color: var(--glow); text-shadow: 0 0 12px var(--glow); }
+.status { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--muted); border: 1px solid var(--line); padding: 3px 8px; }
+.status b { color: #ffcf5a; font-weight: 400; }
+
+.stage { position: relative; border: 1px solid var(--line); background: #000; overflow: hidden; }
+.stage canvas { display: block; width: 100%; touch-action: manipulation; cursor: crosshair; image-rendering: pixelated; }
+.hint { position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); pointer-events: none; }
+
+.rail { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-start; }
+.group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+button {
+  font: 600 13px/1 var(--display); letter-spacing: 1px; text-transform: uppercase;
+  color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  padding: 9px 12px; cursor: pointer;
+}
+button:hover { border-color: var(--glow); }
+button:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--glow); box-shadow: 0 0 10px -2px var(--glow), inset 0 0 8px -4px var(--glow); }
+button.primary { background: var(--glow); color: #04060b; border-color: var(--glow); }
+.swatch { width: 34px; height: 34px; padding: 0; position: relative; }
+.swatch::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+
+.notes { border-top: 1px solid var(--line); padding-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 28px; }
+.notes h2 { margin: 0 0 6px; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; color: var(--glow); }
+.notes p, .notes li { font-family: var(--display); font-size: 14px; line-height: 1.5; color: #c4d0e2; max-width: 62ch; }
+.notes p { margin: 0; }
+.notes ul { margin: 0; padding-left: 18px; }
+.sheet-wrap h2 { margin: 0 0 8px; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; color: var(--glow); }
+.sheet-scroll { overflow-x: auto; border: 1px solid var(--line); }
+#sheet { display: block; image-rendering: pixelated; }
+@media (prefers-reduced-motion: reduce) { .stage canvas { cursor: default; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>NOVA <span>//</span> SPRITE LAB</h1>
+    <span class="status">DRAFT 57 · <b>WAITING FOR YOUR OK</b></span>
+  </header>
+
+  <div class="stage" id="stage-box">
+    <canvas id="stage" aria-label="Chibi Nova standing on a glowing grid floor"></canvas>
+    <div class="hint">Tap the floor to teleport her there</div>
+  </div>
+
+  <div class="rail">
+    <div class="group">
+      <span class="label">Animation</span>
+      <div class="row" id="anims"></div>
+    </div>
+    <div class="group">
+      <span class="label">Teleport</span>
+      <div class="row"><button id="tp" class="primary">Teleport somewhere</button></div>
+    </div>
+    <div class="group">
+      <span class="label">Color</span>
+      <div class="row" id="glows"></div>
+    </div>
+    <div class="group">
+      <span class="label">Projector</span>
+      <div class="row"><button id="base" aria-pressed="true">Base light</button></div>
+    </div>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h2>What this is</h2>
+      <p>New Working and Sleep animations. In Working, she types on a floating hologram keyboard: her hands take turns, keys light up under her fingers, and code scrolls on a hologram screen beside her. In Sleep, she dozes on her feet with her eyes closed and breathes slowly, while a bubble swells from her mouth and pops and Zzz drift up. Every animation has smooth in-between frames. Nothing here is in the app yet.</p>
+    </div>
+    <div>
+      <h2>Tell me what to change</h2>
+      <ul>
+        <li>Face: eyes, mouth, expressions</li>
+        <li>Hair: length, shine, bangs</li>
+        <li>Body: size, shape, suit lines</li>
+        <li>Shades of red, or other colors</li>
+        <li>Which animations to add or redo</li>
+        <li>The teleport: speed, particles, sound</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sheet-wrap">
+    <h2>Every frame</h2>
+    <div class="sheet-scroll"><canvas id="sheet" aria-label="Sprite sheet with every animation frame"></canvas></div>
+  </section>
+</div>
+
+<script>/*CHIBI_JS*/</script>
+<script>/*LAB_JS*/</script>

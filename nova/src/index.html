@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Nova</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="fx"></canvas>
+  <div id="nova"><canvas id="sprite"></canvas></div>
+  <div id="tag" class="hidden"></div>
+  <div id="hi" class="hidden">hi</div>
+  <div id="bubble" class="hidden">
+    <div class="b-head">
+      <span class="b-name">NOVA</span>
+      <span class="b-chip">ONLINE</span>
+      <button class="b-x" title="Close">×</button>
+    </div>
+    <div id="b-text"></div>
+    <div id="b-body"></div>
+  </div>
+  <script src="sprites.js"></script>
+  <script src="../brain/intents.js"></script>
+  <script src="../brain/brain.js"></script>
+  <script src="../voice/wake.js"></script>
+  <script src="voice.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
