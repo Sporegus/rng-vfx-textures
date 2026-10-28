@@ -107,14 +107,16 @@ free, open models that run on your PC, so nothing you say is sent anywhere:
 
 **Pixie** was made for Zin: a search over blends of Kokoro's 54 voices for the one
 that sounds most like a real speaker with a bright, cute voice (EARS speaker
-p062), scored by a speaker-identity model. On sentences it was never tuned on,
-graded by a second, independent speaker model:
+p062), scored by a speaker-identity model plus a bright pitch (240 Hz or more),
+lively intonation and every word understood, at a 10% quicker pace. On
+sentences it was never tuned on, graded by a second, independent speaker model:
 
-| | Same person every sentence | Sounds like the real speaker | Words heard right |
-|---|---|---|---|
-| Pixie | 0.88 | 0.69 | 98% |
-| Expressive (Pocket TTS) | 0.54 | 0.58 | 95% |
-| Stock Kokoro voice | 0.89 | 0.55 | 98% |
+| | Pitch | Same person every sentence | Sounds like the real speaker | Words heard right |
+|---|---|---|---|---|
+| Pixie | 222 Hz | 0.85 | 0.74 | 98% |
+| First Pixie (too low and slow) | 164 Hz | 0.88 | 0.69 | 98% |
+| Expressive (Pocket TTS) | – | 0.54 | 0.58 | 95% |
+| Stock Kokoro voice | 171 Hz | 0.89 | 0.55 | 98% |
 
 Moods (cute, happy, excited, sad, calm, confused, proud, pouty, shy, love) change
 how she says things: a little faster, higher and louder when excited, slower and
