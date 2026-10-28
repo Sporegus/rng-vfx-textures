@@ -454,6 +454,7 @@
       // each breast is a little narrower than it is tall, so the pair sit close together
       const R = 4.1, RX = 3.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
       const inB = (i, Y) => Math.hypot((i + 0.5 - RX) / RX, (Y + 0.5 - cyP) / R) <= 1;
+      const bottom = [], under = new Map();
       for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * RX + 1; i++) {
         if (!inB(i, Y)) continue;
         const X = midX + i, nx = (i + 0.5 - RX) / RX, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
@@ -462,8 +463,18 @@
           : ny > 0.35 && r > 0.55 ? B4[3]
           : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
           : B4[2];
+        if (!under.has(X + ',' + Y)) under.set(X + ',' + Y, [body.getP(X, Y), body.getP(2 * midX - 1 - X, Y)]);
         body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
+        bottom[i] = Y;
       }
+      // a column that dips one pixel below both neighbours pokes out of the curve:
+      // lift its outline a pixel and give the suit back underneath
+      bottom.forEach((Y, i) => {
+        if (!(Y > (bottom[i - 1] ?? Infinity) && Y > (bottom[i + 1] ?? Infinity))) return;
+        const X = midX + i, [a, b] = under.get(X + ',' + Y);
+        body.setP(X, Y, a); body.setP(2 * midX - 1 - X, Y, b);
+        body.setP(X, Y - 1, pal.outline); body.setP(2 * midX - 1 - X, Y - 1, pal.outline);
+      });
       // suit lines carry on over the chest: an arc over the top of each breast and a
       // V neckline running down to the cleavage
       const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
