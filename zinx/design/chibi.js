@@ -28,7 +28,7 @@
   };
   // tapered limb through pts, 3-tone shading (light on the upper-left)
   Buf.prototype.limb = function (pts, radii, tones) {
-    const P = pts.map(([x, y]) => [x + 0.5, y + 0.5]);
+    const P = pts.map(([x, y]) => [x, y + 0.5]);
     const R = Math.max(...radii) + 1;
     const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
     this.each(Math.min(...xs) - R, Math.min(...ys) - R, Math.max(...xs) + R, Math.max(...ys) + R, (x, y) => {
@@ -222,8 +222,8 @@
 
     const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 5, 31.4 + oy];
     const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 5, 31.4 + oy];
-    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.8, 42.6 + oy];
-    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.8, 42.6 + oy];
+    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.5, 42.6 + oy];
+    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
     const joint = (base, preset, table, s, leg) => {
       const v = Array.isArray(preset) ? preset : table[preset] || table.down || table.stand;
@@ -244,9 +244,10 @@
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [3.45, 2.45, 1.35, 1.5, 0.9], tones);
+      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.95, 2.2, 1.35, 1.5, 0.9], tones);
       // foot: a little shoe, wider than the ankle, toes pointing out (forward in side view)
-      const ax = Math.round(ankle[0]), ay = Math.round(ankle[1]);
+      // mirror-exact pixel for the left foot so both feet match
+      const ax = side ? Math.round(ankle[0]) : sgn > 0 ? Math.floor(ankle[0]) : W - 1 - Math.floor(W - ankle[0]), ay = Math.round(ankle[1]);
       const shoe = { L: tones[1], M: tones[2], D: tones[3] };
       if (side) t.glyph(ax - 1, ay, ['LMM.', 'MDDD'], shoe);
       else if (sgn > 0) t.glyph(ax - 1, ay, ['LMD.', 'MDDD'], shoe);
@@ -264,7 +265,7 @@
     const T = (pts) => pts.map(([x, y]) => [x + ox, 30.4 + (y - 30.4) * 0.86 + oy]);
     const torso = side
       ? T([[-3, 30.5], [1.5, 30.5], [3.4, 32], [5.8, 34.2], [5, 36.6], [2.1, 37.8], [2, 39.5], [2.9, 42], [2.4, 44.6], [-1, 45.6], [-5.6, 45.2], [-7, 42.6], [-5, 39.6], [-3.1, 38.4], [-3.2, 36], [-3.6, 33]])
-      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [5.4, 36.4], [4.2, 37.7], [3.3, 38.8], [3.2, 39.8], [3.7, 40.8], [4.6, 42], [5.1, 43.3], [5.1, 44.4], [4.4, 45.6], [2.6, 46.4], [0, 45.8], [-2.6, 46.4], [-4.4, 45.6], [-5.1, 44.4], [-5.1, 43.3], [-4.6, 42], [-3.7, 40.8], [-3.2, 39.8], [-3.3, 38.8], [-4.2, 37.7], [-5.4, 36.4], [-6.1, 34.6], [-5.4, 32]]);
+      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [5.4, 36.4], [4.2, 37.7], [3.3, 38.8], [3.2, 39.8], [3.6, 40.8], [4.3, 42], [4.7, 43.3], [4.6, 44.4], [4, 45.6], [2.4, 46.4], [0, 45.8], [-2.4, 46.4], [-4, 45.6], [-4.6, 44.4], [-4.7, 43.3], [-4.3, 42], [-3.6, 40.8], [-3.2, 39.8], [-3.3, 38.8], [-4.2, 37.7], [-5.4, 36.4], [-6.1, 34.6], [-5.4, 32]]);
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
@@ -335,7 +336,7 @@
 
   // ---------------------------------------------------------------- animations
   const ANIMS = {
-    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'hip', armB: 'down', legB: 'apart' }) },
+    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'hip', armB: 'down' }) },
     walk:  { frames: 4, fps: 8, pose: f => ({ view: 'side', bob: f % 2 ? -1 : 0, legA: ['stepB', 'pass', 'stepF', 'stand'][f], legB: ['stepF', 'stand', 'stepB', 'pass'][f], armA: ['swingF', 'down', 'swingB', 'down'][f], armB: ['swingB', 'down', 'swingF', 'down'][f] }) },
     run:   { frames: 4, fps: 12, pose: f => ({ view: 'side', dx: 1, bob: f % 2 ? -1 : 0, legA: ['runB', 'runUp', 'runF', 'stand'][f], legB: ['runF', 'stand', 'runB', 'runUp'][f], armA: f < 2 ? 'swingF' : 'swingB', armB: f < 2 ? [[-2, 3], [-1, 7]] : [[3, 3], [5, 5]], mouth: 'grin' }) },
     wave:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open' }) },
