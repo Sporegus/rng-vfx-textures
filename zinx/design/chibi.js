@@ -327,7 +327,7 @@
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], [2.3, 1.85, 1.15, 1.3, 0.8], tones, [-0.62, 0.62]);
+      t.limb([hip, thigh, knee, calf, ankle], [2.4, 2.2, 1.65, 1.7, 1.15], tones, [-0.62, 0.62]);
       // foot: a little shoe, wider than the ankle, toes pointing out
       // mirror-exact pixel for the left foot so both feet match
       const ax = sgn > 0 ? Math.floor(ankle[0]) : LW - 1 - Math.floor(LW - ankle[0]), ay = Math.round(ankle[1]);
@@ -425,6 +425,13 @@
     // legs blend into the hips
     for (const [lg, key, sg, hip] of [[legA, p.legA, -1, hipA], [legB, p.legB, 1, hipB]])
       part(body, null, (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8]]);
+    // with a leg bent, the suit's leotard line bridges her hips so there's no gap at the crotch
+    if (!(standing(p.legA) && standing(p.legB))) {
+      body.poly(T([[-4.6, 42.4], [4.6, 42.4], [3.9, 44.6], [2.2, 46.2], [0, 46.7], [-2.2, 46.2], [-3.9, 44.6]]), (x) => {
+        const rel = (x + 0.5 - ox) / 6;
+        return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
+      });
+    }
     // from the back, a soft line where the legs meet
     if (back) body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
     for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
