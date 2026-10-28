@@ -375,7 +375,7 @@
     // front-view standing legs: straight inner edge with a thin gap, outer edge
     // tapering from the hip to a flat rounded foot
     const drawStandLeg = (t, sgn) => {
-      const pts = [[1.15, 43.4], [5.1, 42.6], [5.2, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [1.35, 55], [1.15, 53.8]];
+      const pts = [[0.6, 43.4], [5.1, 42.6], [5.2, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [0.6, 55], [0.6, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
         const outer = d > (y < 47 ? 4.4 : 3.2);
@@ -438,7 +438,7 @@
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
     const bothLegsStand = standing(p.legA) && standing(p.legB);
     const sideCurve = span(35.6, 44.4, (y) => halfW(y) - 1.6).concat(bothLegsStand ? [[3.6, 45.6], [3.3, 47.4], [2.8, 49.8], [2.5, 52.4], [2.3, 53.6]] : []);
-    const legInner = bothLegsStand ? [[[2.2, 45.6], [2.4, 48.2], [2.2, 51], [2.1, 53.6]]] : [];
+    const legInner = bothLegsStand ? [[[1.9, 45.6], [2.1, 48.2], [1.9, 51], [1.8, 53.6]]] : [];
     const FRONT_LINES = [
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],                            // collar to shoulder
       sideCurve,                                                         // down her curves
@@ -522,6 +522,10 @@
     }
     if (p.tears) p.tears.forEach(([x, y]) => fx.glyph(ox + x, y + oy, G.drop, pal.tear));
     const out = outline(body, pal.outline);
+    // standing, a clean 2-pixel gap between the legs, without outline inside it
+    if (!side && standing(p.legA) && standing(p.legB)) {
+      for (let Y = Math.round(ty(44.6 + Math.min(0, oy)) * K); Y < H; Y++) for (const X of [midX - 1, midX]) if (out.getP(X, Y) === pal.outline) out.setP(X, Y, null), out.p[Y * W + X] = null;
+    }
     for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = fx.p[i];
     return out;
   }
