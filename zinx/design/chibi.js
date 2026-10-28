@@ -217,48 +217,6 @@
     '....OEO.OEO........................................EEEEOEO....',
     '.....O...O..........................................OO..O.....',
   ];
-  // side view facing right; the skull's center is column 22
-  const PX_HEAD_SIDE = [
-    '...............OOOOMMMMMMMOOO.................',
-    '..........OOO.OHTMMMMMMMMMMMMOO...............',
-    '........OODEDOMMpMMDMMMMMDMMMMMO..............',
-    '.......OEDMMDMMMMpMDMMMMMDMMMMMMO.............',
-    '......OMMMDMMMDMpTMDMMMMMDMMMMMMMO............',
-    '.....OMMMMMDMMDpTMDMMMMMMDMMMMMMMMO...........',
-    '....OMMMMHDDMDTTMMDMMMMMDMMMMMMMMMMO..........',
-    '....OMMMMDDDMDptMMHHHHMHHHHHMMMMMMMMO.........',
-    '...OMMHHMDDDMppHMHHHMMMMHHMMMHHHMMMMO.........',
-    '...OMMHHDDDDpTMMMMDMMMMMDMMMMMHHHMMMMO........',
-    '...OMMMMDDDDTTMMMMDMMMMMDMMMMMMMMMMMMO........',
-    '...OMMMMDDDDDMMMMMDMMMMMOOMMMMMMMMMMMO........',
-    '..OMMHMMDDDDDMMMMDMMMMMOSSOMMMMMMMMMMOO.......',
-    '..OMMHMDDDDDDMMMMDMMMMMOSSOMMMMMMMMMMMMO......',
-    '..OMMHMDDDDEMMMMMDMMMMMOSSOMMMMMMMMMMMMO......',
-    '..OMMHMDDDDEMMMMMDMOMMMOSSOMMMOMMMMMMMMO......',
-    '..OMMMMDDDDEMMMMMDOSOMMOSSSOMOSOMMMOMMMO......',
-    '..OMMMMDDDEDMMMMDMOSOMMOSSSSOSSOOMOSOMMO......',
-    '..OMMMMMEEEDMMMMDMOSOMMOSSSSSSOOOOSSSOO.......',
-    '..OMMMMMEEEDMMMMDMOSOMMOSSSSSOOOWOSSSO........',
-    '..OEMMMMEEEDMMMMDMOSOMMOSSSSSWOOOOSSSO........',
-    '..OEMEMMEEDDMMMMDMOSSOMMOSSSSWOOOOSSSO........',
-    '..OEMEMMEEDDDDDDEDOSSOMMOSSSSWOOOOSSSO........',
-    '..OEEEEEEODDDDDDEDOSSOMMOSSSSWOOOOSSSO........',
-    '..OEEMEEEEDDDDDEDDOSSOMOSSSSSSSOOSSSSO........',
-    '..OEEMEEEEEDDDDEDDOSSOOSSSSSSSSSSSSSO.........',
-    '..OEEMEEEEEEEEEEEEEOSOSSSSSSSsssSSSSO.........',
-    '..OEEMEEEEEEEOEEEEEOSOSSSSSSSSsSSSNO..........',
-    '.OEEEEEEEEEEEOOEEEEEOOSSSSSSSSSSNNO...........',
-    'OMEEOEEEEEEEEO.OEEEEEOSSSSSSSSSSSO............',
-    'OEEOOEEEEEEEEEO.OEOOO.OOSSSSSSSOO.............',
-    '.OO.OEEEEEEEEEO.OO......OOOOOOO...............',
-    '....OEEEEEEEOEEO..............................',
-    '....OEOOOEOO.OO...............................',
-    '....OEO.OEO...................................',
-    '.....O...O....................................',
-  ];
-  const PX_SIDE_EYE = { x: 29, y: 16, w: 6, h: 9 };
-  const PX_SIDE_EYES = { closed: ['', '', '', '', '', 'O....O', '.OOOO.'], happy: ['', '', '', '', '..OO..', '.O..O.', 'O....O'] };
-  PX_SIDE_EYES.blink = PX_SIDE_EYES.cry = PX_SIDE_EYES.closed;
   const PX_EYE = { y: 17, x: 19, w: 8, h: 8 };     // her left eye box (viewer's left)
   const PX_MOUTH = { y: 27, x: 26, w: 10, h: 3 };
   const PX_EYES = {
@@ -272,10 +230,10 @@
   const PX_MOUTHS = { open: ['MMMMMM', '.MIIM.', '..MM..'], wail: ['MMMMMM', 'MIIIIM', 'MITTIM', '.MMMM.'], grin: ['MMMMMM', '.MIIM.', '..MM..'] };
   // Twin tails swing: shear the tail pixels sideways, more toward the tips.
   // ts is the shift at the tips in pixels; tails stay put where they are tied.
-  function swayTails(rows, ts, view) {
+  function swayTails(rows, ts) {
     if (!ts) return rows;
-    const n = rows[0].length, top = view === 'side' ? 24 : 6, len = 35 - top;
-    const inTail = (x, y) => y >= top && (x <= 13 || (view !== 'side' && x >= n - 14));
+    const n = rows[0].length, top = 6, len = 35 - top;
+    const inTail = (x, y) => y >= top && (x <= 13 || x >= n - 14);
     const out = rows.map(r => r.slice()), moved = [];
     rows.forEach((r, y) => r.forEach((c, x) => { if (c !== '.' && inTail(x, y)) { moved.push([x, y, c]); out[y][x] = '.'; } }));
     for (const [x, y, c] of moved) {
@@ -289,19 +247,9 @@
     const lag = Math.round(p.hdy || 0);                    // the head trails the body a little
     const H4 = pal.hair, F4 = pal.skin || pal.body, rib = pal.ribbon || ['#ffd0da', '#ff8aa6'];
     const col = { O: pal.lash, H: H4[1], M: H4[2], D: H4[3], E: pal.hairLine, S: F4[1], p: F4[2], s: pal.blush || pal.cheek, T: rib[0], t: rib[1], W: '#ffffff', N: pal.mouth };
-    if (p.view === 'back' || p.view === 'side') {
-      const back = p.view === 'back', rows = (back ? PX_HEAD_BACK : PX_HEAD_SIDE).map(r => r.split(''));
-      if (!back) {
-        const g = PX_SIDE_EYES[p.eyes === 'wink' ? 'happy' : p.eyes], E = PX_SIDE_EYE;
-        if (g) {
-          for (let j = 0; j < E.h; j++) for (let i = 0; i < E.w; i++) if ('OWij'.includes(rows[E.y + j][E.x + i])) rows[E.y + j][E.x + i] = 'S';
-          g.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === 'O') rows[E.y + j][E.x + i] = 'O'; });
-        }
-        if (['open', 'grin', 'wail', 'o', 'tongue'].includes(p.mouth)) for (const [x, y] of [[32, 28], [33, 28], [32, 29]]) rows[y][x] = 'N';
-      }
-      col.i = pal.iris[1]; col.j = pal.iris[2];
-      const X0 = Math.round(tx(hx) * K) - (back ? 31 : 22), Y0 = Math.round(ty(hy + 23.2) * K) - 32 + lag;
-      swayTails(rows, p.tails, p.view).forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
+    if (p.view === 'back') {
+      const X0 = Math.round(tx(hx) * K) - 31, Y0 = Math.round(ty(hy + 23.2) * K) - 32 + lag;
+      swayTails(PX_HEAD_BACK.map(r => r.split('')), p.tails).forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
       return;
     }
     const rows = PX_HEAD.map(r => r.split(''));
@@ -330,7 +278,7 @@
       mouth = PX_MOUTHS[mk] || MOUTHS[mk];
     }
     const X0 = Math.round(tx(hx) * K) - 31, Y0 = Math.round(ty(hy + 23.2) * K) - 32 + lag;
-    swayTails(rows, p.tails, p.view).forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
+    swayTails(rows, p.tails).forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
     if (mouth) b.glyphP(X0 + 31 - Math.floor(mouth[0].length / 2), Y0 + PX_MOUTH.y, mouth, { M: pal.mouth, I: pal.mouthIn || pal.mouth, T: pal.cheek, W: '#ffffff' });
   }
 
@@ -354,42 +302,37 @@
   function drawZinx(pose, palKey) {
     const pal = palOf(palKey);
     const p = Object.assign({ view: 'front', bob: 0, dx: 0, eyes: 'open', mouth: 'smile', armA: 'down', armB: 'down', legA: 'stand', legB: 'stand' }, pose);
-    const side = p.view === 'side', back = p.view === 'back';
+    const back = p.view === 'back';
     const ox = CX + p.dx, oy = p.bob;
     const B4 = pal.suit || pal.body;
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 4.2, 32.0 + oy];
-    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 4.2, 32.0 + oy];
-    const hipA = side ? [ox - 1.4, 42.6 + oy] : [ox - 2.5, 42.6 + oy];
-    const hipB = side ? [ox - 0.4, 42.6 + oy] : [ox + 2.5, 42.6 + oy];
+    const shA = [ox - 4.2, 32.0 + oy], shB = [ox + 4.2, 32.0 + oy];
+    const hipA = [ox - 2.5, 42.6 + oy], hipB = [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
     const joint = (base, preset, table, s, leg) => {
       const v = Array.isArray(preset) ? preset : table[preset] || table.down || table.stand;
-      const k = leg ? (side ? 1.03 : 0.95) : 1;
+      const k = leg ? 0.95 : 1;
       const e = mirror(v[0], s), h = mirror(v[1], s);
       const end = [base[0] + h[0], base[1] + h[1] * k];
       if (leg && oy > 0) end[1] -= oy; // feet stay planted when she bobs down
       return [base, [base[0] + e[0], base[1] + e[1] * k], end];
     };
-    // front view: A is viewer's left (mirrored), B viewer's right. side view: A is the far limb.
-    const sA = side ? 1 : -1, sB = 1;
-    const armA = joint(shA, p.armA, ARMS, sA), armB = joint(shB, p.armB, ARMS, sB);
-    const legA = joint(hipA, p.legA, LEGS, sA, true), legB = joint(hipB, p.legB, LEGS, sB, true);
-    const dark = [B4[2], B4[2], B4[3], B4[3]];
+    // A is the viewer's left (mirrored), B the viewer's right
+    const armA = joint(shA, p.armA, ARMS, -1), armB = joint(shB, p.armB, ARMS, 1);
+    const legA = joint(hipA, p.legA, LEGS, -1, true), legB = joint(hipB, p.legB, LEGS, 1, true);
 
     // shapely leg: thick thigh, slim knee, calf, ankle, small foot
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.3, 1.85, 1.15, 1.3, 0.8], tones, side ? undefined : [-0.62, 0.62]);
-      // foot: a little shoe, wider than the ankle, toes pointing out (forward in side view)
+      t.limb([hip, thigh, knee, calf, ankle], [2.3, 1.85, 1.15, 1.3, 0.8], tones, [-0.62, 0.62]);
+      // foot: a little shoe, wider than the ankle, toes pointing out
       // mirror-exact pixel for the left foot so both feet match
-      const ax = side ? Math.round(ankle[0]) : sgn > 0 ? Math.floor(ankle[0]) : LW - 1 - Math.floor(LW - ankle[0]), ay = Math.round(ankle[1]);
+      const ax = sgn > 0 ? Math.floor(ankle[0]) : LW - 1 - Math.floor(LW - ankle[0]), ay = Math.round(ankle[1]);
       const shoe = { L: tones[1], M: tones[2], D: tones[3] };
-      if (side) t.glyph(ax - 1, ay, ['LMM.', 'MDDD'], shoe);
-      else if (sgn > 0) t.glyph(ax - 1, ay, ['LMD.', 'MDDD'], shoe);
+      if (sgn > 0) t.glyph(ax - 1, ay, ['LMD.', 'MDDD'], shoe);
       else t.glyph(ax - 2, ay, ['.LMD', 'DDDM'], shoe);
     };
     // front-view standing legs: straight inner edge with a thin gap, outer edge
@@ -407,12 +350,9 @@
     // arms in the suit, bare hands so they stand out against her red hair
     const SK = pal.skin || pal.body, hand = [null, SK[1], SK[1], SK[2]];
     const drawArm = (t, arm, tones) => {
-      t.limb(arm, side ? [1.55, 1.35, 1.25] : [1.5, 1.4, 1.3], tones);
-      t.limb([arm[2], arm[2]], [1.5, 1.5], tones === dark ? [null, SK[2], SK[2], SK[3]] : hand);
+      t.limb(arm, [1.5, 1.4, 1.3], tones);
+      t.limb([arm[2], arm[2]], [1.5, 1.5], hand);
     };
-
-    // far limbs in side view sit behind the body
-    if (side) { drawLeg(body, legA, dark, 1); drawArm(body, armA, dark); }
 
     // Glowing circuit lines: 2-pixel lines in the shine color, only drawn over the
     // suit. Points are logical [dx from her center, y]; `mirror` repeats the line
@@ -457,10 +397,6 @@
       return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
     };
     const halfW = profile(WAIST);
-    // her side silhouette, facing right: chest, bust, tummy, hip and thigh in
-    // front; shoulder blades, small of the back and a round bum behind
-    const sideFront = profile([[29.8, 1.6], [31.0, 3.2], [32.6, 4.8], [34.0, 5.6], [35.4, 5.0], [36.5, 2.2], [38.2, 1.3], [40.4, 2.2], [42.6, 2.7], [44.8, 2.0], [45.6, 1.4]]);
-    const sideBack = profile([[29.8, -3.0], [32.0, -3.4], [35.0, -3.0], [37.6, -2.5], [39.4, -3.4], [41.2, -4.5], [42.8, -4.8], [44.2, -4.3], [45.2, -3.2], [45.6, -2.4]]);
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
     const bothLegsStand = standing(p.legA) && standing(p.legB);
     const sideCurve = span(35.6, 40.6, (y) => halfW(y) - 1.2);          // thin, from the bust to the waist
@@ -479,64 +415,31 @@
       [[0.6, 31.8], [2.0, 32.8], [3.4, 32.2]],                            // shoulder blades
       [[0.5, 36.2], [1.2, 38.6], [0.6, 41.0]],                            // small of the back
     ].concat(legInner, legOuter);
-    const SIDE_LINES = [
-      [[1.2, 30.2], [2.2, 31.4], [2.6, 32.6]],                            // collar
-      [[1.4, 36.6], [1.0, 38.4], [1.6, 40.4], [1.6, 42.6]],              // belly
-    ];
     // torso: hourglass with a bust and round hips
     const T = (pts) => pts.map(([x, y]) => [x + ox, y + oy]);
-    const torso = side
-      ? T(span(29.8, 45.6, sideFront).concat(span(29.8, 45.6, sideBack).reverse()))
-      : T(span(29.6, 45, halfW).concat([[1.2, 45], [0, 44.8], [-1.2, 45]], span(29.6, 45, halfW).reverse().map(([x, y]) => [-x, y])));
-    part(body, pal.outline, (t) => {
-      t.poly(torso, (x, y) => {
-        const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
-        if (!side) return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
-        return rel < -0.8 ? B4[1] : rel > 0.62 ? B4[3] : B4[2];
-      });
-      if (side) {   // bust in profile: shine on top (its outline is drawn last)
-        const cx = ox + 3.2, cy = 33.8 + oy;
-        t.each(cx - 2.5, cy - 2.5, cx + 2.5, cy + 2.5, (x, y) => {
-          const nx = (x + 0.5 - cx) / 1.9, ny = (y + 0.5 - cy) / 2.0, r = Math.hypot(nx, ny);
-          if (r > 1 || t.getP(Math.round(tx(x + 0.5) * K - 0.5), Math.round(ty(y + 0.5) * K - 0.5)) == null) return null;
-          if (ny < -0.2 && r < 0.55) return B4[1];
-          return null;
-        });
-      }
-    });
-    if (!side) {
-      // legs blend into the hips
-      for (const [lg, key, sg, hip] of [[legA, p.legA, -1, hipA], [legB, p.legB, 1, hipB]])
-        part(body, null, (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8]]);
-    }
-    // from the back, a soft line where the legs meet; in profile, the near leg
-    if (back) {
-      body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
-    } else if (side) {
-      part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1), [[hipB[0] - 0.6, hipB[1] - 0.6, 3.4]]);
-    }
-    if (side) {
-      for (const l of SIDE_LINES) glow(body, l, false);
-      glow(body, span(31.2, 41.4, (y) => sideBack(y) + 1.1), false, B4[0], true);         // down her back
-      glow(body, [[-4.3, 44.0], [-3.6, 44.7], [-2.8, 45.1]], false, pal.outline, true);   // fold under the bum
-      limbGlow(body, legB, 0.5);
-    } else {
-      for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
-      glow(body, sideCurve, true, B4[0], true);
-      if (!back) for (const l of TUMMY) glow(body, l, true, B4[0], true);
-      for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
-    }
-    // a U-shaped outline under each breast (in profile, under the bust)
-    if (side) glow(body, [[5.5, 35.0], [4.8, 36.0], [3.6, 36.5], [2.2, 36.3]], false, pal.outline);
+    const torso = T(span(29.6, 45, halfW).concat([[1.2, 45], [0, 44.8], [-1.2, 45]], span(29.6, 45, halfW).reverse().map(([x, y]) => [-x, y])));
+    part(body, pal.outline, (t) => t.poly(torso, (x, y) => {
+      const rel = (x + 0.5 - ox) / 6;
+      return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
+    }));
+    // legs blend into the hips
+    for (const [lg, key, sg, hip] of [[legA, p.legA, -1, hipA], [legB, p.legB, 1, hipB]])
+      part(body, null, (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8]]);
+    // from the back, a soft line where the legs meet
+    if (back) body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
+    for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
+    glow(body, sideCurve, true, B4[0], true);
+    if (!back) for (const l of TUMMY) glow(body, l, true, B4[0], true);
+    for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
     // neck + head
     body.rect(ox - 1, 27 + oy, 2, 4, (pal.skin || pal.body)[2]);
-    part(body, pal.outline, (t) => drawPixelHead(t, p, pal, ox + (side ? -1 : 0), 6 + oy));
+    part(body, pal.outline, (t) => drawPixelHead(t, p, pal, ox, 6 + oy));
     // arms in front
-    if (!side) part(body, pal.outline, (t) => { drawArm(t, armA, B4); limbGlow(t, armA, 0.5); }, [[shA[0], shA[1], 2.4]]);
+    part(body, pal.outline, (t) => { drawArm(t, armA, B4); limbGlow(t, armA, 0.5); }, [[shA[0], shA[1], 2.4]]);
     part(body, pal.outline, (t) => { drawArm(t, armB, B4); limbGlow(t, armB, -0.5); }, [[shB[0], shB[1], 2.4]]);
 
     // the bust sits in front of her upper arms
-    if (!side && !back) {
+    if (!back) {
       // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
       // shine up top, shadow underneath, and a dark outline round the bottom
       const R = 4.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
@@ -544,8 +447,8 @@
         const X = midX + i, nx = (i + 0.5 - R) / R, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
         if (r > 1) continue;
         // the lowest pixel of each column, and the outermost pixels below the middle, are outline
-        const below = Math.hypot(nx, (Y + 1.5 - cyP) / R) > 1, side = ny > 0 && (Math.hypot((i - 0.5 - R) / R, ny) > 1 || Math.hypot((i + 1.5 - R) / R, ny) > 1);
-        const c = (ny > 0.05 && (below || side)) ? pal.outline
+        const below = Math.hypot(nx, (Y + 1.5 - cyP) / R) > 1, edge = ny > 0 && (Math.hypot((i - 0.5 - R) / R, ny) > 1 || Math.hypot((i + 1.5 - R) / R, ny) > 1);
+        const c = (ny > 0.05 && (below || edge)) ? pal.outline
           : ny > 0.35 && r > 0.55 ? B4[3]
           : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
           : B4[2];
@@ -573,7 +476,7 @@
     }
     const out = outline(body, pal.outline);
     // standing, the legs touch with a thin line between them
-    if (!side && standing(p.legA) && standing(p.legB)) {
+    if (standing(p.legA) && standing(p.legB)) {
       for (let Y = Math.round(ty(44.8 + Math.min(0, oy)) * K); Y < H; Y++) if (out.p[Y * W + midX]) out.p[Y * W + midX] = pal.outline;
     }
     for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = fx.p[i];
@@ -591,38 +494,13 @@
   
 
   // ---------------------------------------------------------------- animations
-  // Walking and running, side view facing right (flip the frame to face left).
-  // A is the far leg and arm. The foot is off the ground while it swings forward,
-  // the arms swing against the legs, and she rises as a leg passes under her.
-  function stride(f, n, run) {
-    const ph = (f / n) * Math.PI * 2, u = Math.sin(ph), c = Math.cos(ph);
-    const reach = run ? 4.6 : 3.4, lift = run ? 3.2 : 2.0, swing = run ? 2.8 : 2.2;
-    const leg = (u, air) => {
-      const up = air * lift, ax = u * reach + air * 0.6;
-      return [[ax * 0.5 + up * (run ? 1.4 : 0.9), 5.2 - up * 0.5], [ax, 10.6 - up]];
-    };
-    const arm = (u) => run
-      ? [[u * swing * 0.5, 3.6], [u * swing + 1.6, 5.6 - Math.abs(u)]]
-      : [[u * swing * 0.4, 4.4], [u * swing, 8.4 - Math.abs(u) * 0.6]];
-    return {
-      view: 'side', sway: run ? -1.2 : -0.6, dx: 1,
-      bob: Math.abs(c) > 0.6 ? -1 : 0, hdy: Math.abs(c) > 0.6 ? 1 : 0,
-      tails: (run ? -2.5 : -1.2) - Math.abs(u) * (run ? 1 : 0.6),        // twin tails stream out behind
-      legA: leg(u, Math.max(0, c)), legB: leg(-u, Math.max(0, -c)),
-      armA: arm(-u), armB: arm(u),
-      mouth: run ? 'grin' : 'smile',
-    };
-  }
   // Effects ([glyph, x, y, color]) use the unscaled 56 x 56 grid: her head spans
   // about x 13..43, y 22..40 there, so the space above it is free for effects.
   const SIN = (f, n, ph = 0) => Math.sin((f / n) * Math.PI * 2 + ph), COS = (f, n, ph = 0) => Math.cos((f / n) * Math.PI * 2 + ph);
   const ANIMS = {
     // breathing: the body rises, the head follows a beat later, the tails sway, a blink
     idle:  { frames: 6, fps: 4, pose: f => ({ bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 0, 1, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], eyes: f === 5 ? 'blink' : 'open', armA: 'down', armB: 'down' }) },
-    walk:  { frames: 8, fps: 10, pose: f => stride(f, 8, false) },
-    side:  { frames: 6, fps: 4, pose: f => ({ view: 'side', bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 0, 1, 1, 0][f], tails: [0, -0.5, -1, -0.5, 0, 0][f], eyes: f === 5 ? 'blink' : 'open', armA: [[0.4, 4.3], [0.6, 8.4]], armB: [[0.4, 4.3], [0.6, 8.4]], legA: [[0.2, 5.4], [0.2, 10.6]], legB: [[0.2, 5.4], [0.2, 10.6]] }) },
     back:  { frames: 6, fps: 4, pose: f => ({ view: 'back', bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 0, 1, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], armA: 'down', armB: 'down' }) },
-    run:   { frames: 8, fps: 14, pose: f => stride(f, 8, true) },
     // a big friendly wave: the hand swings, the tails swing the other way, sparkles
     wave:  { frames: 4, fps: 5, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open', bob: f % 2 ? 0.5 : 0, tails: f % 2 ? -1.5 : 1.5, fx: [['spark2', 46, 23 + (f % 2) * 2, '#ffffff']].concat(f % 2 ? [] : [['star', 49, 27, 'line']]) }) },
     // chatting: mouth flaps, little hand gestures, a bounce
@@ -669,7 +547,7 @@
   };
   // Smoother motion: these animations get in-between frames, with limbs, bob and
   // drift blended between key poses (faces and effects come from the nearer key).
-  const SMOOTH = { idle: 2, side: 2, back: 2, wave: 2, point: 2, think: 2, cheer: 2, sit: 2, cry: 2, sad: 2, dance: 2, dangle: 2, land: 2, love: 2 };
+  const SMOOTH = { idle: 2, back: 2, wave: 2, point: 2, think: 2, cheer: 2, sit: 2, cry: 2, sad: 2, dance: 2, dangle: 2, land: 2, love: 2 };
   const resolve = (v, table) => Array.isArray(v) ? v : table[v];
   const mix = (a, b, t) => a.map((pt, i) => pt.map((x, j) => x + (b[i][j] - x) * t));
   function blendPose(p0, p1, t) {

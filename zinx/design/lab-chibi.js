@@ -1,5 +1,5 @@
-// Sprite lab for the chibi Zinx: animated preview on a grid floor, walking
-// back and forth, the pixel dissolve teleport, and a sheet of every frame.
+// Sprite lab for the chibi Zinx: animated preview on a grid floor, the pixel
+// dissolve teleport, and a sheet of every frame.
 (function () {
   const Z = window.ZinxChibi;
   const cv = document.getElementById('stage');
@@ -13,7 +13,7 @@
   // ---------------------------------------------------------------- layout
   let W = 0, H = 0, dpr = 1, horizon = 0;
   const floorBuf = document.createElement('canvas');
-  const her = { x: 0, y: 0, facing: 1 };
+  const her = { x: 0, y: 0 };
   function layout() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     W = box.clientWidth;
@@ -139,14 +139,6 @@
     const a = Z.ANIMS[anim];
     ft += dt;
     if (ft >= 1 / a.fps) { ft = 0; frame = a.loop ? frame + 1 : Math.min(frame + 1, a.frames - 1); }
-    // walking and running actually move her, turning around at the edges
-    if ((anim === 'walk' || anim === 'run') && !tele) {
-      const s = scaleAt(her.y), speed = (anim === 'run' ? 30 : 14) * s;
-      her.x += her.facing * speed * dt;
-      const m = Z.W * s * 0.35;
-      if (her.x > W - m) { her.x = W - m; her.facing = -1; }
-      if (her.x < m) { her.x = m; her.facing = 1; }
-    }
     updateTele(dt);
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -178,10 +170,8 @@
       ctx.save();
       ctx.shadowColor = glow; ctx.shadowBlur = 10 * dpr;
       ctx.globalAlpha = time < glitchUntil ? 0.6 : 1;
-      const flip = her.facing < 0 && (anim === 'walk' || anim === 'run');
       const dx = time < glitchUntil ? Math.round((Math.random() - 0.5) * 3) * s : 0;
-      if (flip) { ctx.translate(ox + Z.W * s + dx, oy); ctx.scale(-1, 1); ctx.drawImage(oc, 0, 0, Z.W * s, Z.H * s); }
-      else ctx.drawImage(oc, ox + dx, oy, Z.W * s, Z.H * s);
+      ctx.drawImage(oc, ox + dx, oy, Z.W * s, Z.H * s);
       ctx.restore();
     }
 
@@ -229,7 +219,7 @@
   }
 
   // ---------------------------------------------------------------- controls
-  const LABELS = { idle: 'Idle', side: 'Side view', back: 'Back view', walk: 'Walk', run: 'Run', wave: 'Wave', talk: 'Talk', point: 'Point', think: 'Think', cheer: 'Cheer', sit: 'Sit', sleep: 'Sleep', cry: 'Cry', sad: 'Sad', dance: 'Dance', dangle: 'Picked up', fall: 'Fall', land: 'Land', work: 'Working', love: 'Love', angry: 'Angry', dizzy: 'Dizzy' };
+  const LABELS = { idle: 'Idle', back: 'Back view', wave: 'Wave', talk: 'Talk', point: 'Point', think: 'Think', cheer: 'Cheer', sit: 'Sit', sleep: 'Sleep', cry: 'Cry', sad: 'Sad', dance: 'Dance', dangle: 'Picked up', fall: 'Fall', land: 'Land', work: 'Working', love: 'Love', angry: 'Angry', dizzy: 'Dizzy' };
   const animRow = document.getElementById('anims');
   Object.keys(Z.ANIMS).forEach((k) => {
     const b = document.createElement('button');
