@@ -356,7 +356,7 @@
 
     // Glowing circuit lines: 2-pixel lines in the shine color, only drawn over the
     // suit. Points are logical [dx from her center, y]; `mirror` repeats the line
-    // on her other side, mirror-exact around her center.
+    // on her other side, mirror-exact around her center ('only' draws just that copy).
     const suit = new Set(B4.slice(1));
     const midX = Math.round(tx(ox) * K);
     const glow = (buf, pts, mirror, c = B4[0], thin = false) => {
@@ -368,7 +368,7 @@
           const X = Math.round(x0 + (x1 - x0) * k / n), Y = Math.round(y0 + (y1 - y0) * k / n);
           // two pixels thick: widen across the line's direction
           const [ex, ey] = thin ? [0, 0] : Math.abs(x1 - x0) > Math.abs(y1 - y0) ? [0, 1] : [1, 0];
-          dot(X, Y); dot(X + ex, Y + ey);
+          if (mirror !== 'only') { dot(X, Y); dot(X + ex, Y + ey); }
           if (mirror) { dot(2 * midX - 1 - X, Y); dot(2 * midX - 1 - X - ex, Y + ey); }
         }
       }
@@ -398,13 +398,12 @@
     };
     const halfW = profile(WAIST);
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
-    const bothLegsStand = standing(p.legA) && standing(p.legB);
     const sideCurve = span(35.6, 40.6, (y) => halfW(y) - 1.2);          // thin, from the bust to the waist
-    const legOuter = bothLegsStand ? [[[3.4, 46.4], [3.1, 48.2], [2.7, 50.4], [2.4, 52.6], [2.3, 53.6]]] : [];
-    const legInner = bothLegsStand ? [[[1.9, 45.6], [2.1, 48.2], [1.9, 51], [1.8, 53.6]]] : [];
+    // glow lines down a standing leg (right-leg coordinates; sgn -1 mirrors to the left)
+    const STAND_LEG_LINES = [[[3.4, 46.4], [3.1, 48.2], [2.7, 50.4], [2.4, 52.6], [2.3, 53.6]], [[1.9, 45.6], [2.1, 48.2], [1.9, 51], [1.8, 53.6]]];
     const FRONT_LINES = [
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],                            // collar to shoulder
-    ].concat(legInner, legOuter);
+    ];
     // suit detail under the bust: two curved glow lines on each side of her tummy, ( ( ) )
     const TUMMY = [
       [[1.2, 37.5], [1.8, 38.6], [1.9, 40.0], [1.5, 41.4], [1.2, 42.2]],
@@ -414,7 +413,7 @@
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],
       [[0.6, 31.8], [2.0, 32.8], [3.4, 32.2]],                            // shoulder blades
       [[0.5, 36.2], [1.2, 38.6], [0.6, 41.0]],                            // small of the back
-    ].concat(legInner, legOuter);
+    ];
     // torso: hourglass with a bust and round hips
     const T = (pts) => pts.map(([x, y]) => [x + ox, y + oy]);
     const torso = T(span(29.6, 45, halfW).concat([[1.2, 45], [0, 44.8], [-1.2, 45]], span(29.6, 45, halfW).reverse().map(([x, y]) => [-x, y])));
@@ -423,21 +422,20 @@
       return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
     }));
     // legs blend into the hips
-    for (const [lg, key, sg, hip] of [[legA, p.legA, -1, hipA], [legB, p.legB, 1, hipB]])
-      part(body, null, (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8]]);
-    // with a leg bent, the suit's leotard line bridges her hips so there's no gap at the crotch
-    if (!(standing(p.legA) && standing(p.legB))) {
-      body.poly(T([[-4.6, 42.4], [4.6, 42.4], [3.9, 44.6], [2.2, 46.2], [0, 46.7], [-2.2, 46.2], [-3.9, 44.6]]), (x) => {
-        const rel = (x + 0.5 - ox) / 6;
-        return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
-      });
-    }
+    // (a natural gap opens between her thighs when they part; where one bent leg
+    // crosses the other, the second gets an outline so they don't merge)
+    for (const [lg, key, sg, hip, i] of [[legA, p.legA, -1, hipA, 0], [legB, p.legB, 1, hipB, 1]])
+      part(body, i && !(standing(p.legA) && standing(p.legB)) ? pal.outline : null,
+        (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8], [ox, 43.2 + oy, 2.2]]);
     // from the back, a soft line where the legs meet
     if (back) body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
     for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
     glow(body, sideCurve, true, B4[0], true);
     if (!back) for (const l of TUMMY) glow(body, l, true, B4[0], true);
-    for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
+    for (const [lg, key, sg] of [[legA, p.legA, -1], [legB, p.legB, 1]]) {
+      if (!standing(key)) limbGlow(body, lg, 0.4);
+      else for (const l of STAND_LEG_LINES) glow(body, l, sg < 0 ? 'only' : false);
+    }
     // neck + head
     body.rect(ox - 1, 27 + oy, 2, 4, (pal.skin || pal.body)[2]);
     part(body, pal.outline, (t) => drawPixelHead(t, p, pal, ox, 6 + oy));
