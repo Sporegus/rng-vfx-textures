@@ -10,8 +10,8 @@
   // ---------------------------------------------------------------- palettes
   // body: [shine, light, mid, shadow], hair: [shine, light, mid, dark]
   const PALETTES = {
-    red:  { name: 'Red', outline: '#5a0614', body: ['#ffe3e3', '#ffaaa8', '#ff6f6d', '#d93a46'], hair: ['#ffb3b0', '#ff4a52', '#d81f33', '#99102a'], eye: ['#3d0010', '#b0142e'], glint: '#ffffff', mouth: '#b3122e', line: '#ffd2d0', tear: '#ffd6e0' },
-    blue: { name: 'Blue', outline: '#0b2a7d', body: ['#e2f4ff', '#a8dcff', '#6fb8ff', '#3f86e8'], hair: ['#a8e2ff', '#3f94ff', '#2363e0', '#163fae'], eye: ['#0e2c88', '#2f6fe0'], glint: '#ffffff', mouth: '#2a5ad0', line: '#e2f4ff', tear: '#e2f4ff' },
+    red:  { name: 'Red', suit: ['#ffd0ce', '#ff7a78', '#e6404f', '#b3213a'], outline: '#5a0614', body: ['#ffe3e3', '#ffaaa8', '#ff6f6d', '#d93a46'], hair: ['#ffb3b0', '#ff4a52', '#d81f33', '#99102a'], eye: ['#3d0010', '#b0142e'], glint: '#ffffff', mouth: '#b3122e', line: '#ffd2d0', tear: '#ffd6e0' },
+    blue: { name: 'Blue', suit: ['#c4f3ff', '#5fb0ff', '#2f7fe6', '#1d55b8'], outline: '#0b2a7d', body: ['#e2f4ff', '#a8dcff', '#6fb8ff', '#3f86e8'], hair: ['#a8e2ff', '#3f94ff', '#2363e0', '#163fae'], eye: ['#0e2c88', '#2f6fe0'], glint: '#ffffff', mouth: '#2a5ad0', line: '#e2f4ff', tear: '#e2f4ff' },
   };
   const palOf = (k) => PALETTES[k] || PALETTES.red;
 
@@ -198,7 +198,7 @@
   // ---------------------------------------------------------------- skeleton presets
   // arm/leg presets are [elbow|knee, hand|ankle] offsets from the shoulder/hip
   const ARMS = {
-    down: [[2.3, 4.7], [3.9, 9]], out: [[3, 3], [6, 5]], wave1: [[4, -2], [8, -6]], wave2: [[4, -3], [6, -8]],
+    down: [[1.0, 4.6], [1.6, 9]], out: [[3, 3], [6, 5]], wave1: [[4, -2], [8, -6]], wave2: [[4, -3], [6, -8]],
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
@@ -216,12 +216,12 @@
     const p = Object.assign({ view: 'front', bob: 0, dx: 0, eyes: 'open', mouth: 'smile', armA: 'down', armB: 'down', legA: 'stand', legB: 'stand' }, pose);
     const side = p.view === 'side';
     const ox = CX + p.dx, oy = p.bob;
-    const B4 = pal.body;
+    const B4 = pal.suit || pal.body;
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 5, 31.4 + oy];
-    const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 5, 31.4 + oy];
+    const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 4.3, 31.4 + oy];
+    const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 4.3, 31.4 + oy];
     const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.5, 42.6 + oy];
     const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
@@ -256,7 +256,7 @@
     // front-view standing legs: straight inner edge with a thin gap, outer edge
     // tapering from the hip to a flat rounded foot, glowing line down each leg
     const drawStandLeg = (t, sgn) => {
-      const pts = [[1.05, 41.4], [4.9, 41.4], [5.35, 44.4], [5.05, 47.2], [4.6, 49.6], [4.1, 52.2], [3.95, 53.7], [3.3, 55], [1.4, 55], [1.05, 53.8]];
+      const pts = [[1.05, 42.2], [4.6, 42.2], [4.85, 44.6], [4.6, 47.4], [4.2, 50.2], [3.9, 52.6], [3.8, 53.7], [3.2, 55], [1.4, 55], [1.05, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
         const outer = d > 4.05 + (y > 48 ? -0.6 : 0);
@@ -264,27 +264,28 @@
         if (sgn < 0) return outer ? B4[1] : d < 2.2 ? B4[2] : B4[1];
         return outer ? B4[3] : d < 2.2 ? B4[2] : B4[1];
       });
-      for (const [x, y] of [[3, 45], [4, 46], [4, 47], [3, 49], [3, 50], [3, 52]]) t.set(ox + (sgn > 0 ? x : -x - 1), y + Math.min(0, oy), L);
     };
     const standing = (k) => k === 'stand' || k === 'apart';
     const drawArm = (t, arm, tones) => {
-      t.limb(arm, [1.55, 1.1, 0.95], tones);
-      t.limb([arm[2], arm[2]], [1.2, 1.2], tones);
+      t.limb(arm, side ? [1.55, 1.1, 0.95] : [1.5, 1.3, 1.2], tones);
+      t.limb([arm[2], arm[2]], side ? [1.2, 1.2] : [1.55, 1.55], tones);
     };
+    // pixel column for an x position, mirror-exact on the left side
+    const colOf = (x, sgn) => sgn > 0 ? Math.floor(x) : W - 1 - Math.floor(W - x);
 
     // far limbs in side view sit behind the body
     if (side) { drawLeg(body, legA, dark, 1); drawArm(body, armA, dark); }
 
     // torso: hourglass with a bust and round hips
-    const T = (pts) => pts.map(([x, y]) => [x + ox, 30.4 + (y - 30.4) * 0.86 + oy]);
+    const T = (pts) => pts.map(([x, y]) => [x + ox, (side ? 30.4 + (y - 30.4) * 0.86 : y) + oy]);
     const torso = side
       ? T([[-3, 30.5], [1.5, 30.5], [3.4, 32], [5.8, 34.2], [5, 36.6], [2.1, 37.8], [2, 39.5], [2.9, 42], [2.4, 44.6], [-1, 45.6], [-5.6, 45.2], [-7, 42.6], [-5, 39.6], [-3.1, 38.4], [-3.2, 36], [-3.6, 33]])
-      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [5.4, 36.4], [4.2, 37.7], [3.3, 38.8], [3.2, 39.8], [3.6, 40.8], [4.3, 42], [4.7, 43.3], [4.6, 44.4], [4, 45.6], [2.4, 46.4], [0, 45.8], [-2.4, 46.4], [-4, 45.6], [-4.6, 44.4], [-4.7, 43.3], [-4.3, 42], [-3.6, 40.8], [-3.2, 39.8], [-3.3, 38.8], [-4.2, 37.7], [-5.4, 36.4], [-6.1, 34.6], [-5.4, 32]]);
+      : T([[-2.6, 29.6], [2.6, 29.6], [4.3, 30.8], [5.0, 32.4], [5.1, 35], [4.8, 37.6], [4.9, 40], [5.3, 42.2], [5.0, 43.8], [1.2, 44.8], [0, 44.6], [-1.2, 44.8], [-5.0, 43.8], [-5.3, 42.2], [-4.9, 40], [-4.8, 37.6], [-5.1, 35], [-5.0, 32.4], [-4.3, 30.8]]);
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
         if (side && rel < -0.55 && y > 37 + oy) return B4[2];  // the booty catches a little light
-        if (!side && Math.abs(x - ox) <= 1 && y >= 36 + oy && y <= 39 + oy) return B4[1];  // belly
+        if (!side) return rel < -0.62 ? B4[1] : rel > 0.62 ? B4[3] : B4[2];
         return rel < -0.42 ? B4[1] : rel > 0.45 ? B4[3] : B4[2];
       });
       if (side) {
@@ -298,21 +299,43 @@
       // legs blend into the hips; a line only where the two legs meet
       part(body, null, (t) => standing(p.legA) ? drawStandLeg(t, -1) : drawLeg(t, legA, B4, -1));
       part(body, null, (t) => standing(p.legB) ? drawStandLeg(t, 1) : drawLeg(t, legB, B4, 1));
-      redrawBust(body, ox, oy, B4, pal);
     }
     // hologram lines on the suit
     if (!side) {
-      body.set(ox - 3, 31 + oy, L); body.set(ox - 2, 32 + oy, L); body.set(ox + 2, 32 + oy, L); body.set(ox + 3, 31 + oy, L);
+      // both sides at once: dx counts columns out from her center line
+      const sym = (dx, y, c) => { body.set(ox + dx, y + oy, c); body.set(ox - 1 - dx, y + oy, c); };
+      // bust: two soft rounded shapes and a cleavage line
+      for (const sgn of [-1, 1]) {
+        const cx = ox + sgn * 2.2, cy = 33.4 + oy;
+        body.each(cx - 3, cy - 3, cx + 3, cy + 3, (x, y) => {
+          const nx = (x + 0.5 - cx) / 2.55, ny = (y + 0.5 - cy) / 2.15;
+          if (nx * nx + ny * ny > 1) return null;
+          if (ny > 0.2 && nx * nx + ny * ny > 0.55) return B4[3];
+          return B4[2];
+        });
+      }
+      sym(1, 32, B4[1]); sym(2, 32, B4[1]); sym(1, 33, B4[1]);   // the light catches the top of each curve
+      sym(0, 31, B4[3]); sym(0, 32, B4[3]); sym(0, 33, B4[3]); sym(0, 34, pal.outline);  // cleavage line
+      // glowing hologram lines: shoulders, around the bust, a diamond on the belly, down the legs
+      const lines = [[3, 30], [4, 31], [4, 32], [5, 33], [4, 35], [3, 36], [2, 37], [1, 38], [1, 39], [2, 40], [3, 41], [3, 42]];
+      if (standing(p.legA) && standing(p.legB)) lines.push([2, 44], [2, 45], [3, 46], [3, 47], [3, 48], [2, 49], [2, 50], [3, 51], [3, 52]);
+      for (const [dx, y] of lines) sym(dx, y, B4[0]);
     } else {
       body.set(ox, 31 + oy, L); body.set(ox + 1, 32 + oy, L); body.set(ox - 1, 39 + oy, L); body.set(ox, 40 + oy, L);
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1));
     }
     // neck + head
-    body.rect(ox - 1, 27 + oy, 3, 4, B4[3]);
+    body.rect(ox - 1, 27 + oy, 3, 4, pal.body[3]);
     part(body, pal.outline, (t) => drawHead(t, p, pal, ox + (side ? -1 : 0), 6 + oy));
     // arms in front
-    if (!side) part(body, pal.outline, (t) => drawArm(t, armA, B4), [[shA[0], shA[1], 2.8]]);
-    part(body, pal.outline, (t) => drawArm(t, armB, B4), [[shB[0], shB[1], 2.8]]);
+    const armLines = (t, arm, sgn) => {
+      for (const u of [0.35, 0.7]) for (const [a, b] of [[arm[0], arm[1]], [arm[1], arm[2]]]) {
+        const x = a[0] + (b[0] - a[0]) * u, y = a[1] + (b[1] - a[1]) * u;
+        t.set(colOf(x + sgn * 0.3, sgn), Math.floor(y + 0.5), B4[0]);
+      }
+    };
+    if (!side) part(body, pal.outline, (t) => { drawArm(t, armA, B4); armLines(t, armA, -1); }, [[shA[0], shA[1], 2.4]]);
+    part(body, pal.outline, (t) => { drawArm(t, armB, B4); if (!side) armLines(t, armB, 1); }, [[shB[0], shB[1], 2.4]]);
 
     // props / effects
     if (p.panel) {
@@ -324,22 +347,6 @@
     for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = fx.p[i];
     return out;
   }
-  // front-view bust: two rounded shapes, a cleavage line and a soft shadow under each
-  function redrawBust(t, ox, oy, B4, pal) {
-    for (const sgn of [-1, 1]) {
-      const cx = ox + sgn * 2.75, cy = 34 + oy;
-      t.each(cx - 3.6, cy - 3.2, cx + 3.6, cy + 3.2, (x, y) => {
-        const nx = (x + 0.5 - cx) / 3.45, ny = (y + 0.5 - cy) / 2.9;
-        if (nx * nx + ny * ny > 1) return null;
-        if (ny > 0.3 && nx * nx + ny * ny > 0.62) return B4[3];
-        if (nx < -0.2 && ny < 0.15) return B4[1];
-        return sgn > 0 && nx > 0.45 ? B4[3] : B4[2];
-      });
-      t.set(Math.round(cx - 1), Math.round(cy - 1), B4[0]); t.set(Math.round(cx - 1), Math.round(cy), B4[0]);
-    }
-    t.set(ox, 33 + oy, pal.outline); t.set(ox, 34 + oy, pal.outline); t.set(ox, 35 + oy, B4[3]);
-    t.set(ox - 1, 32 + oy, B4[3]); t.set(ox + 1, 32 + oy, B4[3]);
-  }
   // floating effects (sparkles, hearts, zzz) are added after any rotation
   function addFx(out, pose, palKey) {
     const pal = palOf(palKey);
@@ -349,7 +356,7 @@
 
   // ---------------------------------------------------------------- animations
   const ANIMS = {
-    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'hip', armB: 'down' }) },
+    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'down', armB: 'down' }) },
     walk:  { frames: 4, fps: 8, pose: f => ({ view: 'side', bob: f % 2 ? -1 : 0, legA: ['stepB', 'pass', 'stepF', 'stand'][f], legB: ['stepF', 'stand', 'stepB', 'pass'][f], armA: ['swingF', 'down', 'swingB', 'down'][f], armB: ['swingB', 'down', 'swingF', 'down'][f] }) },
     run:   { frames: 4, fps: 12, pose: f => ({ view: 'side', dx: 1, bob: f % 2 ? -1 : 0, legA: ['runB', 'runUp', 'runF', 'stand'][f], legB: ['runF', 'stand', 'runB', 'runUp'][f], armA: f < 2 ? 'swingF' : 'swingB', armB: f < 2 ? [[-2, 3], [-1, 7]] : [[3, 3], [5, 5]], mouth: 'grin' }) },
     wave:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open' }) },
