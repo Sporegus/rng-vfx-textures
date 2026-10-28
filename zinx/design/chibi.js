@@ -204,7 +204,7 @@
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
   };
   const LEGS = {
-    stand: [[-0.5, 5.4], [0.2, 10.6]], apart: [[0, 5.4], [1.2, 10.6]],
+    stand: [[0.5, 5.4], [0.7, 10.6]], apart: [[0.9, 5.4], [1.7, 10.6]],
     stepF: [[2, 5], [4, 10.5]], stepB: [[-1.5, 5], [-4, 10]], pass: [[1.5, 4.5], [0, 9]],
     runF: [[4, 4], [7, 9]], runB: [[-3, 5], [-7, 8]], runUp: [[4, 3], [2, 7]],
     sit: [[0.6, 2.5], [1, 9]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
@@ -244,7 +244,7 @@
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.95, 2.2, 1.35, 1.5, 0.9], tones);
+      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.95, 2.0, 1.1, 1.3, 0.75], tones);
       // foot: a little shoe, wider than the ankle, toes pointing out (forward in side view)
       // mirror-exact pixel for the left foot so both feet match
       const ax = side ? Math.round(ankle[0]) : sgn > 0 ? Math.floor(ankle[0]) : W - 1 - Math.floor(W - ankle[0]), ay = Math.round(ankle[1]);
@@ -284,7 +284,8 @@
       // legs blend into the hips; a line only where the two legs meet
       part(body, null, (t) => drawLeg(t, legA, B4, -1));
       part(body, null, (t) => { drawLeg(t, legB, B4, 1); });
-      for (let y = Math.round(43 + oy); y < 54; y++) if (body.get(ox, y) && body.get(ox - 1, y) && body.get(ox + 1, y)) body.set(ox, y, B4[3]);
+      // soft shading where the thighs meet (no hard line)
+      for (let y = Math.round(44 + oy); y <= Math.round(46 + oy); y++) for (const x of [ox - 1, ox]) if (body.get(x, y)) body.set(x, y, B4[3]);
       redrawBust(body, ox, oy, B4, pal);
     }
     // hologram lines on the suit
