@@ -204,7 +204,7 @@
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
   };
   const LEGS = {
-    stand: [[-0.6, 5.4], [0.1, 11]], apart: [[0, 5.4], [1.3, 11]],
+    stand: [[-0.5, 5.4], [-0.6, 11]], apart: [[0, 5.4], [0.8, 11]],
     stepF: [[2, 5], [4, 10.5]], stepB: [[-1.5, 5], [-4, 10]], pass: [[1.5, 4.5], [0, 9]],
     runF: [[4, 4], [7, 9]], runB: [[-3, 5], [-7, 8]], runUp: [[4, 3], [2, 7]],
     sit: [[0.6, 2.5], [1, 9]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
@@ -222,8 +222,8 @@
 
     const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 5, 31.4 + oy];
     const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 5, 31.4 + oy];
-    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 3.3, 41.6 + oy];
-    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 3.3, 41.6 + oy];
+    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.6, 41.6 + oy];
+    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.6, 41.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
     const joint = (base, preset, table, s, leg) => {
       const v = Array.isArray(preset) ? preset : table[preset] || table.down || table.stand;
@@ -244,7 +244,7 @@
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [3.3, 2.6, 1.4, 1.7, 0.9], tones);
+      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.8, 2.15, 1.35, 1.5, 0.9], tones);
       // foot: a small rounded shoe pointing slightly outward (forward in side view)
       const toe = side ? [ankle[0] + 2.2, ankle[1] + 1] : [ankle[0] + sgn * 0.9, ankle[1] + 1.1];
       t.limb([ankle, toe], [1.05, 0.9], [tones[2], tones[2], tones[3], tones[3]]);
@@ -261,7 +261,7 @@
     const T = (pts) => pts.map(([x, y]) => [x + ox, 30.4 + (y - 30.4) * 0.86 + oy]);
     const torso = side
       ? T([[-3, 30.5], [1.5, 30.5], [3.4, 32], [5.8, 34.2], [5, 36.6], [2.1, 37.8], [2, 39.5], [2.9, 42], [2.4, 44.6], [-1, 45.6], [-5.6, 45.2], [-7, 42.6], [-5, 39.6], [-3.1, 38.4], [-3.2, 36], [-3.6, 33]])
-      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [4.6, 37], [2.6, 38.6], [3, 39.8], [5.8, 41.6], [7.1, 43.6], [6.2, 45.6], [3.2, 46.4], [0, 45.8], [-3.2, 46.4], [-6.2, 45.6], [-7.1, 43.6], [-5.8, 41.6], [-3, 39.8], [-2.6, 38.6], [-4.6, 37], [-6.1, 34.6], [-5.4, 32]]);
+      : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [4.6, 37], [2.6, 38.6], [3, 39.8], [5.4, 41.6], [6.1, 43.4], [5, 45.6], [2.6, 46.4], [0, 45.8], [-2.6, 46.4], [-5, 45.6], [-6.1, 43.4], [-5.4, 41.6], [-3, 39.8], [-2.6, 38.6], [-4.6, 37], [-6.1, 34.6], [-5.4, 32]]);
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
@@ -272,7 +272,7 @@
         t.set(ox + 3, 33 + oy, B4[1]); t.set(ox + 4, 33 + oy, B4[0]); t.set(ox + 4, 32 + oy, B4[1]); t.rect(ox + 1, 35 + oy, 5, 1, B4[3]);  // bust
         t.set(ox - 6, 39 + oy, B4[1]); t.set(ox - 6, 40 + oy, B4[0]); t.set(ox - 5, 41 + oy, B4[1]);          // booty shine
       } else {
-        t.set(ox - 6, 41 + oy, B4[1]); t.set(ox - 5, 42 + oy, B4[1]);  // hip highlight
+        t.set(ox - 5, 41 + oy, B4[1]); t.set(ox - 5, 42 + oy, B4[1]);  // hip highlight
       }
     });
     if (!side) {
