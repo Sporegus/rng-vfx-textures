@@ -340,8 +340,8 @@
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 4.3, 32.0 + oy];
-    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 4.3, 32.0 + oy];
+    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 4.6, 32.0 + oy];
+    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 4.6, 32.0 + oy];
     const hipA = side ? [ox - 1.4, 42.6 + oy] : [ox - 2.5, 42.6 + oy];
     const hipB = side ? [ox - 0.4, 42.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
@@ -425,7 +425,7 @@
     };
     const i0 = (pts) => pts.slice(0, -1).concat([pts[pts.length - 1]]);
     // her front silhouette: half-width at each height, smoothed into an hourglass
-    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.8], [34.0, 5.0], [35.6, 4.3], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.5], [43.2, 5.15], [44.4, 5.15], [45.0, 4.95]];
+    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.9], [34.2, 5.3], [35.8, 4.4], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.5], [43.2, 5.15], [44.4, 5.15], [45.0, 4.95]];
     // Catmull-Rom through [y, x] knots
     const profile = (k) => (y) => {
       const n = k.length;
@@ -439,7 +439,7 @@
     const halfW = profile(WAIST);
     // her side silhouette, facing right: chest, bust, tummy, hip and thigh in
     // front; shoulder blades, small of the back and a round bum behind
-    const sideFront = profile([[29.8, 1.6], [31.2, 3.1], [33.3, 4.9], [35.1, 4.5], [36.4, 2.1], [38.2, 1.3], [40.4, 2.2], [42.6, 2.7], [44.8, 2.0], [45.6, 1.4]]);
+    const sideFront = profile([[29.8, 1.6], [31.0, 3.2], [32.6, 4.8], [34.0, 5.6], [35.4, 5.0], [36.5, 2.2], [38.2, 1.3], [40.4, 2.2], [42.6, 2.7], [44.8, 2.0], [45.6, 1.4]]);
     const sideBack = profile([[29.8, -3.0], [32.0, -3.4], [35.0, -3.0], [37.6, -2.5], [39.4, -3.4], [41.2, -4.5], [42.8, -4.8], [44.2, -4.3], [45.2, -3.2], [45.6, -2.4]]);
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
     const bothLegsStand = standing(p.legA) && standing(p.legB);
@@ -471,7 +471,7 @@
         return rel < -0.8 ? B4[1] : rel > 0.62 ? B4[3] : B4[2];
       });
       if (side) {   // bust in profile: shine on top (its outline is drawn last)
-        const cx = ox + 2.6, cy = 33.6 + oy;
+        const cx = ox + 3.2, cy = 33.8 + oy;
         t.each(cx - 2.5, cy - 2.5, cx + 2.5, cy + 2.5, (x, y) => {
           const nx = (x + 0.5 - cx) / 1.9, ny = (y + 0.5 - cy) / 2.0, r = Math.hypot(nx, ny);
           if (r > 1 || t.getP(Math.round(tx(x + 0.5) * K - 0.5), Math.round(ty(y + 0.5) * K - 0.5)) == null) return null;
@@ -490,15 +490,19 @@
     if (back) {
       body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
     } else if (!side) {
-      for (const sgn of [-1, 1]) {
-        const cx = ox + sgn * 1.9, cy = 34.0 + oy;
-        body.each(cx - 3.5, cy - 4, cx + 3.5, cy + 4, (x, y) => {
-          const nx = (x + 0.5 - cx) / 2.0, ny = (y + 0.5 - cy) / 2.9, r = Math.hypot(nx, ny);
-          if (r > 1) return null;
-          if (ny > 0.15 && r > 0.55) return B4[3];
-          if (ny < -0.15 && r < 0.55 && nx * sgn < 0.35) return B4[1];    // shine
-          return B4[2];
-        });
+      // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
+      // shine up top, shadow underneath, and a dark outline round the bottom
+      const R = 4.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
+      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * R + 1; i++) {
+        const X = midX + i, nx = (i + 0.5 - R) / R, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
+        if (r > 1) continue;
+        // the lowest pixel of each column, and the outermost pixels below the middle, are outline
+        const below = Math.hypot(nx, (Y + 1.5 - cyP) / R) > 1, side = ny > 0 && (Math.hypot((i - 0.5 - R) / R, ny) > 1 || Math.hypot((i + 1.5 - R) / R, ny) > 1);
+        const c = (ny > 0.05 && (below || side)) ? pal.outline
+          : ny > 0.35 && r > 0.55 ? B4[3]
+          : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
+          : B4[2];
+        body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
       }
     } else {
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1), [[hipB[0] - 0.6, hipB[1] - 0.6, 3.4]]);
@@ -514,13 +518,7 @@
       for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
     }
     // a U-shaped outline under each breast (in profile, under the bust)
-    if (side) glow(body, [[4.6, 34.6], [4.0, 35.7], [3.0, 36.2], [1.8, 36.0]], false, pal.outline);
-    else if (!back) {
-      // pixel-drawn U under each breast, the two meeting at her center line
-      const U = ['X.......X', 'X.......X', '.X.....X.', '..XXXXX..'], Y0 = Math.round(ty(33.3 + oy) * K);
-      body.glyphP(midX, Y0, U, { X: pal.outline });
-      body.glyphP(midX - U[0].length, Y0, U, { X: pal.outline }, true);
-    }
+    if (side) glow(body, [[5.5, 35.0], [4.8, 36.0], [3.6, 36.5], [2.2, 36.3]], false, pal.outline);
     // neck + head
     body.rect(ox - 1, 27 + oy, 2, 4, (pal.skin || pal.body)[2]);
     part(body, pal.outline, (t) => drawPixelHead(t, p, pal, ox + (side ? -1 : 0), 6 + oy));
