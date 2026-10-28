@@ -425,7 +425,7 @@
     // (a natural gap opens between her thighs when they part; where one bent leg
     // crosses the other, the second gets an outline so they don't merge)
     for (const [lg, key, sg, hip, i] of [[legA, p.legA, -1, hipA, 0], [legB, p.legB, 1, hipB, 1]])
-      part(body, i && !(standing(p.legA) && standing(p.legB)) ? pal.outline : null,
+      part(body, i && p.legA !== p.legB ? pal.outline : null,
         (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8], [ox, 43.2 + oy, 2.2]]);
     // from the back, a soft line where the legs meet
     if (back) body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
@@ -433,7 +433,11 @@
     glow(body, sideCurve, true, B4[0], true);
     if (!back) for (const l of TUMMY) glow(body, l, true, B4[0], true);
     for (const [lg, key, sg] of [[legA, p.legA, -1], [legB, p.legB, 1]]) {
-      if (!standing(key)) limbGlow(body, lg, 0.4);
+      // on a bent leg the line runs down its outer side, starting below the hip
+      if (!standing(key)) {
+        const [h, k, a] = lg, from = [h[0] + (k[0] - h[0]) * 0.45, h[1] + (k[1] - h[1]) * 0.45];
+        limbGlow(body, [from, k, a], sg * -0.75);
+      }
       else for (const l of STAND_LEG_LINES) glow(body, l, sg < 0 ? 'only' : false);
     }
     // neck + head
