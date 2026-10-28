@@ -11,7 +11,7 @@
   --line: #1b2433;
   --ink: #e9f3ff;
   --muted: #8796ad;
-  --glow: #e6fdff;
+  --glow: #ff4a52;
   --display: "Chakra Petch", "Segoe UI", sans-serif;
   --mono: "Share Tech Mono", "Cascadia Mono", Consolas, monospace;
 }
@@ -33,7 +33,7 @@ h1 span { color: var(--glow); text-shadow: 0 0 12px var(--glow); }
 .status b { color: #ffcf5a; font-weight: 400; }
 
 .stage { position: relative; border: 1px solid var(--line); background: #000; overflow: hidden; }
-.stage canvas { display: block; width: 100%; touch-action: manipulation; cursor: crosshair; }
+.stage canvas { display: block; width: 100%; touch-action: manipulation; cursor: crosshair; image-rendering: pixelated; }
 .hint { position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); pointer-events: none; }
 
 .rail { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-start; }
@@ -57,17 +57,20 @@ button.primary { background: var(--glow); color: #04060b; border-color: var(--gl
 .notes p, .notes li { font-family: var(--display); font-size: 14px; line-height: 1.5; color: #c4d0e2; max-width: 62ch; }
 .notes p { margin: 0; }
 .notes ul { margin: 0; padding-left: 18px; }
+.sheet-wrap h2 { margin: 0 0 8px; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; color: var(--glow); }
+.sheet-scroll { overflow-x: auto; border: 1px solid var(--line); }
+#sheet { display: block; image-rendering: pixelated; }
 @media (prefers-reduced-motion: reduce) { .stage canvas { cursor: default; } }
 </style>
 
 <div class="wrap">
   <header>
     <h1>ZINX <span>//</span> SPRITE LAB</h1>
-    <span class="status">DRAFT 2 · <b>WAITING FOR YOUR OK</b></span>
+    <span class="status">DRAFT 3 · <b>WAITING FOR YOUR OK</b></span>
   </header>
 
   <div class="stage" id="stage-box">
-    <canvas id="stage" aria-label="Zinx standing on a glowing grid floor"></canvas>
+    <canvas id="stage" aria-label="Chibi Zinx standing on a glowing grid floor"></canvas>
     <div class="hint">Tap the floor to teleport her there</div>
   </div>
 
@@ -81,7 +84,7 @@ button.primary { background: var(--glow); color: #04060b; border-color: var(--gl
       <div class="row"><button id="tp" class="primary">Teleport somewhere</button></div>
     </div>
     <div class="group">
-      <span class="label">Glow color</span>
+      <span class="label">Color</span>
       <div class="row" id="glows"></div>
     </div>
     <div class="group">
@@ -93,20 +96,26 @@ button.primary { background: var(--glow); color: #04060b; border-color: var(--gl
   <section class="notes">
     <div>
       <h2>What this is</h2>
-      <p>The new look for Zinx: a smooth hologram, facing you, in a black Tron-style suit with glowing light-lines. Nothing here is in the app yet. Once you approve her, I'll put her in.</p>
+      <p>Zinx as a chibi desktop pet in the style you sent: red hologram, big glossy bob, about two heads tall. Walk and Run move her across the floor in side view. Nothing here is in the app yet. Once you approve her, I'll put her in.</p>
     </div>
     <div>
       <h2>Tell me what to change</h2>
       <ul>
-        <li>Face: eyes, lips, makeup, expression</li>
-        <li>Hair: length, style, color</li>
-        <li>Body shape and proportions</li>
-        <li>Suit: where the light-lines go, boots, gloves</li>
-        <li>The teleport effect: speed, particles, sound</li>
+        <li>Face: eyes, mouth, expressions</li>
+        <li>Hair: length, shine, bangs</li>
+        <li>Body: size, shape, suit lines</li>
+        <li>Shades of red, or other colors</li>
+        <li>Which animations to add or redo</li>
+        <li>The teleport: speed, particles, sound</li>
       </ul>
     </div>
   </section>
+
+  <section class="sheet-wrap">
+    <h2>Every frame</h2>
+    <div class="sheet-scroll"><canvas id="sheet" aria-label="Sprite sheet with every animation frame"></canvas></div>
+  </section>
 </div>
 
-<script>/*HOLO_JS*/</script>
+<script>/*CHIBI_JS*/</script>
 <script>/*LAB_JS*/</script>
