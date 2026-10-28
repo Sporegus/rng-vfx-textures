@@ -342,8 +342,8 @@
 
     const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 3.7, 32.0 + oy];
     const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 3.7, 32.0 + oy];
-    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.5, 42.6 + oy];
-    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.5, 42.6 + oy];
+    const hipA = side ? [ox - 1.4, 42.6 + oy] : [ox - 2.5, 42.6 + oy];
+    const hipB = side ? [ox - 0.4, 42.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
     const joint = (base, preset, table, s, leg) => {
       const v = Array.isArray(preset) ? preset : table[preset] || table.down || table.stand;
@@ -426,8 +426,9 @@
     const i0 = (pts) => pts.slice(0, -1).concat([pts[pts.length - 1]]);
     // her front silhouette: half-width at each height, smoothed into an hourglass
     const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.8], [34.0, 5.0], [35.6, 4.3], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.5], [43.2, 5.15], [44.4, 5.15], [45.0, 4.95]];
-    const halfW = (y) => {
-      const k = WAIST, n = k.length;
+    // Catmull-Rom through [y, x] knots
+    const profile = (k) => (y) => {
+      const n = k.length;
       if (y <= k[0][0]) return k[0][1];
       if (y >= k[n - 1][0]) return k[n - 1][1];
       let i = 0; while (k[i + 1][0] < y) i++;
@@ -435,6 +436,11 @@
       const t = (y - k[i][0]) / (k[i + 1][0] - k[i][0]);
       return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
     };
+    const halfW = profile(WAIST);
+    // her side silhouette, facing right: chest, bust, tummy, hip and thigh in
+    // front; shoulder blades, small of the back and a round bum behind
+    const sideFront = profile([[29.8, 1.6], [31.2, 3.0], [33.2, 4.5], [35.0, 4.1], [36.4, 2.2], [38.2, 1.3], [40.4, 2.2], [42.6, 2.7], [44.8, 2.0], [45.6, 1.4]]);
+    const sideBack = profile([[29.8, -3.0], [32.0, -3.4], [35.0, -3.0], [37.6, -2.5], [39.4, -3.4], [41.2, -4.5], [42.8, -4.8], [44.2, -4.3], [45.2, -3.2], [45.6, -2.4]]);
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
     const bothLegsStand = standing(p.legA) && standing(p.legB);
     const sideCurve = span(35.6, 40.6, (y) => halfW(y) - 1.2);          // thin, from the bust to the waist
@@ -452,18 +458,17 @@
     const SIDE_LINES = [
       [[1.2, 30.2], [2.2, 31.4], [2.6, 32.6]],                            // collar
       [[1.4, 36.6], [1.0, 38.4], [1.6, 40.4], [1.6, 42.6]],              // belly
-      [[-2.2, 31.0], [-2.4, 34.4], [-1.8, 37.4], [-2.8, 39.8], [-3.6, 42.6]],  // back and booty
     ];
     // torso: hourglass with a bust and round hips
     const T = (pts) => pts.map(([x, y]) => [x + ox, y + oy]);
     const torso = side
-      ? T([[-2.6, 29.8], [1.4, 29.8], [2.6, 31.2], [3.9, 33.2], [3.6, 35.2], [1.9, 36.4], [1.1, 38.2], [1.9, 40.4], [2.4, 42.6], [1.4, 44.6], [-2.2, 44.9], [-4.3, 43.7], [-4.7, 41.6], [-3.5, 39.4], [-2.2, 37.8], [-2.6, 35], [-3.1, 32]].map(([x, y]) => [x * 1.15, y]))
+      ? T(span(29.8, 45.6, sideFront).concat(span(29.8, 45.6, sideBack).reverse()))
       : T(span(29.6, 45, halfW).concat([[1.2, 45], [0, 44.8], [-1.2, 45]], span(29.6, 45, halfW).reverse().map(([x, y]) => [-x, y])));
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
         if (!side) return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
-        return rel < -0.42 ? B4[1] : rel > 0.45 ? B4[3] : B4[2];
+        return rel < -0.8 ? B4[1] : rel > 0.62 ? B4[3] : B4[2];
       });
       if (side) {   // bust in profile: shine on top, an outline under it
         const cx = ox + 2.3, cy = 33.5 + oy;
@@ -498,10 +503,12 @@
       }
       body.each(ox - 1, 31.8 + oy, ox + 1, 35 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 32.4 + oy && y < 34.6 + oy ? B4[3] : null);
     } else {
-      part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1));
+      part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1), [[hipB[0] - 0.6, hipB[1] - 0.6, 3.4]]);
     }
     if (side) {
       for (const l of SIDE_LINES) glow(body, l, false);
+      glow(body, span(31.2, 41.4, (y) => sideBack(y) + 1.1), false, B4[0], true);         // down her back
+      glow(body, [[-3.9, 44.4], [-3.0, 45.0], [-1.9, 45.2]], false, B4[3], true);           // under the bum
       limbGlow(body, legB, 0.5);
     } else {
       for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
