@@ -42,7 +42,8 @@
     "asarUnpack": [
       "node_modules/sherpa-onnx-*/**",
       "node_modules/node-llama-cpp/**",
-      "node_modules/@node-llama-cpp/**"
+      "node_modules/@node-llama-cpp/**",
+      "voice/emotions/**"
     ]
   },
   "dependencies": {

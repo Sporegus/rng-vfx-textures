@@ -16,7 +16,9 @@ const MODELS = {
   ears: { label: 'ears', url: SHERPA + 'asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2', dir: 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8', mb: 482 },
   // a smaller, quicker one for slow PCs (Moonshine tiny)
   earsLight: { label: 'ears', url: SHERPA + 'asr-models/sherpa-onnx-moonshine-tiny-en-int8.tar.bz2', dir: 'sherpa-onnx-moonshine-tiny-en-int8', mb: 108 },
-  // her voice (Kokoro v1.0, 54 voices)
+  // her emotional voice (Kyutai Pocket TTS): copies the mood of the clips in voice/emotions
+  voiceEmo: { label: 'voice', url: SHERPA + 'tts-models/sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2', dir: 'sherpa-onnx-pocket-tts-int8-2026-01-26', mb: 98 },
+  // her classic voice (Kokoro v1.0, 54 voices; steady, no moods)
   voice: { label: 'voice', url: SHERPA + 'tts-models/kokoro-multi-lang-v1_0.tar.bz2', dir: 'kokoro-multi-lang-v1_0', mb: 350 },
 };
 

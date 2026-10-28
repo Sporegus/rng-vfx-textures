@@ -5,6 +5,7 @@
 // the command brain, so the same safety rules apply.
 const os = require('os');
 const { MINDS } = require('./models');
+const MOODS = ['cute', 'happy', 'excited', 'sad', 'calm', 'confused', 'proud', 'pouty', 'shy', 'love'];
 
 let L = null; // node-llama-cpp, loaded on first use
 
@@ -14,6 +15,7 @@ function persona({ facts = [], name } = {}) {
 
 How you talk:
 - Everything you say is spoken out loud, so keep it short: one to three sentences, natural and friendly. No emoji, no lists, no markdown.
+- Start each sentence with the feeling you say it with, in brackets, one of: [cute] [happy] [excited] [sad] [calm] [confused] [proud] [pouty] [shy] [love]. For example: "[excited] Ooh, I love that song! [cute] Want me to play it?"
 - Never make things up about the user's PC or files. If you don't know something (like today's news or prices), say so and offer to search the web.
 
 What you can do: call do_task with a short plain request to do things on the PC, for example "open roblox", "play god did by dj khaled", "find my resume", "remind me at 5pm to call mom", "set a timer for 10 minutes", "turn the volume down", "organize my downloads a to z", "google best pizza near me", "dark mode". Call it whenever the user wants something done. Never say you did something unless do_task said it worked.
@@ -88,14 +90,21 @@ class Mind {
     // a new conversation after a long break, or on a new day
     if (Date.now() - this.lastAt > 20 * 60000 || this.day !== new Date().toDateString()) await this.fresh();
     this.lastAt = Date.now();
-    let buf = '';
+    let buf = '', mood = 'cute';
+    // "[excited] Ooh!" -> say "Ooh!" excitedly; a sentence without a tag keeps the last mood
+    const say = (s) => {
+      const tag = s.match(/^\[(\w+)\]\s*/);
+      if (tag && MOODS.includes(tag[1].toLowerCase())) mood = tag[1].toLowerCase();
+      const clean = s.replace(/\[\w+\]\s*/g, '').trim();
+      if (clean && onSentence) onSentence(clean, mood);
+    };
     const flush = (all) => {
       const re = all ? /^([\s\S]+)$/ : /^([\s\S]*?[.!?…]+["')\]]?)(\s+[\s\S]*)$/;
       let m;
       while ((m = buf.match(re))) {
         const s = m[1].trim();
         buf = all ? '' : m[2];
-        if (s && onSentence) onSentence(s);
+        if (s) say(s);
         if (all) break;
       }
     };
@@ -108,7 +117,7 @@ class Mind {
     } catch (e) { if (!(signal && signal.aborted)) throw e; } // stopped: you started talking again
     if (signal && signal.aborted) return '';
     flush(true);
-    return reply.trim();
+    return reply.replace(/\[\w+\]\s*/g, '').trim();
   }
 
   // fixes a misheard song or app name ("god did by dj cald" -> "God Did by DJ Khaled")

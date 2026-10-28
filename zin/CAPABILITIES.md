@@ -8,7 +8,7 @@ and does it, either on her own or after asking, depending on how risky it is.
 | Part | What it does |
 |---|---|
 | **Senses** | Watches for things worth acting on: a finished download, new email, low disk or battery, the app you are using, music playing, how long you have been away, reminders coming due |
-| **Ears and voice** | Listens for "Zin" and answers out loud, with free speech models that run on your PC (Parakeet to hear, Kokoro to speak) |
+| **Ears and voice** | Listens for "Zin" and answers out loud with feeling (10 moods), using free speech models that run on your PC (Parakeet to hear, Pocket TTS to speak) |
 | **Brain** | Two parts, both free and on your PC. The command brain is always on and instant: it understands plain, messy English, typos and several requests at once. The optional chat brain (a local Qwen model) holds conversations, answers questions, remembers things about you and works out trickier requests, which it hands back to the command brain to do |
 | **Hands** | The actions below. The AI can only choose from these; it can't run anything else |
 | **Memory** | Your choices, saved on your PC: where each kind of download goes, how you like folders sorted, favorite songs and apps, quiet hours. She learns from your answers so she asks less over time |

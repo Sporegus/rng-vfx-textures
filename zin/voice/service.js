@@ -4,12 +4,16 @@
 //   out: status, progress, speaking, heard, audio, said, sentence, replied, rpc, error
 const path = require('path');
 const models = require('./models');
-const { Ears, Mouth } = require('./speech');
+const { Ears, Mouth, EMOTIONAL } = require('./speech');
 const { Mind } = require('./mind');
 
 const port = process.parentPort;
 const send = (m) => port.postMessage(m);
-let root = null, ears = null, mouth = null, mind = null, listening = false, chatModel = null;
+let root = null, ears = null, mind = null, listening = false, chatModel = null;
+const mouths = {}; // 'emotional' and/or 'classic', loaded when first needed
+// the mood clips ship with Zin; when packaged they sit outside the app archive so the voice engine can read them
+const EMOTIONS = path.join(__dirname, 'emotions').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+const kindOf = (voice) => (EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
 const busy = {};
 
 // ---------------------------------------------------------------- asking the app for things
@@ -32,18 +36,28 @@ const host = {
 
 // ---------------------------------------------------------------- getting models ready
 const progress = (what) => (done, total) => send({ type: 'progress', what, done, total });
-async function setupVoice(light) {
+async function loadMouth(kind) {
+  if (mouths[kind]) return mouths[kind];
+  const dir = await models.ensure(root, kind === 'emotional' ? 'voiceEmo' : 'voice', progress('voice'));
+  mouths[kind] = new Mouth(dir, kind, EMOTIONS);
+  return mouths[kind];
+}
+async function setupVoice(light, voice) {
   if (busy.voice) return busy.voice;
   busy.voice = (async () => {
     const vad = await models.ensure(root, 'vad', progress('listening'));
     const asr = await models.ensure(root, light ? 'earsLight' : 'ears', progress('ears'));
-    const tts = await models.ensure(root, 'voice', progress('voice'));
+    await loadMouth(kindOf(voice));
     send({ type: 'status', what: 'voice', state: 'loading' });
-    mouth = new Mouth(tts);
     ears = new Ears(vad, asr);
     send({ type: 'status', what: 'voice', state: 'ready' });
   })().catch((e) => { busy.voice = null; send({ type: 'error', what: 'voice', message: e.message }); });
   return busy.voice;
+}
+// the mouth for this voice (switching to a voice of the other kind downloads it the first time)
+async function mouthFor(voice) {
+  try { return await loadMouth(kindOf(voice)); }
+  catch (e) { send({ type: 'error', what: 'voice', message: e.message }); return null; }
 }
 async function setupMind() {
   if (busy.mind) return busy.mind;
@@ -57,23 +71,27 @@ async function setupMind() {
 
 // ---------------------------------------------------------------- talking
 async function say(id, text, opts) {
+  const mouth = ears && await mouthFor(opts.voice);
   if (!mouth) return send({ type: 'said', id });
-  await mouth.say(text, opts, (samples) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate })).catch(() => {});
+  await mouth.say(text, opts, (samples) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate }))
+    .catch((e) => send({ type: 'error', what: 'speak', message: e.message }));
   send({ type: 'said', id });
 }
+const hushAll = () => { for (const m of Object.values(mouths)) m.hush(); };
 
 let chatAbort = null;
 async function chat(id, text, opts) {
   if (!mind || !mind.ready) return send({ type: 'replied', id, text: null });
   if (chatAbort) chatAbort.abort();
   const ac = chatAbort = new AbortController();
-  // speak each sentence as it's written, one after another
+  // speak each sentence as it's written, one after another, in the mood the chat brain picked
+  const mouth = opts && opts.speak && ears ? await mouthFor(opts.voice) : null;
   let speaking = Promise.resolve();
   try {
-    const reply = await mind.chat(text, (s) => {
+    const reply = await mind.chat(text, (s, mood) => {
       if (ac.signal.aborted) return;
-      send({ type: 'sentence', id, text: s });
-      if (opts && opts.speak && mouth) speaking = speaking.then(() => mouth.say(s, opts, (samples) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate })).catch(() => {}));
+      send({ type: 'sentence', id, text: s, mood });
+      if (mouth) speaking = speaking.then(() => mouth.say(s, { ...opts, mood }, (samples) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate })).catch(() => {}));
     }, ac.signal);
     await speaking;
     send({ type: 'replied', id, text: ac.signal.aborted ? null : reply });
@@ -86,12 +104,12 @@ port.on('message', async ({ data: m }) => {
   switch (m.type) {
     case 'setup':
       root = m.root; chatModel = m.chatModel || null;
-      send({ type: 'status', what: 'models', have: { voice: models.have(root, 'voice') && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight')) } });
-      if (m.voice) setupVoice(m.light);
+      send({ type: 'status', what: 'models', have: { voice: (models.have(root, 'voiceEmo') || models.have(root, 'voice')) && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight')) } });
+      if (m.voice) setupVoice(m.light, m.voiceName);
       if (m.chat) setupMind();
       break;
     case 'get':
-      if (m.what === 'voice') setupVoice(m.light);
+      if (m.what === 'voice') setupVoice(m.light, m.voiceName);
       if (m.what === 'chat') setupMind();
       break;
     case 'listen': listening = !!m.on; if (ears && !listening) ears.reset(); break;
@@ -103,7 +121,7 @@ port.on('message', async ({ data: m }) => {
       });
       break;
     case 'say': say(m.id, m.text, m.opts || {}); break;
-    case 'hush': if (mouth) mouth.hush(); if (chatAbort) chatAbort.abort(); break;
+    case 'hush': hushAll(); if (chatAbort) chatAbort.abort(); break;
     case 'chat': chat(m.id, m.text, m.opts); break;
     case 'fix': send({ type: 'fixed', id: m.id, text: mind && mind.ready ? await mind.fixName(m.kind, m.text) : m.text }); break;
     case 'rpc-reply': { const r = waiting.get(m.id); if (r) { waiting.delete(m.id); r(m.result); } break; }

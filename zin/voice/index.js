@@ -55,7 +55,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
       if (!quitting && restarts++ < 3) setTimeout(start, 3000);
     });
     const st = settings();
-    proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null });
+    proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), voiceName: st.voiceName, chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null });
   }
   ipcMain.on('voice', (_, m) => { if (proc) proc.postMessage(m); });
   app.on('will-quit', () => { quitting = true; if (proc) proc.kill(); });
