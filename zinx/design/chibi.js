@@ -318,7 +318,7 @@
   // ---------------------------------------------------------------- skeleton presets
   // arm/leg presets are [elbow|knee, hand|ankle] offsets from the shoulder/hip
   const ARMS = {
-    down: [[2.0, 4.3], [3.7, 8.4]], out: [[3, 3], [6, 5]], wave1: [[4, -1.5], [8.4, -4.6]], wave2: [[3.6, -2.6], [5.6, -7.6]],
+    down: [[2.4, 4.0], [4.0, 7.9]], out: [[3, 3], [6, 5]], wave1: [[4, -1.5], [8.4, -4.6]], wave2: [[3.6, -2.6], [5.6, -7.6]],
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
@@ -340,8 +340,8 @@
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 3.9, 31.4 + oy];
-    const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 3.9, 31.4 + oy];
+    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 3.7, 32.0 + oy];
+    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 3.7, 32.0 + oy];
     const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.5, 42.6 + oy];
     const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
@@ -378,16 +378,16 @@
       const pts = [[0.3, 42.6], [5.1, 42.6], [5.2, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [0.6, 55], [0.3, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
-        const outer = d > (y < 47 ? 4.1 : 3.0);
+        const outer = d > (y < 47 ? 4.4 : 3.2);
         if (y >= 54) return B4[3];                  // sole
-        return outer ? (sgn < 0 ? B4[1] : B4[3]) : B4[2];
+        return outer && sgn > 0 ? B4[3] : B4[2];
       });
     };
     const standing = (k) => k === 'stand' || k === 'apart';
     // arms in the suit, bare hands so they stand out against her red hair
     const SK = pal.skin || pal.body, hand = [null, SK[1], SK[1], SK[2]];
     const drawArm = (t, arm, tones) => {
-      t.limb(arm, side ? [1.7, 1.4, 1.25] : [1.7, 1.45, 1.3], tones);
+      t.limb(arm, side ? [1.55, 1.35, 1.25] : [1.5, 1.4, 1.3], tones);
       t.limb([arm[2], arm[2]], [1.5, 1.5], tones === dark ? [null, SK[2], SK[2], SK[3]] : hand);
     };
 
@@ -424,41 +424,58 @@
       glow(buf, i0(pts), false, c);
     };
     const i0 = (pts) => pts.slice(0, -1).concat([pts[pts.length - 1]]);
+    // her front silhouette: half-width at each height, smoothed into an hourglass
+    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.8], [34.0, 5.0], [35.6, 4.5], [37.2, 3.6], [38.6, 3.1], [40.2, 3.7], [41.8, 4.8], [43.2, 5.4], [44.4, 5.3], [45.0, 5.0]];
+    const halfW = (y) => {
+      const k = WAIST, n = k.length;
+      if (y <= k[0][0]) return k[0][1];
+      if (y >= k[n - 1][0]) return k[n - 1][1];
+      let i = 0; while (k[i + 1][0] < y) i++;
+      const p0 = k[Math.max(0, i - 1)][1], p1 = k[i][1], p2 = k[i + 1][1], p3 = k[Math.min(n - 1, i + 2)][1];
+      const t = (y - k[i][0]) / (k[i + 1][0] - k[i][0]);
+      return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
+    };
+    const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
+    const bothLegsStand = standing(p.legA) && standing(p.legB);
+    const sideCurve = span(35.6, 44.4, (y) => halfW(y) - 1.6).concat(bothLegsStand ? [[3.6, 45.6], [3.3, 47.4], [2.8, 49.8], [2.5, 52.4], [2.3, 53.6]] : []);
+    const legInner = bothLegsStand ? [[[1.5, 45.4], [1.7, 48.2], [1.5, 51], [1.4, 53.6]]] : [];
     const FRONT_LINES = [
-      [[1.2, 30.2], [2.6, 30.8], [3.8, 31.8]],                            // collar to shoulder
-      [[0.5, 31.4], [0.7, 34.0], [1.5, 35.6], [2.7, 35.9], [3.7, 34.8], [4.2, 32.4]],  // under each breast
-      [[4.4, 35.6], [3.5, 37.4], [2.9, 39.0], [3.6, 40.6], [4.6, 42.4]],  // down her sides
-      [[0, 36.6], [0, 38.6], [1.5, 40.4], [1.9, 42.6]],                  // belly
-      [[4.2, 43.6], [3.7, 46.4], [3.9, 48.2], [3.1, 50.6], [2.9, 53.6]],  // legs, outer
-      [[1.8, 44.6], [2.3, 47.2], [1.6, 49.4], [2.0, 51.4], [1.6, 53.6]],  // legs, inner
-    ];
+      [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],                            // collar to shoulder
+      sideCurve,                                                         // down her curves
+      [[0.6, 37.6], [0.7, 39.0], [1.5, 40.8], [1.9, 42.8]],              // belly
+    ].concat(legInner);
     const BACK_LINES = [
-      [[1.2, 30.2], [2.6, 30.8], [3.8, 31.8]],
-      [[0.6, 31.6], [2.0, 32.6], [3.4, 32.0]],                            // shoulder blades
-      [[0.9, 33.8], [2.4, 34.8], [3.6, 34.2]],
-      [[4.4, 35.6], [3.5, 37.4], [2.9, 39.0], [3.6, 40.6], [4.6, 42.4]],
-      [[0.4, 36.2], [1.2, 38.6], [0.6, 41.0]],                            // small of the back
-      [[4.2, 43.6], [3.7, 46.4], [3.9, 48.2], [3.1, 50.6], [2.9, 53.6]],
-      [[1.8, 44.6], [2.3, 47.2], [1.6, 49.4], [2.0, 51.4], [1.6, 53.6]],
-    ];
+      [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],
+      [[0.6, 31.8], [2.0, 32.8], [3.4, 32.2]],                            // shoulder blades
+      sideCurve,
+      [[0.5, 36.2], [1.2, 38.6], [0.6, 41.0]],                            // small of the back
+    ].concat(legInner);
     const SIDE_LINES = [
       [[1.2, 30.2], [2.2, 31.4], [2.6, 32.6]],                            // collar
-      [[0.4, 31.8], [1.0, 34.6], [2.2, 35.9], [3.4, 35.4], [4.2, 33.8]],  // under the bust
-      [[1.2, 36.4], [0.8, 38.4], [1.6, 40.4], [1.6, 42.6]],              // belly
+      [[1.4, 36.6], [1.0, 38.4], [1.6, 40.4], [1.6, 42.6]],              // belly
       [[-2.2, 31.0], [-2.4, 34.4], [-1.8, 37.4], [-2.8, 39.8], [-3.6, 42.6]],  // back and booty
     ];
     // torso: hourglass with a bust and round hips
     const T = (pts) => pts.map(([x, y]) => [x + ox, y + oy]);
     const torso = side
       ? T([[-2.6, 29.8], [1.4, 29.8], [2.6, 31.2], [3.9, 33.2], [3.6, 35.2], [2.1, 36.4], [1.5, 38.2], [2.1, 40.4], [2.4, 42.6], [1.4, 44.6], [-2.2, 44.9], [-4.3, 43.7], [-4.7, 41.6], [-3.7, 39.4], [-2.6, 37.8], [-2.7, 35], [-3.1, 32]].map(([x, y]) => [x * 1.15, y]))
-      : T([[-2.2, 29.6], [2.2, 29.6], [3.8, 30.8], [4.7, 32.4], [5.2, 34.2], [4.4, 36.4], [3.2, 37.9], [2.8, 39.1], [3.4, 40.4], [4.6, 41.7], [5.4, 43], [5.3, 44.1], [1.2, 45], [0, 44.8], [-1.2, 45], [-5.3, 44.1], [-5.4, 43], [-4.6, 41.7], [-3.4, 40.4], [-2.8, 39.1], [-3.2, 37.9], [-4.4, 36.4], [-5.2, 34.2], [-4.7, 32.4], [-3.8, 30.8]]);
+      : T(span(29.6, 45, halfW).concat([[1.2, 45], [0, 44.8], [-1.2, 45]], span(29.6, 45, halfW).reverse().map(([x, y]) => [-x, y])));
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
-        if (!side) return rel < -0.55 ? B4[1] : rel > 0.55 ? B4[3] : B4[2];
+        if (!side) return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
         return rel < -0.42 ? B4[1] : rel > 0.45 ? B4[3] : B4[2];
       });
-      if (side) t.each(ox + 1, 34 + oy, ox + 4, 36 + oy, (x, y) => y > 34.6 + oy && y < 35.6 + oy && x + 0.5 - ox < 3.4 ? B4[3] : null);  // under the bust
+      if (side) {   // bust in profile: shine on top, an outline under it
+        const cx = ox + 2.3, cy = 33.5 + oy;
+        t.each(cx - 2.5, cy - 2.5, cx + 2.5, cy + 2.5, (x, y) => {
+          const nx = (x + 0.5 - cx) / 1.9, ny = (y + 0.5 - cy) / 2.0, r = Math.hypot(nx, ny);
+          if (r > 1 || t.getP(Math.round(tx(x + 0.5) * K - 0.5), Math.round(ty(y + 0.5) * K - 0.5)) == null) return null;
+          if (ny > 0.3 && r > 0.72 && nx > -0.5) return pal.outline;
+          if (ny < -0.2 && r < 0.55) return B4[1];
+          return null;
+        });
+      }
     });
     if (!side) {
       // legs blend into the hips
@@ -470,16 +487,17 @@
       body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
     } else if (!side) {
       for (const sgn of [-1, 1]) {
-        const cx = ox + sgn * 2.3, cy = 33.4 + oy;
-        body.each(cx - 3, cy - 3, cx + 3, cy + 3, (x, y) => {
-          const nx = (x + 0.5 - cx) / 2.6, ny = (y + 0.5 - cy) / 2.2, r = nx * nx + ny * ny;
+        const cx = ox + sgn * 2.4, cy = 34.0 + oy;
+        body.each(cx - 3.5, cy - 4, cx + 3.5, cy + 4, (x, y) => {
+          const nx = (x + 0.5 - cx) / 2.5, ny = (y + 0.5 - cy) / 2.9, r = Math.hypot(nx, ny);
           if (r > 1) return null;
-          if (ny > 0.3 && r > 0.55) return B4[3];
-          if (ny < -0.2 && nx * sgn < 0.1 && r < 0.3) return B4[1];
-          return null;
+          if (ny > 0.2 && r > 0.82) return pal.outline;                  // the outline under each breast
+          if (ny > 0.15 && r > 0.55) return B4[3];
+          if (ny < -0.15 && r < 0.55 && nx * sgn < 0.35) return B4[1];    // shine
+          return B4[2];
         });
       }
-      body.each(ox - 1, 31.5 + oy, ox + 1, 34.5 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 32.4 + oy && y < 34.2 + oy ? B4[3] : null);
+      body.each(ox - 1, 31.8 + oy, ox + 1, 35 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 32.4 + oy && y < 34.6 + oy ? B4[3] : null);
     } else {
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1));
     }
