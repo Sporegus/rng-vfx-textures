@@ -522,9 +522,9 @@
     }
     if (p.tears) p.tears.forEach(([x, y]) => fx.glyph(ox + x, y + oy, G.drop, pal.tear));
     const out = outline(body, pal.outline);
-    // standing, a 1-pixel gap between the legs
+    // standing, the legs touch with a thin line between them
     if (!side && standing(p.legA) && standing(p.legB)) {
-      for (let Y = Math.round(ty(44.8 + Math.min(0, oy)) * K); Y < H; Y++) out.p[Y * W + midX] = null;
+      for (let Y = Math.round(ty(44.8 + Math.min(0, oy)) * K); Y < H; Y++) if (out.p[Y * W + midX]) out.p[Y * W + midX] = pal.outline;
     }
     for (let i = 0; i < fx.p.length; i++) if (fx.p[i]) out.p[i] = fx.p[i];
     return out;
