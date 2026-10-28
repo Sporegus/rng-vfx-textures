@@ -204,7 +204,7 @@
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
   };
   const LEGS = {
-    stand: [[-0.5, 5.4], [-0.6, 11]], apart: [[0, 5.4], [0.8, 11]],
+    stand: [[-0.5, 5.4], [0.2, 10.6]], apart: [[0, 5.4], [1.2, 10.6]],
     stepF: [[2, 5], [4, 10.5]], stepB: [[-1.5, 5], [-4, 10]], pass: [[1.5, 4.5], [0, 9]],
     runF: [[4, 4], [7, 9]], runB: [[-3, 5], [-7, 8]], runUp: [[4, 3], [2, 7]],
     sit: [[0.6, 2.5], [1, 9]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
@@ -245,9 +245,12 @@
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
       t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.8, 2.15, 1.35, 1.5, 0.9], tones);
-      // foot: a small rounded shoe pointing slightly outward (forward in side view)
-      const toe = side ? [ankle[0] + 2.2, ankle[1] + 1] : [ankle[0] + sgn * 0.9, ankle[1] + 1.1];
-      t.limb([ankle, toe], [1.05, 0.9], [tones[2], tones[2], tones[3], tones[3]]);
+      // foot: a little shoe, wider than the ankle, toes pointing out (forward in side view)
+      const ax = Math.round(ankle[0]), ay = Math.round(ankle[1]);
+      const shoe = { L: tones[1], M: tones[2], D: tones[3] };
+      if (side) t.glyph(ax - 1, ay, ['LMM.', 'MDDD'], shoe);
+      else if (sgn > 0) t.glyph(ax - 1, ay, ['LMD.', 'MDDD'], shoe);
+      else t.glyph(ax - 2, ay, ['.LMD', 'DDDM'], shoe);
     };
     const drawArm = (t, arm, tones) => {
       t.limb(arm, [1.55, 1.1, 0.95], tones);
