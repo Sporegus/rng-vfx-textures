@@ -16,13 +16,13 @@
   const PALETTES = {
     red:     { name: 'Red', suit: ['#ffd0ce', '#ff7a78', '#e6404f', '#b3213a'], outline: '#5a0614', body: ['#fff1f0', '#ffcbc8', '#f7a09d', '#e06470'],
                skin: ['#fffaf7', '#ffe6de', '#f8c3b8', '#e3968c'], hair: ['#ffb0ac', '#ff4450', '#d81e34', '#9a1028'], hairLine: '#64061a',
-               lash: '#2b0610', iris: ['#4a0614', '#a8132b', '#ee3049', '#ffa3ab'], mouth: '#9c2436', mouthIn: '#c63a50', line: '#ffd2d0', tear: '#ffd6e0', cheek: '#ff9aa6', tie: '#2b0a12', tieHi: '#6b2232' },
+               lash: '#2b0610', iris: ['#4a0614', '#a8132b', '#ee3049', '#ffa3ab'], mouth: '#9c2436', mouthIn: '#c63a50', line: '#ffd2d0', tear: '#ffd6e0', cheek: '#ff9aa6', blush: '#f7aaa4', ribbon: ['#ffd0da', '#ff8aa6'], tie: '#2b0a12', tieHi: '#6b2232' },
     cortana: { name: 'Blue + red hair', suit: ['#c4f3ff', '#5fb0ff', '#2f7fe6', '#1d55b8'], outline: '#0b2a7d', body: ['#eaf7ff', '#b4defc', '#7fbdf2', '#4d8fdc'],
                skin: ['#f2fbff', '#cfeaff', '#97c8f4', '#5f98dc'], hair: ['#ffb0ac', '#ff4450', '#d81e34', '#9a1028'], hairLine: '#64061a',
-               lash: '#0a1a55', iris: ['#0a1b5e', '#1f55cf', '#4a96ff', '#a6dcff'], mouth: '#2a5ad0', mouthIn: '#4a7ae0', line: '#e2f4ff', tear: '#e2f4ff', cheek: '#ff9ab0', tie: '#12163a', tieHi: '#3a4180' },
+               lash: '#0a1a55', iris: ['#0a1b5e', '#1f55cf', '#4a96ff', '#a6dcff'], mouth: '#2a5ad0', mouthIn: '#4a7ae0', line: '#e2f4ff', tear: '#e2f4ff', cheek: '#ff9ab0', blush: '#a9c8f4', ribbon: ['#ffffff', '#b8dcff'], tie: '#12163a', tieHi: '#3a4180' },
     blue:    { name: 'Blue', suit: ['#c4f3ff', '#5fb0ff', '#2f7fe6', '#1d55b8'], outline: '#0b2a7d', body: ['#eaf7ff', '#b4defc', '#7fbdf2', '#4d8fdc'],
                skin: ['#f2fbff', '#cfeaff', '#97c8f4', '#5f98dc'], hair: ['#b4e6ff', '#3f94ff', '#2363e0', '#163fae'], hairLine: '#0c2470',
-               lash: '#0a1a55', iris: ['#0a1b5e', '#1f55cf', '#4a96ff', '#a6dcff'], mouth: '#2a5ad0', mouthIn: '#4a7ae0', line: '#e2f4ff', tear: '#e2f4ff', cheek: '#9fd2ff', tie: '#0b1f5c', tieHi: '#3355aa' },
+               lash: '#0a1a55', iris: ['#0a1b5e', '#1f55cf', '#4a96ff', '#a6dcff'], mouth: '#2a5ad0', mouthIn: '#4a7ae0', line: '#e2f4ff', tear: '#e2f4ff', cheek: '#9fd2ff', blush: '#a9c8f4', ribbon: ['#ffffff', '#b8dcff'], tie: '#0b1f5c', tieHi: '#3355aa' },
   };
   const palOf = (k) => PALETTES[k] || PALETTES.red;
 
@@ -238,18 +238,105 @@
   const LONG_BANGS = [[10.2, 4, 12.8, 10, 10.6, 19, 2.5], [7.2, 1, 10.4, 6, 8.2, 14.2, 2.9], [3.8, -0.4, 6.2, 4.5, 4.2, 10.4, 3.0], [0, -0.8, 0, 5, 0, 10.8, 2.6]];
   const SWEPT_BANGS = [[-10.2, 4, -12.8, 10, -10.6, 17, 2.5], [10.2, 4, 12.8, 10, 10.8, 18, 2.5], [-7.2, 1, -9.4, 6, -7.6, 12.4, 2.8], [7.8, 1.2, 11, 6.5, 9.6, 14.2, 2.8], [-3.8, -0.4, -2.6, 5, -1.2, 10.4, 3.0], [-0.6, -0.8, 3.4, 3.6, 6.6, 10.8, 3.1]];
   const HAIR_STYLES = {
+    pixel: { name: 'Pixel twin tails', pixel: true },
     long:  { name: 'Long', bangs: LONG_BANGS, locks: [[10, 7, 13.8, 16, 11.4, 30, 2.8]], back: { n: 6, len: 39, spread: 14.6, w: 4.2 }, fly: true },
     twin:  { name: 'Twin tails', bangs: LONG_BANGS.slice(1).concat(), outer: [10.4, 4, 12, 9.5, 11.4, 16.5, 2.2], locks: [[10.2, 7, 12, 13, 11.2, 21, 2.2]], back: { n: 5, len: 20, spread: 12, w: 3.8 }, tails: true, fly: true },
     bob:   { name: 'Bob', bangs: SWEPT_BANGS, asym: true, locks: [[11.2, 5.5, 15, 14, 10.6, 23.5, 3.4]], back: { n: 5, len: 22, spread: 13, w: 4.2, inward: true } },
     wavy:  { name: 'Wavy', bangs: SWEPT_BANGS, asym: true, locks: [[10, 7, 14.2, 17, 12, 31, 2.8, 1.3]], back: { n: 6, len: 40, spread: 15.2, w: 4.1, wave: 1.6 }, fly: true },
   };
   HAIR_STYLES.twin.bangs = [HAIR_STYLES.twin.outer].concat(LONG_BANGS.slice(1));
-  const styleOf = (k) => HAIR_STYLES[k] || HAIR_STYLES.long;
+  const styleOf = (k) => HAIR_STYLES[k] || HAIR_STYLES.pixel;
   // side view (facing right): front bangs, then the crown sweeping back
   const SIDE_BANGS = [[-3, 0.5, 1, 5, 2.5, 11, 2.6], [0, -0.2, 4, 4, 5.5, 10.6, 2.6], [3, 0.8, 6.6, 5, 7.8, 11.4, 2.4], [5.5, 2.5, 8.6, 8, 8.4, 14, 2.0]];
   const SIDE_CROWN = [[2.5, 0.5, -4, 1, -9, 6.5, 2.4], [0, 1, -7, 6, -12.5, 11.5, 2.8], [1, 0, -6, 3, -11.5, 15.5, 2.8], [-1.5, 1, -8, 10, -11, 19.5, 2.6]];
 
+  // ---- pixel-art head: hand-pixeled twin tails and face, drawn 1:1 in real pixels.
+  // O line, H/M/D hair light to dark, E hair shadow, S/p skin, s blush, T/t ribbon,
+  // W white, N mouth. Column 31 sits just right of her center line; row 32 is the chin.
+  const PX_HEAD = [
+    '...............OO........OOOOOOOOOOOO........OO...............',
+    '..........OOO..HTO....OOOEDDEEEEEEEEEOOO....OTTO.OOOO.........',
+    '........OODEDOOHpOO.OODDDDDDMMMMMMDDDEDDOOOOOppOOEEEEOO.......',
+    '.......OEDMMDEEHOppOEEDDMMMMMMMMMMMMMMDEDDOppOpEEEMMMEEO......',
+    '......OMMMDMEDEOpTOEDMMMMMMMMMMMMMMMMMMMMMEOTpOEEEDDMMMO......',
+    '.....OMMMMMMMEOpTODMMMMMMMMMMMMMMMMMMMMMMMMDOTpOOMMMMMMME.....',
+    '....OMMMMHMMMOTTOMMMMMMMMMMMMMMMMMMMMMMMMMMMMOTTOMMMMHMMMO....',
+    '....OMMMMHMMMOptOMMMMMMMMMMMMMMMMMMMMMMMMMMMMOtpMMMMMHMMMO....',
+    '...OMMHHMMDMOppOMMMMMMMMMDEMMMMMMMMEMMMMMMMMMMOppOMMDMMHMMO...',
+    '...OMMHHMMDMpTOMMMMMMMMMMEEMMMMMMMMEMMMMMMMMMMMOTpEDDMMHMMO...',
+    '...OMMMMMMMOTTOMMMHMHHHMEEEMMHHHHMMEEEMHMHMHMMMEtTEEMMMMMMO...',
+    '...OMMMMMMEDOOEMMMHMMMMMOEEMMMMMMMMEEOMMMMMMMMMDOOEEDMMMMMO...',
+    '..OMMHMMMDEEOOEMMMMDMMMMOEEOMMMMMMOEEOMMMMDMMMMDOOEEEMMMHMMO..',
+    '..OMMHMMMEEEEEEMMMMDMMMOpEEOMMMMMMOEEpOMMMDMMMMDEEEEEMMMHMMO..',
+    '..OMMHMMMEEEOEEMMMDDEEOMDOOOEEEEEEOOMMMOEEEEMMMDEOEEEDMMHMMO..',
+    '..OMMHMMEEEEOEEEMMOEDEOppOpOEEEEEEOpOppODEEOMMDEEOEEEEMMHMMO..',
+    '..OMMMMMEEEEOEEEMMOEEOpSSSSpOOOOOOsSSSSsOOOOMMDEEOEEEEMMMMMO..',
+    '..OMMMMMEEEEOEEEMMOpstSOOSOSppppppSOSOOSsOpOMMDEEOEEEEEMMMMO..',
+    '..OMMMMMEEEEOEEEEOsSSpOOOOSSSSSSSSSSOOOOpSSsEEEEEOEEEEEMMMMO..',
+    '..OMMMMMEEEOOOEEEEsSsOOOWOOSSSSSSSSOOWOOOsSsEEEEOOOEEEEMMMMO..',
+    '..OEMMMMEEOOEOOEMESSOWOOOOSSSSSSSSSSOOOOWOpSEMDOOEEOEEEMMMDO..',
+    '..OEMEMMEEOOEOpEMESOSWOOOOSSSSSSSSSSOOOOWWOSEMDsOEEOEEEMDMEO..',
+    '..OEMEMMEOOOEOpEMESSSWOOOOSSSSSSSSSSOOOOWWSSEMDsOEEOOEEMDMEO..',
+    '..OEEEEEEOOEEOpEMDSSSWOOOOSSSSSSSSSSOOOOWSSEEMDsOEEOOOEEEEEO..',
+    '..OEEMEEEEOEEOpEMMDSSSSOOSSSSSSSSSSSSOOSSSSEMMDsOEEEOEEEMEEO..',
+    '..OEEMEEEEEEEOOEMMDSSSsSSSSSSSSSSSSSSSSsSSSEMMDOOEEEEEEEMEEO..',
+    '..OEEMEEEEEEEO.EMDESSsssSSSSSSSSSSSSSSssssSEEMEEEEEEEEEEMEEO..',
+    '..OEEMEEEEEEEO.EEEESSsssSSSNSSSSSSNSSSSssSSEEEE.EEEEEEEEMEEE..',
+    '.OEEEEEEEEEEEO.OEEEOsSSSSSSSNSSSSNSSSSSSSSOEEEO.EEEEEEEEEEEEO.',
+    'OMEEOEEEEEEEEO.OEEEOOpSSSSSSSSNNNSSSSSSSsOOEEEO.EEEEEEEEEOEEMO',
+    'OEEOOEEEEEEEEEO.OEO..OpsSSSSSSSSSSSSSSspOO.OEO.NEEEEEEEEEOOEEO',
+    '.OO.OEEEEEEEEEO.OO....OOOppppSSSSppppOOO....OO.EEEEEEEEEEO.OO.',
+    '....OEEEEEEEOEE.........OOOOOssssDOOOO..........EOOEEEEEEO....',
+    '....OEOOOEO........................................OEEOOEO....',
+    '....OEO.OEO........................................EEEEOEO....',
+    '.....O...O..........................................OO..O.....',
+  ];
+  const PX_EYE = { y: 17, x: 19, w: 8, h: 8 };     // her left eye box (viewer's left)
+  const PX_MOUTH = { y: 27, x: 26, w: 10, h: 3 };
+  const PX_EYES = {
+    closed: ['', '', '', '', 'O......O', '.OOOOOO.'],
+    happy:  ['', '', '', '...OO...', '.OO..OO.', 'O......O'],
+    cry:    ['', '', '', '', 'OOOOOOOO', '.O....O.'],
+    x:      ['', '.O....O.', '..O..O..', '...OO...', '...OO...', '..O..O..', '.O....O.'],
+  };
+  PX_EYES.blink = PX_EYES.closed;
+  // smaller mouths that suit this face
+  const PX_MOUTHS = { open: ['MMMMMM', '.MIIM.', '..MM..'], wail: ['MMMMMM', 'MIIIIM', 'MITTIM', '.MMMM.'], grin: ['MMMMMM', '.MIIM.', '..MM..'] };
+  function drawPixelHead(b, p, pal, hx, hy) {
+    const H4 = pal.hair, F4 = pal.skin || pal.body, rib = pal.ribbon || ['#ffd0da', '#ff8aa6'];
+    const col = { O: pal.lash, H: H4[1], M: H4[2], D: H4[3], E: pal.hairLine, S: F4[1], p: F4[2], s: pal.blush || pal.cheek, T: rib[0], t: rib[1], W: '#ffffff', N: pal.mouth };
+    const rows = PX_HEAD.map(r => r.split(''));
+    const n = rows[0].length;
+    // expressions: swap the eyes and mouth
+    const eyeKey = p.eyes === 'wink' ? null : p.eyes;
+    const paintEye = (glyph, mirror) => {
+      const x0 = mirror ? n - PX_EYE.x - PX_EYE.w : PX_EYE.x;
+      for (let j = 0; j < PX_EYE.h; j++) for (let i = 0; i < PX_EYE.w; i++) {
+        const c = rows[PX_EYE.y + j][x0 + i];
+        if ('OWSsp'.includes(c)) rows[PX_EYE.y + j][x0 + i] = 'S';
+      }
+      glyph.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[mirror ? r.length - 1 - i : i] === 'O') rows[PX_EYE.y + j][x0 + i] = 'O'; });
+    };
+    if (PX_EYES[eyeKey]) { paintEye(PX_EYES[eyeKey], false); paintEye(PX_EYES[eyeKey], true); }
+    if (p.eyes === 'wink') paintEye(PX_EYES.happy, true);
+    // a hint of red in the bottom of each eye
+    else if (!PX_EYES[eyeKey]) for (const y of [22, 23]) for (let x = 0; x < n; x++) {
+      if (rows[y][x] === 'O' && rows[y - 1][x] === 'O' && (Math.abs(x - 22.5) < 3 || Math.abs(x - 38.5) < 3)) rows[y][x] = y === 22 ? 'i' : 'j';
+    }
+    col.i = pal.iris[1]; col.j = pal.iris[2];
+    const mk = p.mouth && p.mouth !== 'smile' ? p.mouth : null;
+    let mouth = null;
+    if (mk && MOUTHS[mk]) {
+      for (let j = 0; j < PX_MOUTH.h; j++) for (let i = 0; i < PX_MOUTH.w; i++) if (rows[PX_MOUTH.y + j][PX_MOUTH.x + i] === 'N') rows[PX_MOUTH.y + j][PX_MOUTH.x + i] = 'S';
+      mouth = PX_MOUTHS[mk] || MOUTHS[mk];
+    }
+    const X0 = Math.round(hx * K) - 31, Y0 = Math.round(hy * K) + 14;
+    rows.forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
+    if (mouth) b.glyphP(X0 + 31 - Math.floor(mouth[0].length / 2), Y0 + PX_MOUTH.y, mouth, { M: pal.mouth, I: pal.mouthIn || pal.mouth, T: pal.cheek, W: '#ffffff' });
+  }
+
   function drawHead(b, p, pal, hx, hy) {
+    if (styleOf(p.hairStyle).pixel) return drawPixelHead(b, p, pal, hx, hy);
     const side = p.view === 'side';
     const H4 = pal.hair, F4 = pal.skin || pal.body, OL = pal.outline, sway = p.sway || 0;
     const st = styleOf(p.hairStyle), face = FACES[p.face] || FACES.sparkle;
@@ -366,6 +453,7 @@
   function drawBackHair(b, p, pal, hx, hy) {
     const side = p.view === 'side', H4 = pal.hair, sway = p.sway || 0;
     const hairCols = new Set([...H4, pal.hairLine]);
+    if (styleOf(p.hairStyle).pixel) return;
     const bk = styleOf(p.hairStyle).back;
     const n = side ? Math.max(4, Math.round(bk.n * 0.6)) : bk.n;
     const order = [];
@@ -591,10 +679,10 @@
   function frameRGBA(anim, frame, pal, hair, face) {
     const a = ANIMS[anim] || ANIMS.idle;
     const f = ((frame % a.frames) + a.frames) % a.frames;
-    const key = anim + '|' + f + '|' + pal + '|' + (hair || 'long') + '|' + (face || 'sparkle');
+    const key = anim + '|' + f + '|' + pal + '|' + (hair || 'pixel') + '|' + (face || 'sparkle');
     let px = cache.get(key);
     if (!px) {
-      const pose = Object.assign({ hairStyle: hair || 'long', face: face || 'sparkle' }, a.pose(f));
+      const pose = Object.assign({ hairStyle: hair || 'pixel', face: face || 'sparkle' }, a.pose(f));
       let buf = drawZinx(pose, pal);
       if (a.lie) buf = lieDown(buf);
       addFx(buf, pose, pal);
@@ -611,7 +699,7 @@
     return px;
   }
   let scratch = null;
-  function draw(ctx, { anim = 'idle', frame = 0, pal = 'red', hair = 'long', face = 'sparkle', x = 0, y = 0, scale = 4, flip = false }) {
+  function draw(ctx, { anim = 'idle', frame = 0, pal = 'red', hair = 'pixel', face = 'sparkle', x = 0, y = 0, scale = 4, flip = false }) {
     if (!scratch) scratch = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });
     const sctx = scratch.getContext('2d');
     const img = sctx.createImageData(W, H);

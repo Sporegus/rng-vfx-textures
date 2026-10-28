@@ -6,7 +6,7 @@
   const ctx = cv.getContext('2d');
   const box = document.getElementById('stage-box');
   let pal = 'red';
-  let hair = 'long';
+  let hair = 'pixel';
   let face = 'sparkle';
   let anim = 'idle', frame = 0, ft = 0;
   let showBase = true;
@@ -251,18 +251,6 @@
     });
     colorRow.append(b);
   });
-  // face and hair pickers
-  const picker = (id, options, get, set) => {
-    const row = document.getElementById(id);
-    Object.entries(options).forEach(([k, label]) => {
-      const b = document.createElement('button');
-      b.textContent = label; b.setAttribute('aria-pressed', k === get());
-      b.addEventListener('click', () => { set(k); row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawSheet(); });
-      row.append(b);
-    });
-  };
-  picker('faces', Z.FACES, () => face, (k) => { face = k; });
-  picker('hairs', Z.HAIRS, () => hair, (k) => { hair = k; });
   document.getElementById('base').addEventListener('click', (e) => { showBase = !showBase; e.currentTarget.setAttribute('aria-pressed', showBase); });
   document.getElementById('tp').addEventListener('click', () => {
     let x, y, n = 0;
