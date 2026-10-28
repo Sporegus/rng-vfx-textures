@@ -14,8 +14,8 @@ const DEFAULTS = {
   skin: 'holo', hat: 'none', size: 3, sound: true,
   wander: true, followWindows: true, startWithWindows: false, introDone: false,
   // voice: talk out loud, listen for "Zin", which voice, a little higher pitch, the smaller speech model
-  // (mochi, pixie and luna are emotional voices; heart, bella... the classic ones)
-  voice: false, listen: false, voiceName: 'mochi', cute: true, earsLight: false, voiceOffered: false,
+  // (pixie is Zin's own smooth voice; sparkle, mochi and luna are extra expressive; heart, bella... stock ones)
+  voice: false, listen: false, voiceName: 'pixie', cute: true, earsLight: false, voiceOffered: false,
   // chat: the local AI model for conversation; what she remembers about you
   // chatModel: your own model instead (a .gguf file or an hf: name), for tinkerers
   chat: false, chatModel: null, memory: [], userName: null, city: null, units: null,
@@ -131,11 +131,12 @@ function buildTrayMenu() {
       check('Listen for "Zin"', 'listen'),
       { label: 'Push to talk', accelerator: 'Ctrl+Alt+V', click: () => send('ptt') },
       { type: 'separator' },
-      { label: 'Emotional voices', enabled: false },
-      ...[['mochi', 'Mochi (sweet, bubbly)'], ['pixie', 'Pixie (bright, playful)'], ['luna', 'Luna (soft, gentle)']].map(([k, l]) => radio(l, 'voiceName', k)),
-      { label: 'Classic voices (quicker, no moods)', enabled: false },
+      radio('Pixie (Zin\'s own voice, smooth)', 'voiceName', 'pixie'),
+      { label: 'Extra expressive (less steady)', enabled: false },
+      ...[['sparkle', 'Sparkle (bright, playful)'], ['mochi', 'Mochi (sweet, bubbly)'], ['luna', 'Luna (soft, gentle)']].map(([k, l]) => radio(l, 'voiceName', k)),
+      { label: 'Other smooth voices', enabled: false },
       ...[['heart', 'Heart (sweet)'], ['bella', 'Bella (bright)'], ['nicole', 'Nicole (soft)'], ['sky', 'Sky (airy)'], ['aoede', 'Aoede (warm)'], ['nova', 'Nova (clear)']].map(([k, l]) => radio(l, 'voiceName', k)),
-      check('Higher, cuter pitch (classic voices)', 'cute'),
+      check('Higher, cuter pitch (other smooth voices)', 'cute'),
       { type: 'separator' },
       check('Smaller speech model (for slower PCs)', 'earsLight'),
       check('Chat brain (free, runs on your PC)', 'chat'),

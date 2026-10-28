@@ -29,7 +29,7 @@ window.ZinVoiceIO = (function () {
   let onIdle = null, unmuteTimer = null;
   // plays a piece of speech after whatever is already queued. pitch above 1
   // makes her voice higher (the service already slowed it down to match).
-  function play(samples, rate, pitch = 1) {
+  function play(samples, rate, pitch = 1, gain = 1) {
     if (!out) { out = new AudioContext(); analyser = out.createAnalyser(); analyser.fftSize = 256; analyser.connect(out.destination); }
     if (out.state === 'suspended') out.resume();
     const buf = out.createBuffer(1, samples.length, rate);
@@ -37,10 +37,13 @@ window.ZinVoiceIO = (function () {
     const src = out.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = pitch;
-    src.connect(analyser);
-    const at = Math.max(out.currentTime + 0.03, next);
-    src.start(at);
-    next = at + samples.length / rate / pitch;
+    // a short fade in and out so pieces join without clicks
+    const g = out.createGain(), at0 = Math.max(out.currentTime + 0.03, next), dur = samples.length / rate / pitch;
+    g.gain.setValueAtTime(0, at0); g.gain.linearRampToValueAtTime(gain, at0 + 0.008);
+    g.gain.setValueAtTime(gain, Math.max(at0 + 0.008, at0 + dur - 0.012)); g.gain.linearRampToValueAtTime(0, at0 + dur);
+    src.connect(g); g.connect(analyser);
+    src.start(at0);
+    next = at0 + dur;
     playing.add(src);
     // don't listen to herself while she talks
     muted = true; clearTimeout(unmuteTimer);

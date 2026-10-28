@@ -69,14 +69,28 @@ class Ears {
 
 // ---------------------------------------------------------------- mouth
 // Two kinds of voice:
-//   emotional (Pocket TTS): copies the voice and mood of a short clip, so she
-//     can sound happy, excited, sad, shy... (clips in voice/emotions)
-//   classic (Kokoro): quicker and steady, no moods
+//   steady (Kokoro): one consistent voice, quick to start. Moods change how she
+//     says things (pace, pitch, loudness), so she never sounds like someone else.
+//     Includes Zin's own voices, made to sound like a real person (voice/styles)
+//   expressive (Pocket TTS): copies the voice and mood of a short clip (voice/emotions);
+//     more feeling, but the voice drifts a little from sentence to sentence
 const fs = require('fs');
-const EMOTIONAL = ['mochi', 'pixie', 'luna'];
+// expressive voices and the clip folder each one uses
+const EXPRESSIVE = { mochi: 'mochi', sparkle: 'pixie', luna: 'luna' };
+const EMOTIONAL = Object.keys(EXPRESSIVE);
 const MOODS = ['cute', 'happy', 'excited', 'sad', 'calm', 'confused', 'proud', 'pouty', 'shy', 'love'];
-// the Kokoro voices that suit her (speaker numbers in the model)
+// the Kokoro voices that suit her (speaker numbers in the model); Zin's own
+// voices take over unused slots at the end (see customVoices)
 const VOICES = { heart: 3, bella: 2, nicole: 6, sky: 10, aoede: 1, nova: 7, jessica: 4, kore: 5 };
+const CUSTOM_SLOTS = [53, 52, 51, 50];
+// how each mood is delivered by a steady voice: pace, pitch (played back higher or
+// lower) and loudness. Small changes, so it stays the same voice.
+const DELIVERY = {
+  cute: { speed: 1, pitch: 1, gain: 1 }, happy: { speed: 1.04, pitch: 1.03, gain: 1.05 }, excited: { speed: 1.08, pitch: 1.06, gain: 1.12 },
+  sad: { speed: 0.9, pitch: 0.96, gain: 0.8 }, calm: { speed: 0.93, pitch: 0.98, gain: 0.85 }, confused: { speed: 0.96, pitch: 1.02, gain: 0.95 },
+  proud: { speed: 1.02, pitch: 1.02, gain: 1.08 }, pouty: { speed: 1.05, pitch: 1.04, gain: 1.1 }, shy: { speed: 0.95, pitch: 1.03, gain: 0.78 },
+  love: { speed: 0.95, pitch: 1.02, gain: 0.9 },
+};
 // a mood also changes how fast she talks
 const PACE = { excited: 1.06, happy: 1.03, sad: 0.92, calm: 0.92, shy: 0.96 };
 
@@ -96,22 +110,42 @@ const unstretch = (t) => t.replace(/\b[Hh]i{2,}\b/g, (m) => m[0] + 'i').replace(
 // split into sentences, so she can start talking after the first one
 const sentences = (t) => (t.match(/[^.!?…]+(?:[.!?…]+["')\]]*|$)/g) || [t]).map(x => x.trim()).filter(Boolean);
 
+// Kokoro reads all its voices from one file (54 voices of 510 x 256 numbers).
+// Zin's own voices (voice/styles/<name>.bin, one voice each) are written over
+// unused slots in a copy of that file, kept next to the model.
+function customVoices(dir, stylesDir) {
+  const names = stylesDir && fs.existsSync(stylesDir) ? fs.readdirSync(stylesDir).filter(f => f.endsWith('.bin')).sort().slice(0, CUSTOM_SLOTS.length) : [];
+  if (!names.length) return path.join(dir, 'voices.bin');
+  const out = path.join(dir, 'zin-voices.bin');
+  const buf = fs.readFileSync(path.join(dir, 'voices.bin'));
+  const size = 510 * 256 * 4;
+  names.forEach((n, i) => {
+    const v = fs.readFileSync(path.join(stylesDir, n));
+    if (v.length === size) v.copy(buf, CUSTOM_SLOTS[i] * size);
+    VOICES[n.replace(/\.bin$/, '')] = CUSTOM_SLOTS[i];
+  });
+  if (!fs.existsSync(out) || !fs.readFileSync(out).equals(buf)) fs.writeFileSync(out, buf);
+  return out;
+}
+
 class Mouth {
-  // dir: the Kokoro folder (classic) or the Pocket TTS folder (emotional)
-  constructor(dir, kind = 'classic', emotionsDir = null) {
+  // dir: the Kokoro folder (steady) or the Pocket TTS folder (expressive);
+  // extra: the expressive clips folder, or the folder of Zin's own steady voices
+  constructor(dir, kind = 'classic', extra = null) {
     const f = (n) => path.join(dir, n);
     this.kind = kind;
+    const voicesFile = kind === 'emotional' ? null : customVoices(dir, extra);
     this.tts = new so.OfflineTts(kind === 'emotional'
       ? { model: { pocket: { lmFlow: f('lm_flow.int8.onnx'), lmMain: f('lm_main.int8.onnx'), encoder: f('encoder.onnx'), decoder: f('decoder.int8.onnx'), textConditioner: f('text_conditioner.onnx'), vocabJson: f('vocab.json'), tokenScoresJson: f('token_scores.json'), voiceEmbeddingCacheCapacity: 40 }, numThreads: threads(), debug: 0 }, maxNumSentences: 1 }
-      : { model: { kokoro: { model: f('model.onnx'), voices: f('voices.bin'), tokens: f('tokens.txt'), dataDir: f('espeak-ng-data'), lexicon: f('lexicon-us-en.txt') }, numThreads: threads(), debug: 0 }, maxNumSentences: 1 });
+      : { model: { kokoro: { model: f('model.onnx'), voices: voicesFile, tokens: f('tokens.txt'), dataDir: f('espeak-ng-data'), lexicon: f('lexicon-us-en.txt') }, numThreads: threads(), debug: 0 }, maxNumSentences: 1 });
     this.sampleRate = this.tts.sampleRate;
-    this.emotionsDir = emotionsDir;
+    this.emotionsDir = kind === 'emotional' ? extra : null;
     this.clips = {};
     this.token = 0;
   }
 
   clip(voice, mood) {
-    const v = EMOTIONAL.includes(voice) ? voice : EMOTIONAL[0];
+    const v = EXPRESSIVE[voice] || EXPRESSIVE[EMOTIONAL[0]];
     const m = MOODS.includes(mood) ? mood : 'cute';
     const key = v + '/' + m;
     if (!this.clips[key]) {
@@ -122,15 +156,18 @@ class Mouth {
     return this.clips[key];
   }
 
-  // onChunk(samples) is called for each sentence as soon as it's ready.
-  // speed below 1 is slower. Resolves when done (or when hush() is called).
+  // onChunk(samples, { pitch, gain }) is called for each sentence as soon as it's
+  // ready; the player applies pitch and gain. speed below 1 is slower.
+  // Resolves when done (or when hush() is called).
   async say(text, { voice = 'heart', mood = 'cute', speed = 1 } = {}, onChunk) {
     const my = ++this.token;
     const t = speakable(text);
     if (!t) return;
-    const go = (samples) => { if (my !== this.token) return 0; if (onChunk && samples.length) onChunk(Float32Array.from(samples)); return 1; };
+    const d = this.kind === 'emotional' ? { speed: 1, pitch: 1, gain: 1 } : DELIVERY[mood] || DELIVERY.cute;
+    const go = (samples) => { if (my !== this.token) return 0; if (onChunk && samples.length) onChunk(Float32Array.from(samples), { pitch: d.pitch, gain: d.gain }); return 1; };
     if (this.kind !== 'emotional') {
-      await this.tts.generateAsync({ text: t, sid: VOICES[voice] ?? VOICES.heart, speed, enableExternalBuffer: false, onProgress: ({ samples }) => go(samples) });
+      // played back d.pitch times faster, so say it that much slower to keep the pace
+      await this.tts.generateAsync({ text: t, sid: VOICES[voice] ?? VOICES.heart, speed: speed * d.speed / d.pitch, enableExternalBuffer: false, onProgress: ({ samples }) => go(samples) });
       return;
     }
     const ref = this.clip(voice, mood);
@@ -157,4 +194,4 @@ class Mouth {
   hush() { this.token++; }
 }
 
-module.exports = { Ears, Mouth, VOICES, EMOTIONAL, MOODS, RATE, speakable, sentences };
+module.exports = { Ears, Mouth, VOICES, EMOTIONAL, MOODS, DELIVERY, RATE, speakable, sentences };

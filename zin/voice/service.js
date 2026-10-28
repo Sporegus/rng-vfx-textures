@@ -12,7 +12,8 @@ const send = (m) => port.postMessage(m);
 let root = null, ears = null, mind = null, listening = false, chatModel = null;
 const mouths = {}; // 'emotional' and/or 'classic', loaded when first needed
 // the mood clips ship with Zin; when packaged they sit outside the app archive so the voice engine can read them
-const EMOTIONS = path.join(__dirname, 'emotions').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+const unpacked = (d) => path.join(__dirname, d).replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+const EMOTIONS = unpacked('emotions'), STYLES = unpacked('styles');
 const kindOf = (voice) => (EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
 const busy = {};
 
@@ -39,7 +40,7 @@ const progress = (what) => (done, total) => send({ type: 'progress', what, done,
 async function loadMouth(kind) {
   if (mouths[kind]) return mouths[kind];
   const dir = await models.ensure(root, kind === 'emotional' ? 'voiceEmo' : 'voice', progress('voice'));
-  mouths[kind] = new Mouth(dir, kind, EMOTIONS);
+  mouths[kind] = new Mouth(dir, kind, kind === 'emotional' ? EMOTIONS : STYLES);
   return mouths[kind];
 }
 async function setupVoice(light, voice) {
@@ -73,7 +74,7 @@ async function setupMind() {
 async function say(id, text, opts) {
   const mouth = ears && await mouthFor(opts.voice);
   if (!mouth) return send({ type: 'said', id });
-  await mouth.say(text, opts, (samples) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate }))
+  await mouth.say(text, opts, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how }))
     .catch((e) => send({ type: 'error', what: 'speak', message: e.message }));
   send({ type: 'said', id });
 }
@@ -91,7 +92,7 @@ async function chat(id, text, opts) {
     const reply = await mind.chat(text, (s, mood) => {
       if (ac.signal.aborted) return;
       send({ type: 'sentence', id, text: s, mood });
-      if (mouth) speaking = speaking.then(() => mouth.say(s, { ...opts, mood }, (samples) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate })).catch(() => {}));
+      if (mouth) speaking = speaking.then(() => mouth.say(s, { ...opts, mood }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how })).catch(() => {}));
     }, ac.signal);
     await speaking;
     send({ type: 'replied', id, text: ac.signal.aborted ? null : reply });

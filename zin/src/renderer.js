@@ -1351,9 +1351,11 @@
   // the speaker, and what she does with what she hears.
   const VIO = window.ZinVoiceIO, Wake = window.ZinWake;
   const voice = { service: !!api.voice, have: false, ready: false, chat: false, follow: 0, ptt: 0, id: 0, chats: new Map(), waits: new Map(), queued: [], download: null };
-  const EMOTIONAL = ['mochi', 'pixie', 'luna'];
-  // the emotional voices are already high; the pitch boost is for the classic ones
-  const pitch = () => (settings.cute && !EMOTIONAL.includes(settings.voiceName) ? 1.1 : 1);
+  const EMOTIONAL = ['mochi', 'sparkle', 'luna'];
+  // Zin's own voices (made to sound like a real person) and the expressive ones keep
+  // their natural pitch; the pitch boost is for the stock steady voices
+  const OWN = ['pixie'];
+  const pitch = () => (settings.cute && !EMOTIONAL.includes(settings.voiceName) && !OWN.includes(settings.voiceName) ? 1.1 : 1);
   const voiceOpts = (mood) => ({ voice: settings.voiceName, mood: mood || 'cute', speed: 1 / pitch(), speak: !!(settings.voice && voice.ready) });
 
   // how she feels saying something, from the words (the chat brain picks its own)
@@ -1511,7 +1513,7 @@
   async function setupVoice() {
     if (!voice.service) return say('My voice only works in the app, not in this demo. 🎙️');
     if (voice.ready) { settings = await api.setSettings({ voice: true, listen: true }); syncMic(); return say('I\'m all ears! Say "Zin" and then what you need. 🎙️', { ms: 5000 }); }
-    const v = voice.have ? 'go' : await ask('Want me to talk and listen? I need to download my voice and ears first (about 580 MB, one time). It all runs on your PC, so nothing you say leaves it.', [
+    const v = voice.have ? 'go' : await ask('Want me to talk and listen? I need to download my voice and ears first (about 830 MB, one time). It all runs on your PC, so nothing you say leaves it.', [
       { icon: '🎙️', label: 'Yes, download', value: 'go', primary: true }, { label: 'Not now', value: 'no', ghost: true }]);
     settings = await api.setSettings({ voiceOffered: true });
     if (v !== 'go') return v && say('Okay! You can turn it on any time in Voice & chat.', { ms: 3500 });
@@ -1549,9 +1551,9 @@
     }
     if (v === 'pick') {
       if (!voice.ready) return setupVoice();
-      const names = { mochi: '💖 Mochi', pixie: '💖 Pixie', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
-      const n = await ask('Which voice? I\'ll say hi in it. The 💖 ones have feelings; the others are quicker but steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
-        ...(EMOTIONAL.includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
+      const names = { pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
+      const n = await ask('Which voice? I\'ll say hi in it. ⭐ Pixie is my own smooth voice. 💖 ones are extra expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
+        ...(EMOTIONAL.includes(settings.voiceName) || OWN.includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
       if (n === '__back' || !n) return n && voiceMenu();
       settings = await api.setSettings(n === '__cute' ? { cute: !settings.cute } : { voiceName: n, voice: true });
       await say(pick(['Hiii! Is this one cute? 💕', 'Hey! How do I sound now?', 'Ta-da! New voice, who dis? ✨']), { ms: 3000 });
@@ -1586,7 +1588,7 @@
         if (m.what === 'chat') settings = await api.setSettings({ chat: false });
         say(`I couldn't set up my ${m.what === 'chat' ? 'chat brain' : 'voice'}: ${m.message}. Check your internet and try again? 😔`, { ms: 7000 });
         break;
-      case 'audio': if (settings.voice) VIO.play(m.samples, m.sampleRate, pitch()); break;
+      case 'audio': if (settings.voice) VIO.play(m.samples, m.sampleRate, pitch() * (m.pitch || 1), m.gain || 1); break;
       case 'heard': onHeard(m.text); break;
       case 'sentence': { const c = voice.chats.get(m.id); if (c) c.sentence(m.text, m.mood); break; }
       case 'replied': { const c = voice.chats.get(m.id); if (c) c.done(m.text); break; }
