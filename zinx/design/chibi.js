@@ -292,7 +292,7 @@
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
-    tap: [[2, 4], [-0.6, -0.4]], typeL: [[2.4, 4.4], [-0.4, 6.4]], hug: [[2.4, 4.8], [-2.2, 7.6]], typeLd: [[2.4, 4.8], [-0.2, 7.2]], gesture: [[2, 4], [5, 3]], low: [[2.4, 3.6], [3.6, 7.2]], type2: [[2, 5], [5.4, 4.4]],
+    tap: [[2, 4], [-0.6, -0.4]], typeL: [[2.4, 4.4], [-0.4, 6.4]],  typeLd: [[2.4, 4.8], [-0.2, 7.2]], gesture: [[2, 4], [5, 3]], low: [[2.4, 3.6], [3.6, 7.2]], type2: [[2, 5], [5.4, 4.4]],
   };
   const LEGS = {
     stand: [[0.5, 5.4], [0.7, 10.6]], apart: [[0.9, 5.4], [1.7, 10.6]],
@@ -520,10 +520,10 @@
         if (k === 3 && (p.screen || 0) % 2 === 0) { fx.setP(sx + 4 + len, sy + 2 + k * 3, '#ffffff'); fx.setP(sx + 4 + len, sy + 3 + k * 3, '#ffffff'); }   // cursor
       }
     }
-    // a sleep bubble at her nose that swells, then pops
+    // a sleep bubble from her mouth that swells, then pops
     if (p.bubble) {
       const headY = Math.round(ty(6 + oy + 23.2) * K) - 32 + Math.round(p.hdy || 0), g = G[p.bubble > 3 ? 'spark2' : 'bub' + p.bubble];
-      fx.glyphP(midX + 3, headY + 29 - g.length, g, { X: '#e4f6ffe0' });
+      fx.glyphP(midX + 2, headY + 31 - g.length, g, { X: '#e4f6ffe0' });
     }
     // tears: [dx, dy] in real pixels from her center line and the top of her head
     if (p.tears) {
@@ -583,10 +583,10 @@
     ][f] },
     // perched on an edge, swinging her legs
     sit:   { frames: 4, fps: 3, footY: 44, pose: f => ({ legA: f % 2 ? 'sitB' : 'sitA', legB: f % 2 ? 'sitA' : 'sitB', armA: [[1, 5], [2, 9]], armB: [[1, 5], [2, 9]], bob: f === 2 ? 0.5 : 0, tails: [0, 0.5, 0, -0.5][f], eyes: f === 3 ? 'blink' : 'open' }) },
-    // dozing off sitting on the floor, hugging her knees: her head nods, a bubble
-    // swells at her nose and pops, and Zzz drift up and away
-    sleep: { frames: 6, fps: 2, pose: f => ({ eyes: 'closed', mouth: 'o', bob: 3, legA: 'squat', legB: 'squat', armA: 'hug', armB: 'hug', blush: true,
-      hdy: [0, 1, 2, 2, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], bubble: [1, 2, 3, 3, 4, 0][f],
+    // asleep on her feet: eyes closed, slow breathing, a bubble swelling from her
+    // mouth and popping, and Zzz drifting up and away
+    sleep: { frames: 6, fps: 2, pose: f => ({ eyes: 'closed', mouth: 'o', armA: 'down', armB: 'down',
+      bob: [0, 0.5, 1, 1, 0.5, 0][f], hdy: [0, 0, 1, 1, 1, 0][f], tails: [0, 0.5, 1, 0.5, 0, -0.5][f], bubble: [1, 2, 3, 3, 4, 0][f],
       fx: [['z', 40, 22 - f * 2, 'line'], ['zBig', 44, 14 - ((f + 3) % 6) * 2, 'line']] }) },
     // sobbing: shoulders shake and tears stream down
     cry:   { frames: 4, fps: 6, pose: f => ({ armA: 'eyes', armB: 'eyes', eyes: 'cry', mouth: 'wail', dx: f % 2 ? 0.4 : -0.4, bob: f % 2 ? 0.5 : 0, tails: f % 2 ? 1 : -1, tears: [[-11, 24 + (f * 3) % 9], [8, 24 + ((f + 2) * 3) % 9]] }) },
