@@ -604,7 +604,7 @@
       { bob: 0, legA: 'stand', legB: 'stand', armA: 'down', armB: 'down', eyes: 'open', mouth: 'smile' },
     ][f] },
     // typing on a hologram keyboard: hands take turns, keys flash, code scrolls on the screen
-    work:  { frames: 8, fps: 6, pose: f => ({ armA: f % 2 ? 'typeLd' : 'typeL', armB: f % 2 ? 'typeL' : 'typeLd', eyes: f === 7 ? 'blink' : 'open', mouth: f === 4 ? 'smile' : 'flat', hdy: f % 4 === 1 ? 1 : 0, tails: [0, 0.5, 0, -0.5][f % 4],
+    work:  { frames: 8, fps: 6, pose: f => ({ armA: f % 2 ? 'typeLd' : 'typeL', armB: f % 2 ? 'typeL' : 'typeLd', eyes: f === 7 ? 'blink' : 'open', mouth: 'smile', hdy: f % 4 === 1 ? 1 : 0, tails: [0, 0.5, 0, -0.5][f % 4],
       keys: [[f % 2 ? 2 : 4, (f * 3) % 7], f === 3 || f === 7 ? [5, 0] : [f % 2 ? 4 : 2, (f * 5 + 2) % 7]], screen: f }) },
     // swaying with her hands on her heart while hearts float up
     love:  { frames: 6, fps: 5, pose: f => ({ armA: 'heart', armB: 'heart', eyes: 'happy', blush: true, dx: SIN(f, 6) * 0.5, bob: [0, 0.5, 1, 0.5, 0, 0][f], tails: -SIN(f, 6) * 1.2, fx: [['heart', 40, 28 - f * 2, '#ff8fb0'], ['heartS', 12, 30 - ((f + 3) % 6) * 2, '#ff8fb0'], ['heartS', 27, 18 - (f % 3), '#ffb3c8']] }) },
