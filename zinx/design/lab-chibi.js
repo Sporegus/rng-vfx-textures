@@ -6,7 +6,8 @@
   const ctx = cv.getContext('2d');
   const box = document.getElementById('stage-box');
   let pal = 'red';
-  let hair = 'long';
+  let hair = 'layered';
+  let face = 'sparkle';
   let anim = 'idle', frame = 0, ft = 0;
   let showBase = true;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -58,7 +59,7 @@
   const noise = new Float32Array(Z.W * Z.H).map((_, i) => 0.55 * Math.random() + 0.45 * (Math.floor(i / Z.W) / Z.H));
   function renderHer() {
     og.clearRect(0, 0, Z.W, Z.H);
-    Z.draw(og, { anim, frame, pal, hair, x: 0, y: 0, scale: 1 });
+    Z.draw(og, { anim, frame, pal, hair, face, x: 0, y: 0, scale: 1 });
   }
 
   // ---------------------------------------------------------------- teleport (pixel dissolve)
@@ -224,7 +225,7 @@
       for (let f = 0; f < Math.min(cols, Z.ANIMS[n].frames); f++) {
         g.fillStyle = (f + r) % 2 ? '#0e0910' : '#120b14';
         g.fillRect(f * cw, r * (chh + lab) + lab, cw, chh);
-        Z.draw(g, { anim: n, frame: f, pal, hair, x: f * cw, y: r * (chh + lab) + lab, scale: s });
+        Z.draw(g, { anim: n, frame: f, pal, hair, face, x: f * cw, y: r * (chh + lab) + lab, scale: s });
       }
     });
   }
@@ -250,6 +251,18 @@
     });
     colorRow.append(b);
   });
+  // face and hair pickers
+  const picker = (id, options, get, set) => {
+    const row = document.getElementById(id);
+    Object.entries(options).forEach(([k, label]) => {
+      const b = document.createElement('button');
+      b.textContent = label; b.setAttribute('aria-pressed', k === get());
+      b.addEventListener('click', () => { set(k); row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawSheet(); });
+      row.append(b);
+    });
+  };
+  picker('faces', Z.FACES, () => face, (k) => { face = k; });
+  picker('hairs', Z.HAIRS, () => hair, (k) => { hair = k; });
   document.getElementById('base').addEventListener('click', (e) => { showBase = !showBase; e.currentTarget.setAttribute('aria-pressed', showBase); });
   document.getElementById('tp').addEventListener('click', () => {
     let x, y, n = 0;

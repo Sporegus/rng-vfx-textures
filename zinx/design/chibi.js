@@ -105,54 +105,104 @@
   };
 
   // ---------------------------------------------------------------- head
-  // Anime face (big detailed eyes, small smug smile, blush) and hair built from
-  // individual shaded strands: layered bangs, side locks, a few flyaways.
-  // The long back hair is drawn behind the body by drawBackHair.
+  // Kawaii anime faces and strand-by-strand hairstyles, mix and match.
+  // Back hair is drawn behind the body by drawBackHair; everything else here.
   // view: 'front' or 'side' (facing right)
   const tonesOf = (H4) => [H4[0], H4[1], H4[2], H4[3]];
-  // a tapered hair strand from root to tip
-  function strand(b, pts, w, tones) {
-    const n = pts.length, radii = pts.map((_, i) => Math.max(0.28, w * (1 - (i / (n - 1)) * 0.92)));
+  // a tapered hair strand from root to tip (blunt strands keep their width)
+  function strand(b, pts, w, tones, blunt) {
+    const n = pts.length, radii = pts.map((_, i) => Math.max(blunt ? w * 0.7 : 0.28, w * (1 - (i / (n - 1)) * (blunt ? 0.3 : 0.92))));
     b.limb(pts, radii, tones, [-0.75, 0.55]);   // flat ribbon: mostly mid tone, thin dark edge
   }
-  // smooth 3-point curve sampled into a polyline
-  function curve(a, c, z, steps = 6) {
+  // smooth 3-point curve sampled into a polyline; `wave` adds an S-wiggle
+  function curve(a, c, z, steps = 6, wave = 0) {
     const out = [];
     for (let i = 0; i <= steps; i++) {
       const t = i / steps, u = 1 - t;
-      out.push([u * u * a[0] + 2 * u * t * c[0] + t * t * z[0], u * u * a[1] + 2 * u * t * c[1] + t * t * z[1]]);
+      out.push([u * u * a[0] + 2 * u * t * c[0] + t * t * z[0] + Math.sin(t * Math.PI * 2) * wave * t, u * u * a[1] + 2 * u * t * c[1] + t * t * z[1]]);
     }
     return out;
   }
 
-  // Eye glyphs (real pixels, 9 x 10). Right eye; the left eye is mirrored.
+  // ---- faces. Eye glyphs are real pixels, 9 x 10, right eye (left is mirrored).
   // L lash, D/M/B iris dark/mid/bright, W highlight, S white of the eye, l lower lash
-  const EYE = {
-    open: [
-      '..LLLLL..',
-      '.LLLLLLLL',
-      'LLDDDDDLL',
-      'SDWWDDDDL',
-      'SDWWDDDS.',
-      'SDDDDMMS.',
-      'SMDMMBBS.',
-      'SMMBBBMS.',
-      '.SMBBMS..',
-      '..llll...',
-    ],
+  const EYES_SHARED = {
     closed: ['.........', '.........', '.........', '.........', '.........', '.LLLLLLL.', 'L.......L', '.........', '.........', '.........'],
     happy:  ['.........', '.........', '.........', '.........', '...LLL...', '.LL...LL.', 'L.......L', '.........', '.........', '.........'],
     cry:    ['.........', '.........', '.........', '.........', '.........', 'LLLLLLLLL', '.L.....L.', '.........', '.........', '.........'],
     x:      ['.........', '.........', '.L.....L.', '..L...L..', '...L.L...', '....L....', '...L.L...', '..L...L..', '.L.....L.', '.........'],
   };
-  EYE.wide = EYE.open; EYE.sad = EYE.open; EYE.blink = EYE.closed;
+  EYES_SHARED.blink = EYES_SHARED.closed;
+  const FACES = {
+    sparkle: { name: 'Sparkle', mouth: 'cat', blush: 'lines', eye: [
+      '..LLLLL..', '.LLLLLLL.', 'LLDDDDDLL', 'LDWWDDDDL', 'SDWWDDWDS', 'SDDDDDDDS', 'SDMMMMMDS', 'SMMBBBMMS', '.SMBWBMS.', '..SSSSS..'] },
+    doe:     { name: 'Doe', mouth: 'o', blush: 'oval', eye: [
+      '.......L.', '..LLLLLL.', '.LLLLLLLL', 'LLDDDDDLL', 'SDWWDDDDS', 'SDWWDDDDS', 'SDDDMMDDS', 'SMMMBBMMS', '.SMBBBMS.', '..llll...'] },
+    smug:    { name: 'Smug', mouth: 'smile', blush: 'oval', eye: [
+      '.........', '..LLLLLL.', 'LLLLLLLLL', 'LDDDDDDLL', 'SDWWDDDS.', 'SDWDMMDS.', 'SMMBBBMS.', '.SMMMMS..', '..llll...', '.........'] },
+    cat:     { name: 'Cat', mouth: 'fang', blush: 'oval', eye: [
+      '.......LL', '..LLLLLL.', '.LLLLLLLL', 'LMMMDMMML', 'SMWMDMMMS', 'SMWMDMMMS', 'SBMMDMMBS', '.SBBDBBS.', '..SSDSS..', '...lll...'] },
+    sleepy:  { name: 'Sleepy', mouth: 'smile', blush: 'lines', eye: [
+      '.........', '.........', '.........', '..LLLLLL.', 'LLLLLLLLL', 'LDDDDDDDL', 'SDWDMMMDS', 'SMMBBBMMS', '.SMMMMMS.', '..llll...'] },
+  };
+  const MOUTHS = {
+    smile: [[-3, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 0]],
+    cat:   [[-4, 0], [-3, 1], [-2, 1], [-1, 0], [0, 0], [1, 1], [2, 1], [3, 0]],
+    fang:  [[-3, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 0]],
+    open:  [[-2, 0], [-1, 0], [0, 0], [1, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [-1, 2], [0, 2]],
+    o:     [[-1, 0], [0, 0], [-2, 1], [1, 1], [-1, 2], [0, 2]],
+    grin:  [[-4, 0], [-3, 1], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 0]],
+    frown: [[-3, 1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 1]],
+    wail:  [[-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-3, 1], [2, 1], [-2, 2], [-1, 2], [0, 2], [1, 2]],
+    flat:  [[-2, 0], [-1, 0], [0, 0], [1, 0]],
+    tongue:[[-2, 0], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1]],
+  };
+
+  // ---- hairstyles: which bangs, side locks, back hair and tails to use
+  const HAIR_STYLES = {
+    layered: { name: 'Layered long', bangs: 'layered', locks: 'long', back: { n: 9, len: 37, spread: 14.4, w: 3.3 }, fly: true },
+    hime:    { name: 'Hime cut', bangs: 'blunt', locks: 'hime', back: { n: 11, len: 36, spread: 10.8, w: 2.0, blunt: true } },
+    twin:    { name: 'Twin tails', bangs: 'layered', locks: 'short', back: { n: 7, len: 19, spread: 11.4, w: 2.8 }, tails: 'twin', fly: true },
+    wavy:    { name: 'Wavy', bangs: 'swept', locks: 'wavy', back: { n: 11, len: 39, spread: 16, w: 3.0, wave: 1.5 }, fly: true },
+    bob:     { name: 'Bob', bangs: 'layered', locks: 'bob', back: { n: 9, len: 21, spread: 12.6, w: 3.1, inward: true } },
+    pony:    { name: 'Ponytail', bangs: 'swept', locks: 'short', back: { n: 5, len: 15, spread: 10, w: 2.6 }, tails: 'pony' },
+  };
+  const styleOf = (k) => HAIR_STYLES[k] || HAIR_STYLES.layered;
+  const BANGS = {
+    // [root x, tip x, tip y, width] relative to the head; tips over the eyes stay above them
+    layered: [[-10, -11.3, 15.6, 2.2], [-7.6, -8.4, 12.8, 2.4], [-5.0, -5.3, 10.3, 2.4], [-2.4, -2.6, 10.9, 2.3], [0, 0.3, 13.4, 1.7], [2.4, 2.9, 10.5, 2.4], [5.0, 5.5, 10.1, 2.4], [7.6, 8.8, 13.2, 2.4], [10, 11.5, 15.8, 2.2]],
+    blunt:   [-10.4, -8.8, -7.2, -5.6, -4, -2.4, -0.8, 0.8, 2.4, 4, 5.6, 7.2, 8.8, 10.4].map((x, i) => [x * 0.95, x, Math.abs(x) > 8 ? 12.2 : 10.4 + (i % 2) * 0.35, 1.25]),
+    swept:   [[-10, -11.4, 14.6, 2.2], [-8, -6.2, 11.2, 2.5], [-5.5, -2.6, 10.6, 2.5], [-3, 1.2, 10.4, 2.5], [-0.5, 4.6, 10.9, 2.4], [2, 7.8, 13.6, 2.3], [4.5, 10.4, 15.8, 2.1], [7.5, 11.8, 17, 1.8]],
+  };
+  const BANGS_SIDE = [[-3, 0, 10.6, 2.3], [0, 3.5, 10.4, 2.3], [3, 6.5, 10.8, 2.2], [5.5, 9, 13.6, 1.9]];
 
   function drawHead(b, p, pal, hx, hy) {
     const side = p.view === 'side';
     const H4 = pal.hair, F4 = pal.body, OL = pal.outline, T4 = tonesOf(H4);
     const sway = p.sway || 0;
+    const st = styleOf(p.hairStyle), face = FACES[p.face] || FACES.sparkle;
     const hcx = side ? hx - 0.5 : hx, hcy = hy + 10.5, hrx = 12.2, hry = 11.6;
     const fcx = side ? hx + 4 : hx, fcy = hy + 14.2, frx = side ? 7.4 : 9.3, fry = 9.1;
+    const S = (pts, w, blunt) => part(b, null, (t) => strand(t, pts, w, T4, blunt));
+
+    // tails tied high on the head sit behind it
+    if (st.tails === 'twin') {
+      const sides = side ? [-1] : [-1, 1];
+      for (const s of sides) {
+        const rx = side ? hx - 6 : hx + s * 10.2, dir = side ? -1 : s;
+        for (const [o, len, w] of [[0, 33, 2.6], [1.2, 30, 2.2], [-1.2, 31.5, 2.2], [2.4, 27, 1.7]]) {
+          S(curve([rx + dir * o * 0.3, hy + 3], [rx + dir * (5.5 + o), hy + 9], [rx + dir * (6.4 + o * 0.8) + sway * 1.6, hy + len], 8, dir * 0.9), w);
+        }
+        b.glyph(Math.round(rx) - 1 - (dir > 0 ? 0 : 1), hy + 1, ['.TT.', 'TKKT', '.TT.'], { T: pal.tie, K: pal.tieHi });
+      }
+    }
+    if (st.tails === 'pony') {
+      const rx = side ? hx - 8 : hx + 6, dir = side ? -1 : 1;
+      for (const [o, len, w] of [[0, 31, 3], [1.5, 28, 2.4], [-1.5, 29, 2.4], [2.8, 25, 1.8], [-2.6, 26, 1.8]]) {
+        S(curve([rx, hy + 1], [rx + dir * (6 + o), hy + 6], [rx + dir * (7.5 + o * 0.7) + sway * 1.6, hy + len], 8, dir * 0.7), w);
+      }
+      b.glyph(Math.round(rx) - 1, hy - 1, ['.TT.', 'TKKT', '.TT.'], { T: pal.tie, K: pal.tieHi });
+    }
 
     // cranium with a soft shine ring
     b.each(hx - 13, hy - 2, hx + 13, hy + 22, (x, y) => {
@@ -173,99 +223,99 @@
       if (Math.abs(nx) > 0.84 || ny > 0.78) return F4[2];
       return F4[1];
     });
-    if (side) { b.set(fcx + 7, fcy + 1, F4[1]); }
+    if (side) b.set(fcx + 7, fcy + 1, F4[1]);
 
     // ---- face details (real pixels)
-    const X = (x) => Math.round(x * K), Y = (y) => Math.round(y * K);
-    const eyeKey = p.eyes === 'wink' ? 'open' : (EYE[p.eyes] ? p.eyes : 'open');
+    const Xp = (x) => Math.round(x * K), Yp = (y) => Math.round(y * K);
+    const glyphFor = (k) => k === 'open' || k === 'wide' || k === 'sad' || !EYES_SHARED[k] ? face.eye : EYES_SHARED[k];
     const ec = { L: OL, D: pal.eye[0], M: pal.eye[1], B: pal.eye[2] || pal.eye[1], W: pal.glint, S: '#fff6f6', l: F4[3] };
-    const eyeY = Y(hy + 11.4);
+    const eyeY = Yp(hy + 11.4);
     if (side) {
-      const ex = X(fcx + 1.2);
-      b.glyphP(ex, eyeY, EYE[eyeKey].map(r => r.slice(0, 7)), ec);
+      b.glyphP(Xp(fcx + 1.2), eyeY, glyphFor(p.eyes === 'wink' ? 'happy' : p.eyes).map(r => r.slice(0, 7)), ec);
     } else {
-      const rx = X(hx) + 3, lx = W - 1 - (rx + 8);   // mirror-exact
-      b.glyphP(rx, eyeY, EYE[p.eyes === 'wink' ? 'happy' : eyeKey], ec);
-      b.glyphP(lx, eyeY, EYE[eyeKey], ec, true);
-      // brows
+      const rx = Xp(hx) + 3, lx = W - 1 - (rx + 8);   // mirror-exact
+      b.glyphP(rx, eyeY, glyphFor(p.eyes === 'wink' ? 'happy' : p.eyes), ec);
+      b.glyphP(lx, eyeY, glyphFor(p.eyes === 'wink' ? 'open' : p.eyes), ec, true);
       const browY = eyeY - 3, angry = p.eyes === 'sad' || p.mouth === 'frown';
       for (const [dx, dy] of [[1, 1], [2, 0], [3, 0], [4, 0], [5, 0], [6, 1]]) {
-        const yy = browY + (angry ? (dx < 3 ? 1 : -0) : dy);
+        const yy = browY + (angry ? (dx < 3 ? 1 : 0) : dy) - (face === FACES.sleepy ? -1 : 0);
         b.setP(rx + dx, yy, H4[3]); b.setP(W - 1 - (rx + dx), yy, H4[3]);
       }
-      // blush
-      if (p.blush || p.eyes === 'happy' || p.eyes === 'open' || p.eyes === 'wink') {
-        for (const [dx, dy] of [[0, 0], [1, 0], [2, 0], [3, 0], [1, 1], [2, 1]]) {
-          b.setP(rx + 5 + dx, eyeY + 12 + dy, pal.cheek); b.setP(W - 1 - (rx + 5 + dx), eyeY + 12 + dy, pal.cheek);
-        }
+      // blush: soft ovals or kawaii diagonal lines
+      const blush = face.blush === 'lines' ? [[0, 1], [1, 0], [3, 1], [4, 0], [6, 1], [7, 0]] : [[0, 0], [1, 0], [2, 0], [3, 0], [1, 1], [2, 1]];
+      if (p.blush || ['open', 'happy', 'wink', undefined].includes(p.eyes)) {
+        for (const [dx, dy] of blush) { b.setP(rx + 4 + dx, eyeY + 12 + dy, pal.cheek); b.setP(W - 1 - (rx + 4 + dx), eyeY + 12 + dy, pal.cheek); }
       }
     }
     // mouth (centered on the real-pixel seam at her middle)
-    const mY = Y(hy + 19.6), M = pal.mouth, cxp = X(side ? fcx + 5 : hx);
-    const mouthPx = {
-      smile: [[-3, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 0]],
-      open:  [[-2, 0], [-1, 0], [0, 0], [1, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [-1, 2], [0, 2]],
-      o:     [[-1, 0], [0, 0], [-2, 1], [1, 1], [-1, 2], [0, 2]],
-      grin:  [[-4, 0], [-3, 1], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 0]],
-      frown: [[-3, 1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 1]],
-      wail:  [[-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-3, 1], [2, 1], [-2, 2], [-1, 2], [0, 2], [1, 2]],
-      flat:  [[-2, 0], [-1, 0], [0, 0], [1, 0]],
-      tongue:[[-2, 0], [-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1]],
-    }[p.mouth] || [[-3, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 0]];
-    for (const [dx, dy] of mouthPx) b.setP(cxp + dx, mY + dy, M);
-    if (p.mouth === 'open' || p.mouth === 'wail') { b.setP(cxp - 1, mY + 1, pal.cheek); b.setP(cxp, mY + 1, pal.cheek); }
+    const mY = Yp(hy + 19.6), M = pal.mouth, cxp = Xp(side ? fcx + 5 : hx);
+    const mk = (p.mouth === 'smile' || !p.mouth) ? face.mouth : p.mouth;
+    for (const [dx, dy] of (MOUTHS[mk] || MOUTHS.smile)) b.setP(cxp + dx, mY + dy, M);
+    if (mk === 'fang') { b.setP(cxp + 1, mY + 2, '#ffffff'); b.setP(cxp + 1, mY + 1, '#ffffff'); }
+    if (mk === 'open' || mk === 'wail') { b.setP(cxp - 1, mY + 1, pal.cheek); b.setP(cxp, mY + 1, pal.cheek); }
 
-    // ---- hair strands over the face
-    // bangs: [root x, tip x, tip y, width] relative to her head center
-    const bangs = side
-      ? [[-3, 0, 10.6, 2.3], [0, 3.5, 10.4, 2.3], [3, 6.5, 10.8, 2.2], [5.5, 9, 13.6, 1.9]]
-      : [[-10, -11.3, 15.6, 2.2], [-7.6, -8.4, 12.8, 2.4], [-5.0, -5.3, 10.3, 2.4], [-2.4, -2.6, 10.9, 2.3], [0, 0.3, 13.4, 1.7], [2.4, 2.9, 10.5, 2.4], [5.0, 5.5, 10.1, 2.4], [7.6, 8.8, 13.2, 2.4], [10, 11.5, 15.8, 2.2]];
-    for (const [r, tx, ty, w] of bangs) {
+    // ---- bangs
+    for (const [r, tx, ty, w] of (side ? BANGS_SIDE : BANGS[st.bangs])) {
       const root = [hx + r * 0.8, hy + 2.6], tip = [hx + tx, hy + ty];
       const ctrl = [hx + (r + tx) / 2 + (tx - r) * 0.4, hy + (2.6 + ty) / 2 - 0.5];
-      part(b, null, (t) => strand(t, curve(root, ctrl, tip), w, T4));
+      S(curve(root, ctrl, tip), w, st.bangs === 'blunt');
     }
-    // side locks framing the face, down past the chin
+    // ---- side locks
     if (!side) for (const s of [-1, 1]) {
-      part(b, null, (t) => strand(t, curve([hx + s * 11, hy + 9], [hx + s * 13, hy + 17], [hx + s * 13.4 + sway, hy + 26.5]), 2.0, T4));
-      part(b, null, (t) => strand(t, curve([hx + s * 9.2, hy + 8], [hx + s * 11.2, hy + 17], [hx + s * 10.2 + sway * 0.6, hy + 29]), 2.3, T4));
-    } else {
-      // strands sweeping back over the crown
-      for (const [r, ex, ey] of [[1, -11.5, 15], [0, -12.5, 11], [-1.5, -11, 19], [2.5, -9, 6.5]]) {
-        part(b, null, (t) => strand(t, curve([hx + r, hy + 1], [hx + r - 6, hy + 2 + ey * 0.2], [hx + ex + sway * 0.4, hy + ey]), 2.6, T4));
+      if (st.locks === 'long') {
+        S(curve([hx + s * 11, hy + 9], [hx + s * 13, hy + 17], [hx + s * 13.4 + sway, hy + 26.5]), 2.0);
+        S(curve([hx + s * 9.2, hy + 8], [hx + s * 11.2, hy + 17], [hx + s * 10.2 + sway * 0.6, hy + 29]), 2.3);
+      } else if (st.locks === 'hime') {
+        for (const [o, w] of [[11.2, 1.5], [9.9, 1.5], [8.7, 1.3]]) S(curve([hx + s * o, hy + 8], [hx + s * (o + 0.2), hy + 15], [hx + s * (o + 0.3), hy + 22.6], 6), w, true);
+      } else if (st.locks === 'short') {
+        S(curve([hx + s * 9.4, hy + 8], [hx + s * 11, hy + 14], [hx + s * 10.6 + sway * 0.5, hy + 21]), 2.0);
+      } else if (st.locks === 'wavy') {
+        S(curve([hx + s * 11, hy + 9], [hx + s * 14, hy + 18], [hx + s * 13 + sway, hy + 30], 8, s * 1.2), 2.1);
+        S(curve([hx + s * 9.2, hy + 8], [hx + s * 11.5, hy + 17], [hx + s * 10.5 + sway * 0.6, hy + 27], 8, s * 1.0), 2.2);
+      } else if (st.locks === 'bob') {
+        S(curve([hx + s * 11.4, hy + 8], [hx + s * 13.6, hy + 17], [hx + s * 10.4, hy + 23.4]), 2.4);
+        S(curve([hx + s * 9.2, hy + 8], [hx + s * 11.4, hy + 16], [hx + s * 8.6, hy + 22]), 2.0);
       }
-      part(b, null, (t) => strand(t, curve([hx - 2, hy + 7], [hx - 3.5, hy + 16], [hx - 2.5 + sway * 0.6, hy + 25]), 2.2, T4));
+    } else {
+      for (const [r, ex, ey] of [[1, -11.5, 15], [0, -12.5, 11], [-1.5, -11, 19], [2.5, -9, 6.5]]) {
+        S(curve([hx + r, hy + 1], [hx + r - 6, hy + 2 + ey * 0.2], [hx + ex + sway * 0.4, hy + ey]), 2.6);
+      }
+      S(curve([hx - 2, hy + 7], [hx - 3.5, hy + 16], [hx - 2.5 + sway * 0.6, hy + (st.locks === 'long' || st.locks === 'wavy' ? 25 : 20)]), 2.2);
     }
-    // flyaway strands on top
-    const fly = side ? [[[hx - 1, hy + 0.5], [hx + 1, hy - 3], [hx + 4, hy - 3.2]]] : [[[hx - 0.5, hy + 0.8], [hx + 0.8, hy - 2.8], [hx + 3.8, hy - 3]]];
-    for (const [a, c, z] of fly) part(b, OL, (t) => strand(t, curve(a, c, z, 5), 0.95, T4));
+    // flyaway strand on top
+    if (st.fly) {
+      const fly = side ? [[hx - 1, hy + 0.5], [hx + 1, hy - 3], [hx + 4, hy - 3.2]] : [[hx - 0.5, hy + 0.8], [hx + 0.8, hy - 2.8], [hx + 3.8, hy - 3]];
+      part(b, OL, (t) => strand(t, curve(fly[0], fly[1], fly[2], 5), 0.95, T4));
+    }
     // glossy highlight band across the hair, broken into dashes between strands
     const isHair = (c) => c === H4[1] || c === H4[2] || c === H4[3];
-    const x0 = Math.round((hx - (side ? 10 : 10.5)) * K), x1 = Math.round((hx + (side ? 9 : 10.5)) * K);
-    for (let Xp = x0; Xp < x1; Xp++) {
-      const lx = (Xp + 0.5) / K - hx;
-      if (((Xp - x0) % 9) === 0) continue;
+    const x0 = Math.round((hx - 10.5) * K), x1 = Math.round((hx + 10.5) * K);
+    for (let X = x0; X < x1; X++) {
+      const lx = (X + 0.5) / K - hx;
+      if (((X - x0) % 9) === 0) continue;
       const yb = Math.round((hy + 4.6 + lx * lx * 0.022) * K);
-      for (const [dy, c] of [[0, H4[1]], [1, H4[0]], [2, H4[0]], [3, H4[1]]]) if (isHair(b.getP(Xp, yb + dy))) b.setP(Xp, yb + dy, c);
+      for (const [dy, c] of [[0, H4[1]], [1, H4[0]], [2, H4[0]], [3, H4[1]]]) if (isHair(b.getP(X, yb + dy))) b.setP(X, yb + dy, c);
     }
   }
 
-  // Long back hair: a fan of strands that falls behind her to below the hips.
+  // Back hair: a fan of strands behind her body, shaped by the hairstyle.
   function drawBackHair(b, p, pal, hx, hy) {
     const side = p.view === 'side', T4 = tonesOf(pal.hair), sway = p.sway || 0;
-    const n = side ? 6 : 9;
+    const bk = styleOf(p.hairStyle).back;
+    const n = side ? Math.max(4, Math.round(bk.n * 0.6)) : bk.n;
     const order = [];
     for (let k = 0; k < n; k++) order.push(k);
-    // outer strands first so inner ones lay over them
-    order.sort((a, c) => Math.abs(c - (n - 1) / 2) - Math.abs(a - (n - 1) / 2));
+    order.sort((a, c) => Math.abs(c - (n - 1) / 2) - Math.abs(a - (n - 1) / 2));   // outer strands first
     for (const k of order) {
-      const u = side ? -(k / (n - 1)) : (k / (n - 1)) * 2 - 1;
-      const len = 37 - Math.abs(u) * 4 + (k % 2) * 2.2;
+      const u = side ? -(k / Math.max(1, n - 1)) : (k / (n - 1)) * 2 - 1;
+      const j = Math.min(k, n - 1 - k);
+      const len = bk.len - (bk.blunt ? 0 : Math.abs(u) * 4 - (j % 2) * 2.2);
+      const sp = bk.spread;
       const root = side ? [hx - 1 + u * 9, hy + 7] : [hx + u * 10.5, hy + 9];
-      const mid = side ? [hx - 4 + u * 12 + sway, hy + 22] : [hx + u * 14 + sway * 0.6, hy + 22];
-      const j = Math.min(k, n - 1 - k);   // same flick on both sides
-      const tip = side ? [hx - 6 + u * 11 + sway * 2, hy + len] : [hx + u * 14.4 + Math.sign(u) * (j % 3 === 0 ? 1.6 : 0) + sway * 1.5, hy + len];
-      part(b, null, (t) => strand(t, curve(root, mid, tip, 8), side ? 3.0 : 3.3, T4));
+      const mid = side ? [hx - 4 + u * 12 + sway, hy + 7 + (len - 7) * 0.45] : [hx + u * (sp - 0.4) + sway * 0.6, hy + 9 + (len - 9) * 0.45];
+      let tipX = side ? hx - 6 + u * 11 + sway * 2 : hx + u * sp + Math.sign(u) * (!bk.blunt && j % 3 === 0 ? 1.6 : 0) + sway * 1.5;
+      if (bk.inward && !side) tipX = hx + u * (sp - 3.4);
+      part(b, null, (t) => strand(t, curve(root, mid, [tipX, hy + len], 8, bk.wave ? (u < 0 ? -bk.wave : bk.wave) : 0), side ? bk.w * 0.9 : bk.w, T4, bk.blunt));
     }
   }
 
@@ -468,13 +518,13 @@
     return out;
   }
   const cache = new Map();
-  function frameRGBA(anim, frame, pal, hair) {
+  function frameRGBA(anim, frame, pal, hair, face) {
     const a = ANIMS[anim] || ANIMS.idle;
     const f = ((frame % a.frames) + a.frames) % a.frames;
-    const key = anim + '|' + f + '|' + pal + '|' + (hair || 'twin');
+    const key = anim + '|' + f + '|' + pal + '|' + (hair || 'layered') + '|' + (face || 'sparkle');
     let px = cache.get(key);
     if (!px) {
-      const pose = Object.assign({ hairStyle: hair || 'twin' }, a.pose(f));
+      const pose = Object.assign({ hairStyle: hair || 'layered', face: face || 'sparkle' }, a.pose(f));
       let buf = drawZinx(pose, pal);
       if (a.lie) buf = lieDown(buf);
       addFx(buf, pose, pal);
@@ -491,11 +541,11 @@
     return px;
   }
   let scratch = null;
-  function draw(ctx, { anim = 'idle', frame = 0, pal = 'red', hair = 'twin', x = 0, y = 0, scale = 4, flip = false }) {
+  function draw(ctx, { anim = 'idle', frame = 0, pal = 'red', hair = 'layered', face = 'sparkle', x = 0, y = 0, scale = 4, flip = false }) {
     if (!scratch) scratch = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });
     const sctx = scratch.getContext('2d');
     const img = sctx.createImageData(W, H);
-    img.data.set(frameRGBA(anim, frame, pal, hair));
+    img.data.set(frameRGBA(anim, frame, pal, hair, face));
     sctx.putImageData(img, 0, 0);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -504,8 +554,9 @@
     ctx.restore();
   }
 
-  const HAIRS = { long: 'Long' };
-  const api = { W, H, GROUND, PALETTES, HAIRS, ANIMS, frameRGBA, draw };
+  const HAIRS = Object.fromEntries(Object.entries(HAIR_STYLES).map(([k, v]) => [k, v.name]));
+  const FACE_NAMES = Object.fromEntries(Object.entries(FACES).map(([k, v]) => [k, v.name]));
+  const api = { W, H, GROUND, PALETTES, HAIRS, FACES: FACE_NAMES, ANIMS, frameRGBA, draw };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ZinxChibi = api;
 })(typeof window !== 'undefined' ? window : globalThis);
