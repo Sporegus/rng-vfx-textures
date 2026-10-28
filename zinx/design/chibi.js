@@ -451,13 +451,14 @@
     if (!back) {
       // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
       // shine up top, shadow underneath, and a dark outline round the bottom
-      const R = 4.1, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
-      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * R + 1; i++) {
-        const X = midX + i, nx = (i + 0.5 - R) / R, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
-        if (r > 1) continue;
+      // each breast is a little narrower than it is tall, so the pair sit close together
+      const R = 4.1, RX = 3.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
+      const inB = (i, Y) => Math.hypot((i + 0.5 - RX) / RX, (Y + 0.5 - cyP) / R) <= 1;
+      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * RX + 1; i++) {
+        if (!inB(i, Y)) continue;
+        const X = midX + i, nx = (i + 0.5 - RX) / RX, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
         // the lowest pixel of each column, and the outermost pixels below the middle, are outline
-        const below = Math.hypot(nx, (Y + 1.5 - cyP) / R) > 1, edge = ny > 0 && (Math.hypot((i - 0.5 - R) / R, ny) > 1 || Math.hypot((i + 1.5 - R) / R, ny) > 1);
-        const c = (ny > 0.05 && (below || edge)) ? pal.outline
+        const c = (ny > 0.05 && (!inB(i, Y + 1) || !inB(i - 1, Y) || !inB(i + 1, Y))) ? pal.outline
           : ny > 0.35 && r > 0.55 ? B4[3]
           : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
           : B4[2];
@@ -468,7 +469,7 @@
       const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
       for (let a = 200; a <= 335; a += 4) {
         const t = a * Math.PI / 180, r = R - 1.6;
-        glowP(Math.round(midX + R + Math.cos(t) * r - 0.5), Math.round(cyP + Math.sin(t) * r * 0.95 - 0.5));
+        glowP(Math.round(midX + RX + Math.cos(t) * (RX - 1.4) - 0.5), Math.round(cyP + Math.sin(t) * r * 0.95 - 0.5));
       }
       const neckTop = Math.round(cyP - R) - 3;
       for (let k = 0; k <= 3; k++) glowP(midX + 3 - k, neckTop + k);
