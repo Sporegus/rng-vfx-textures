@@ -1357,7 +1357,7 @@
   const OWN = ['pixie'];
   // the natural voices (Orpheus, on the graphics card)
   const NATURAL = ['tara', 'leah', 'jess', 'mia', 'zoe'];
-  const pitch = () => (settings.cute && ![...EMOTIONAL, ...OWN, ...NATURAL].includes(settings.voiceName) ? 1.1 : 1);
+  const pitch = () => (settings.cute && ![...EMOTIONAL, ...OWN, ...NATURAL, 'eleven'].includes(settings.voiceName) ? 1.1 : 1);
   // sound tags (<giggle>) are heard, not shown
   const shownText = (t) => String(t).replace(/<[a-z]+>\s*/g, '').trim();
   const voiceOpts = (mood) => ({ voice: settings.voiceName, mood: mood || 'cute', speed: 1 / pitch(), speak: !!(settings.voice && voice.ready) });
@@ -1539,6 +1539,29 @@
     api.voice.send({ type: 'get', what: 'chat' });
     say('Downloading my chat brain… this one is big, so it might take a while! ⬇️', { ms: 4000 });
   }
+  // your own voice from ElevenLabs: the API key goes straight to the main process, which encrypts it
+  async function setupEleven() {
+    if (!voice.service) return say('That only works in the app, not in this demo.');
+    const k = await ask('Let\'s use your ElevenLabs voice! Paste your API key (ElevenLabs → My Account → API Keys). I keep it encrypted on this PC.',
+      settings.elevenVoiceId ? [{ label: 'Keep my saved key', value: '__keep' }] : [], { input: 'API key', quiet: true });
+    if (k == null) return;
+    const key = k === '__keep' ? '' : k;
+    const voiceId = await ask('Now the voice ID (ElevenLabs → Voices → your voice → ID).', [], { input: 'voice ID', value: settings.elevenVoiceId || '', quiet: true });
+    if (!voiceId) return;
+    const model = await ask('Which ElevenLabs model?', [
+      { label: 'Quick', sub: 'starts talking fastest', value: 'quick', primary: true },
+      { label: 'Natural', sub: 'smoother, a bit slower', value: 'natural' },
+      { label: 'Expressive (v3)', sub: 'most feeling, giggles', value: 'expressive' },
+    ], { cols: 1, quiet: true });
+    if (!model) return;
+    const r = await api.voice.eleven({ key: key.trim(), voiceId: voiceId.trim(), model });
+    if (!r.ok) return say(`Hmm, that didn't work: ${r.error}. 😔`, { ms: 5000 });
+    settings = await api.getSettings();
+    if (!voice.ready) return setupVoice();
+    play('cheer', 1500);
+    await say('Ta-da! This is my new voice! Do you like it? 💕', { ms: 5000 });
+  }
+
   async function voiceMenu() {
     const on = (b) => (b ? 'on' : 'off');
     const v = await ask('Voice & chat:', [
@@ -1557,10 +1580,12 @@
     }
     if (v === 'pick') {
       if (!voice.ready) return setupVoice();
-      const names = { tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
+      const names = { ...(settings.elevenVoiceId ? { eleven: '🎤 My ElevenLabs voice' } : {}), tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
       const n = await ask('Which voice? I\'ll say hi in it. 🌟 ones are the most natural (they use your graphics card). ⭐ Pixie is my own quick voice. 💖 ones are expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
-        ...([...EMOTIONAL, ...OWN, ...NATURAL].includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
+        { label: settings.elevenVoiceId ? 'Change ElevenLabs voice…' : '🎤 Use my ElevenLabs voice…', value: '__eleven' },
+        ...([...EMOTIONAL, ...OWN, ...NATURAL, 'eleven'].includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
       if (n === '__back' || !n) return n && voiceMenu();
+      if (n === '__eleven') return setupEleven();
       settings = await api.setSettings(n === '__cute' ? { cute: !settings.cute } : { voiceName: n, voice: true });
       await say(pick(['Hiii! Is this one cute? 💕', 'Hey! How do I sound now?', 'Ta-da! New voice, who dis? ✨']), { ms: 3000 });
       return voiceMenu();
@@ -1594,6 +1619,11 @@
       }
       case 'error':
         if (m.what === 'speak') { console.warn('Zin could not say that:', m.message); break; }
+        if (m.what === 'eleven') {
+          // she already said it in Pixie's voice instead; mention why once in a while
+          if (Date.now() - (voice.elevenWarned || 0) > 10 * 60000) { voice.elevenWarned = Date.now(); say(`${m.message}, so I'm using my own voice for now. 🔌`, { ms: 6000, mood: 'sad' }); }
+          break;
+        }
         voice.download = null;
         if (m.what === 'chat') settings = await api.setSettings({ chat: false });
         say(`I couldn't set up my ${m.what === 'chat' ? 'chat brain' : 'voice'}: ${m.message}. Check your internet and try again? 😔`, { ms: 7000 });
@@ -1684,6 +1714,7 @@
     if (cmd === 'teleport') teleportTo(clamp(mouse.x, 40, W - 40), mouse.y);
     if (cmd === 'teleport-in') teleportTo(z.x, z.y);
     if (cmd === 'ptt') pushToTalk();
+    if (cmd === 'eleven-setup') setupEleven();
   });
 
   requestAnimationFrame(tick);

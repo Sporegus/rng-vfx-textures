@@ -2,7 +2,8 @@
 // passes audio and words between it and Zin's page, and answers its questions
 // (do this task, what's the weather, remember this).
 const path = require('path');
-const { utilityProcess, ipcMain, session } = require('electron');
+const fs = require('fs');
+const { utilityProcess, ipcMain, session, safeStorage } = require('electron');
 
 module.exports = function startVoice({ app, getWin, settings, saveSettings, actions }) {
   const root = path.join(app.getPath('userData'), 'models');
@@ -42,6 +43,30 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
     return 'I can\'t do that.';
   }
 
+  // Your ElevenLabs API key: encrypted with Windows' own protection and kept in its
+  // own file, so it's never in settings.json and never reaches Zin's page.
+  const keyFile = path.join(app.getPath('userData'), 'elevenlabs.key');
+  let keyCache;
+  const readKey = () => { if (keyCache !== undefined) return keyCache; try { keyCache = safeStorage.decryptString(fs.readFileSync(keyFile)); } catch { keyCache = null; } return keyCache; };
+  const eleven = () => { const st = settings(); const key = readKey(); return key && st.elevenVoiceId ? { key, voiceId: st.elevenVoiceId, model: st.elevenModel || 'quick' } : null; };
+  ipcMain.handle('eleven:set', async (_, { key, voiceId, model }) => {
+    voiceId = String(voiceId || '').trim();
+    if (!voiceId) return { ok: false, error: 'No voice ID' };
+    if (key) {
+      // Windows always has its encryption; on Linux without a keyring, Electron's
+      // weaker built-in store is the fallback (Zin is a Windows app; this is for testing)
+      if (!safeStorage.isEncryptionAvailable() && process.platform === 'linux' && safeStorage.setUsePlainTextEncryption) safeStorage.setUsePlainTextEncryption(true);
+      if (!safeStorage.isEncryptionAvailable() && process.platform !== 'linux') return { ok: false, error: 'This PC can\'t store the key safely' };
+      const k = String(key).trim();
+      fs.writeFileSync(keyFile, safeStorage.encryptStringAsync ? await safeStorage.encryptStringAsync(k) : safeStorage.encryptString(k));
+      keyCache = k;
+    } else if (!readKey()) return { ok: false, error: 'No API key' };
+    saveSettings({ elevenVoiceId: voiceId, elevenModel: model || 'quick', voiceName: 'eleven', voice: true });
+    if (proc) proc.postMessage({ type: 'eleven', creds: eleven() });
+    return { ok: true };
+  });
+  ipcMain.handle('eleven:forget', () => { fs.rmSync(keyFile, { force: true }); keyCache = null; saveSettings({ elevenVoiceId: null, voiceName: 'pixie' }); if (proc) proc.postMessage({ type: 'eleven', creds: null }); return { ok: true }; });
+
   function start() {
     proc = utilityProcess.fork(path.join(__dirname, 'service.js'), [], { serviceName: 'Zin voice', stdio: 'ignore' });
     proc.on('message', async (m) => {
@@ -55,7 +80,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
       if (!quitting && restarts++ < 3) setTimeout(start, 3000);
     });
     const st = settings();
-    proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), voiceName: st.voiceName, chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null });
+    proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), voiceName: st.voiceName, chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null, eleven: eleven() });
   }
   ipcMain.on('voice', (_, m) => { if (proc) proc.postMessage(m); });
   app.on('will-quit', () => { quitting = true; if (proc) proc.kill(); });

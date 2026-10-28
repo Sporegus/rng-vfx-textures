@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('zin', {
   onBounds: (cb) => ipcRenderer.on('bounds', (_, b) => cb(b)),
   // her voice: send audio and requests to the voice service, hear back from it
   voice: {
+    // set up your ElevenLabs voice (the key is encrypted by the main process and never comes back)
+    eleven: (cfg) => ipcRenderer.invoke('eleven:set', cfg),
+    forgetEleven: () => ipcRenderer.invoke('eleven:forget'),
     send: (m) => ipcRenderer.send('voice', m),
     answer: (id, result) => ipcRenderer.send('voice:answer', id, result),
     on: (cb) => ipcRenderer.on('voice', (_, m) => cb(m)),

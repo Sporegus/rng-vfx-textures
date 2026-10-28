@@ -118,6 +118,17 @@ sentences it was never tuned on, graded by a second, independent speaker model:
 | Expressive (Pocket TTS) | – | 0.54 | 0.58 | 95% |
 | Stock Kokoro voice | 171 Hz | 0.89 | 0.55 | 98% |
 
+**Your own ElevenLabs voice (online).** If you made a voice on ElevenLabs, Zin
+can use it: **Voice & chat → Change my voice → Use my ElevenLabs voice**, or
+**Voice → Set up my ElevenLabs voice…** in the tray. Paste your API key (ElevenLabs
+→ My Account → API Keys) and the voice's ID, and pick a model: *Quick* starts
+talking fastest, *Natural* is smoother, *Expressive (v3)* has the most feeling and
+turns her giggles and sighs into real ones. The key is encrypted with Windows'
+own protection and kept out of settings.json and Zin's page. Only what she
+*says* is sent to ElevenLabs (it uses your character credits); listening and
+thinking stay on your PC. If ElevenLabs can't be reached or the credits run out,
+she says it in Pixie's voice instead.
+
 **Natural voices (Orpheus, needs a graphics card).** Tara, Leah, Jess, Mia and Zoe
 use Orpheus TTS, a 3B voice model that sounds far more natural and can giggle,
 laugh, sigh and gasp (the chat brain adds those where they fit). It runs on the

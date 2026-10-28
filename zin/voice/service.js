@@ -16,7 +16,9 @@ let warnedSlow = false; // 'emotional' and/or 'classic', loaded when first neede
 const unpacked = (d) => path.join(__dirname, d).replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 const EMOTIONS = unpacked('emotions'), STYLES = unpacked('styles');
 const { OrpheusMouth, VOICES: NATURAL, REAL_TIME } = require('./orpheus');
-const kindOf = (voice) => (NATURAL.includes(voice) ? 'natural' : EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
+const { ElevenMouth } = require('./eleven');
+let elevenCreds = null;
+const kindOf = (voice) => (voice === 'eleven' ? 'eleven' : NATURAL.includes(voice) ? 'natural' : EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
 const busy = {};
 
 // ---------------------------------------------------------------- asking the app for things
@@ -41,6 +43,11 @@ const host = {
 const progress = (what) => (done, total) => send({ type: 'progress', what, done, total });
 async function loadMouth(kind) {
   if (mouths[kind]) return mouths[kind];
+  if (kind === 'eleven') {
+    if (!elevenCreds) throw new Error('Your ElevenLabs voice isn\'t set up yet');
+    mouths[kind] = new ElevenMouth(elevenCreds);
+    return mouths[kind];
+  }
   if (kind === 'natural') {
     const { gguf, snac } = await models.ensureOrpheus(root, progress('voice'));
     mouths[kind] = await OrpheusMouth.load(gguf, snac);
@@ -55,7 +62,8 @@ async function setupVoice(light, voice) {
   busy.voice = (async () => {
     const vad = await models.ensure(root, 'vad', progress('listening'));
     const asr = await models.ensure(root, light ? 'earsLight' : 'ears', progress('ears'));
-    await loadMouth(kindOf(voice));
+    // if the chosen voice can't load (ElevenLabs not set up, a missing download), start with Pixie
+    await loadMouth(kindOf(voice)).catch(async (e) => { send({ type: 'error', what: kindOf(voice) === 'eleven' ? 'eleven' : 'speak', message: e.message }); await loadMouth('classic'); });
     send({ type: 'status', what: 'voice', state: 'loading' });
     ears = new Ears(vad, asr);
     send({ type: 'status', what: 'voice', state: 'ready' });
@@ -82,7 +90,14 @@ async function say(id, text, opts) {
   const mouth = ears && await mouthFor(opts.voice);
   if (!mouth) return send({ type: 'said', id });
   await mouth.say(text, opts, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how }))
-    .catch((e) => send({ type: 'error', what: 'speak', message: e.message }));
+    .catch(async (e) => {
+      // ElevenLabs can fail (no internet, out of credits): say it with Pixie instead, and tell the page once
+      if (mouth instanceof ElevenMouth) {
+        send({ type: 'error', what: 'eleven', message: e.message });
+        const local = await mouthFor('pixie');
+        if (local) await local.say(text, { ...opts, voice: 'pixie' }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: local.sampleRate, ...how })).catch(() => {});
+      } else send({ type: 'error', what: 'speak', message: e.message });
+    });
   // the natural voice needs a fast enough graphics card; say so if it can't keep up
   if (mouth.speed && mouth.speed < REAL_TIME * 0.85 && !warnedSlow) { warnedSlow = true; send({ type: 'status', what: 'voice', state: 'slow', speed: Math.round(mouth.speed), need: REAL_TIME }); }
   send({ type: 'said', id });
@@ -113,7 +128,7 @@ async function chat(id, text, opts) {
 port.on('message', async ({ data: m }) => {
   switch (m.type) {
     case 'setup':
-      root = m.root; chatModel = m.chatModel || null;
+      root = m.root; chatModel = m.chatModel || null; elevenCreds = m.eleven || null;
       send({ type: 'status', what: 'models', have: { voice: (models.have(root, 'voiceEmo') || models.have(root, 'voice')) && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight')) } });
       if (m.voice) setupVoice(m.light, m.voiceName);
       if (m.chat) setupMind();
@@ -131,6 +146,7 @@ port.on('message', async ({ data: m }) => {
       });
       break;
     case 'say': say(m.id, m.text, m.opts || {}); break;
+    case 'eleven': elevenCreds = m.creds || null; delete mouths.eleven; break;
     case 'hush': hushAll(); if (chatAbort) chatAbort.abort(); break;
     case 'chat': chat(m.id, m.text, m.opts); break;
     case 'fix': send({ type: 'fixed', id: m.id, text: mind && mind.ready ? await mind.fixName(m.kind, m.text) : m.text }); break;
