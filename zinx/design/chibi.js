@@ -10,8 +10,9 @@
   // ---------------------------------------------------------------- palettes
   // body: [shine, light, mid, shadow], hair: [shine, light, mid, dark]
   const PALETTES = {
-    red:  { name: 'Red', suit: ['#ffd0ce', '#ff7a78', '#e6404f', '#b3213a'], outline: '#5a0614', body: ['#ffe3e3', '#ffaaa8', '#ff6f6d', '#d93a46'], hair: ['#ffb3b0', '#ff4a52', '#d81f33', '#99102a'], eye: ['#3d0010', '#b0142e'], glint: '#ffffff', mouth: '#b3122e', line: '#ffd2d0', tear: '#ffd6e0' },
-    blue: { name: 'Blue', suit: ['#c4f3ff', '#5fb0ff', '#2f7fe6', '#1d55b8'], outline: '#0b2a7d', body: ['#e2f4ff', '#a8dcff', '#6fb8ff', '#3f86e8'], hair: ['#a8e2ff', '#3f94ff', '#2363e0', '#163fae'], eye: ['#0e2c88', '#2f6fe0'], glint: '#ffffff', mouth: '#2a5ad0', line: '#e2f4ff', tear: '#e2f4ff' },
+    red:     { name: 'Red', suit: ['#ffd0ce', '#ff7a78', '#e6404f', '#b3213a'], outline: '#5a0614', body: ['#fff1f0', '#ffcbc8', '#f7a09d', '#e06470'], hair: ['#ff9c9c', '#ff3d48', '#d11b2e', '#8c0d23'], eye: ['#5c0716', '#d42a40'], glint: '#ffffff', mouth: '#a5142e', line: '#ffd2d0', tear: '#ffd6e0', cheek: '#ff8f9c', tie: '#2b0a12', tieHi: '#6b2232' },
+    cortana: { name: 'Blue + red hair', suit: ['#c4f3ff', '#5fb0ff', '#2f7fe6', '#1d55b8'], outline: '#0b2a7d', body: ['#eaf7ff', '#b4defc', '#7fbdf2', '#4d8fdc'], hair: ['#ff9c9c', '#ff3d48', '#d11b2e', '#8c0d23'], eye: ['#0e2c88', '#2f6fe0'], glint: '#ffffff', mouth: '#2a5ad0', line: '#e2f4ff', tear: '#e2f4ff', cheek: '#ff9ab0', tie: '#12163a', tieHi: '#3a4180' },
+    blue:    { name: 'Blue', suit: ['#c4f3ff', '#5fb0ff', '#2f7fe6', '#1d55b8'], outline: '#0b2a7d', body: ['#eaf7ff', '#b4defc', '#7fbdf2', '#4d8fdc'], hair: ['#a8e2ff', '#3f94ff', '#2363e0', '#163fae'], eye: ['#0e2c88', '#2f6fe0'], glint: '#ffffff', mouth: '#2a5ad0', line: '#e2f4ff', tear: '#e2f4ff', cheek: '#9fd2ff', tie: '#0b1f5c', tieHi: '#3355aa' },
   };
   const palOf = (k) => PALETTES[k] || PALETTES.red;
 
@@ -89,116 +90,143 @@
   };
 
   // ---------------------------------------------------------------- head
+  // Cortana-style face (big eyes, small smile) with Akane-style hair: spiky
+  // bangs, side locks and long twin tails tied with ribbons.
   // view: 'front' or 'side' (facing right)
   function drawHead(b, p, pal, hx, hy) {
     const side = p.view === 'side';
-    const H4 = pal.hair, B4 = pal.body;
+    const H4 = pal.hair, F4 = pal.body, OL = pal.outline;
+    const sway = p.sway || 0;
     const hcx = side ? hx - 0.5 : hx, hcy = hy + 10.5, hrx = 12.2, hry = 11.5;
-    const fcx = side ? hx + 4 : hx, fcy = hy + 14, frx = side ? 7.2 : 8.8, fry = 8.6;
-    // fringe edge: bangs swept toward her left (viewer's right), with strand tips
+    const fcx = side ? hx + 4 : hx, fcy = hy + 14.6, frx = side ? 7.4 : 9.4, fry = 8.6;
+
+    // twin tails (behind the head): tapered, curling outward at the tips
+    const tails = side ? [-1] : [-1, 1];
+    for (const sgn of tails) {
+      const s = sgn, back = side ? -1 : 0;
+      const pts = side
+        ? [[hx - 5, hy + 3], [hx - 10, hy + 7.5], [hx - 12.5 + sway * 0.5, hy + 14.5], [hx - 12 + sway, hy + 21.5], [hx - 13.8 + sway * 1.6, hy + 28.5], [hx - 15.8 + sway * 2, hy + 32]]
+        : [[hx + s * 10.4, hy + 3.4], [hx + s * 14.4, hy + 8], [hx + s * 16.1 + sway * 0.4, hy + 15], [hx + s * 15.1 + sway, hy + 22], [hx + s * 16.5 + sway * 1.6, hy + 29], [hx + s * 18.3 + sway * 2, hy + 32.5]];
+      void back;
+      b.limb(pts, [2.8, 3.4, 3.1, 2.5, 1.7, 0.7], [H4[0], H4[1], H4[2], H4[3]]);
+      // a shine streak down the tail
+      for (const u of [0.15, 0.3, 0.45]) {
+        const a = pts[1], c = pts[3];
+        b.set(Math.floor(a[0] + (c[0] - a[0]) * u - s * 0.6), Math.floor(a[1] + (c[1] - a[1]) * u), H4[1]);
+      }
+    }
+
+    // fringe: spiky bangs with a strand between the eyes
+    const tips = side ? [[2, 3.5], [5, 4], [7.5, 3]] : [[0, 5.4], [-3, 2.8], [3, 2.8], [-6, 3], [6, 3], [-8.6, 3.2], [8.6, 3.2]];
     const fringe = (x) => {
-      const t = (x - (hx - 10)) / 20;
-      let y = hy + 7.2 + t * 2.4;
-      const rel = Math.round(x - hx);
-      if (!side && (rel === -6 || rel === -5)) y += 1.5;
-      if (!side && (rel === 3 || rel === 4)) y += 2.5;
-      if (!side && rel === 5) y += 1.5;
-      if (side && (rel === 7 || rel === 8)) y += 2.5;
-      return y;
+      const rx = x + 0.5 - hx;
+      let d = 0;
+      for (const [tx, depth] of tips) d = Math.max(d, depth * Math.max(0, 1 - Math.abs(rx - tx) / 1.7));
+      return hy + 9 + d;
     };
-    const inHair = (x, y) => {
+    const inCranium = (x, y) => {
       const nx = (x + 0.5 - hcx) / hrx, ny = (y + 0.5 - hcy) / hry;
       if (nx * nx + ny * ny <= 1) return { nx, ny, lock: false };
-      // side locks of the bob, ending around the chin
-      const locks = side ? [[hx - 9.5, 3]] : [[hx - 9.8, 2.6], [hx + 9.8, 2.6]];
+      return null;
+    };
+    // side locks framing the face, ending in points at the chin
+    const inLock = (x, y) => {
+      const locks = side ? [[hx - 8.5, 2.2]] : [[hx - 9.3, 2.1], [hx + 9.3, 2.1]];
       for (const [lx, lw] of locks) {
-        const dx = x + 0.5 - lx, inward = Math.sign(hx - lx) * dx;
-        const bottom = hy + 23.5 + inward * 0.9 - dx * dx * 0.25;
-        if (Math.abs(dx) <= lw && y + 0.5 >= hcy && y + 0.5 <= bottom) return { nx: dx / lw * Math.sign(lx - hx), ny: (y + 0.5 - hcy) / 13, lock: true };
+        const dx = x + 0.5 - lx;
+        const bottom = hy + 23 - Math.abs(dx) * 1.6;
+        if (Math.abs(dx) <= lw && y + 0.5 >= hcy && y + 0.5 <= bottom) return { nx: dx / lw * Math.sign(lx - hx), lock: true };
       }
       return null;
     };
     const inFace = (x, y) => {
       const nx = (x + 0.5 - fcx) / frx, ny = (y + 0.5 - fcy) / fry;
-      if (nx * nx + ny * ny > 1) return null;
-      if (y + 0.5 < fringe(x)) return null;
+      if (nx * nx + ny * ny > 1 || y + 0.5 < fringe(x)) return null;
       return { nx, ny };
     };
-    // hair
-    b.each(hx - 17, hy - 2, hx + 17, hy + 30, (x, y) => {
-      const h = inHair(x, y);
-      if (!h) return null;
-      const { nx, ny } = h;
-      if (h.lock) return nx > 0.3 ? H4[3] : (ny > 0.55 ? H4[3] : H4[2]);
-      const r = Math.sqrt(nx * nx + ny * ny);
-      // glossy shine ring across the top
-      if (ny < -0.08 && nx > -0.8 && nx < 0.6) {
-        if (r > 0.52 && r < 0.66) return H4[0];
-        if ((r > 0.46 && r <= 0.52) || (r >= 0.66 && r < 0.74)) return H4[1];
-      }
-      if (ny > 0.45 || nx > 0.6) return H4[3];
-      if (nx < -0.55 && ny < 0.2) return H4[1];
-      return H4[2];
+    // cranium + locks, outlined where they cover the tails
+    part(b, OL, (t) => {
+      t.each(hx - 17, hy - 2, hx + 17, hy + 30, (x, y) => {
+        const l = inLock(x, y);
+        if (l) return l.nx > 0.35 ? H4[3] : H4[2];
+        const h = inCranium(x, y);
+        if (!h) return null;
+        const { nx, ny } = h, r = Math.sqrt(nx * nx + ny * ny);
+        if (ny < -0.08 && nx > -0.8 && nx < 0.6) {
+          if (r > 0.52 && r < 0.66) return H4[0];
+          if ((r > 0.46 && r <= 0.52) || (r >= 0.66 && r < 0.74)) return H4[1];
+        }
+        if (ny > 0.45 || nx > 0.6) return H4[3];
+        if (nx < -0.55 && ny < 0.2) return H4[1];
+        return H4[2];
+      });
+      // face
+      t.each(fcx - 11, fcy - 10, fcx + 11, fcy + 10, (x, y) => {
+        const f = inFace(x, y);
+        if (!f) return null;
+        if (inLock(x, y)) return null;
+        if (y + 0.5 < fringe(x) + 1.1) return F4[2];              // soft shadow under the bangs
+        if (f.ny > 0.72 || Math.abs(f.nx) > 0.82) return F4[2];
+        return F4[1];
+      });
+      // a few darker strands in the bangs
+      for (const [tx] of tips) { const x = Math.floor(hx + tx + 0.1 * Math.sign(tx || 1)); t.set(x, Math.floor(hy + 8), H4[3]); }
     });
-    // face
-    b.each(fcx - 10, fcy - 10, fcx + 10, fcy + 10, (x, y) => {
-      const f = inFace(x, y);
-      if (!f) return null;
-      if (y + 0.5 < fringe(x) + 1.1) return B4[2];             // shadow under the bangs
-      if (f.nx > 0.7 || f.ny > 0.78) return B4[2];
-      return B4[1];
-    });
-    // side view: hair falls over the back of the face; little nose bump
-    if (side) {
-      b.each(fcx - 8, hy, fcx, hy + 26, (x, y) => (inHair(x, y) && x + 0.5 < fcx - 3.2 + (y - fcy) * 0.25) ? H4[y > fcy + 4 ? 3 : 2] : null);
-      b.set(fcx + 7, fcy + 1, B4[1]); b.set(fcx + 7, fcy + 2, B4[2]);
+    // ribbons where the tails are tied
+    if (!side) for (const sgn of [-1, 1]) {
+      const bx = sgn > 0 ? hx + 8 : hx - 13;   // mirror-exact columns
+      b.glyph(bx, hy + 1, ['TT.TT', 'TTKTT', 'TT.TT'], { T: pal.tie, K: pal.tieHi });
+    } else {
+      b.glyph(hx - 9, hy + 1, ['TT.TT', 'TTKTT', 'TT.TT'], { T: pal.tie, K: pal.tieHi });
     }
+    if (side) { b.set(fcx + 7, fcy + 1, F4[1]); b.set(fcx + 7, fcy + 2, F4[2]); }
 
-    // eyes
-    const OL = pal.outline, I = pal.eye;
-    const eyes = side ? [[fcx + 2, 'near']] : [[hx - 5, 'L'], [hx + 3, 'R']];
-    const ey = hy + 14;
-    for (const [ex, which] of eyes) {
-      const w = side ? 2 : 3;
+    // eyes: big Cortana-style eyes (4 wide from the front)
+    const I = pal.eye;
+    const ey = hy + 13;
+    const eyes = side ? [[fcx + 2, 1]] : [[hx - 6, -1], [hx + 2, 1]];
+    for (const [ex, s] of eyes) {
+      const w = side ? 3 : 4, outer = s > 0 ? ex + w : ex - 1;
       switch (p.eyes) {
-        case 'blink': case 'closed': b.rect(ex, ey + 1, w, 1, OL); break;
-        case 'happy': b.set(ex, ey + 1, OL); b.set(ex + 1, ey, OL); if (w === 3) b.set(ex + 2, ey + 1, OL); break;
-        case 'sad':
-          b.rect(ex, ey, w, 1, OL); b.rect(ex, ey + 1, w, 2, I[0]); b.set(ex + (which === 'R' ? 0 : w - 1), ey - 1, OL);
-          b.set(ex + 1, ey + 1, pal.glint);
-          break;
-        case 'cry': b.rect(ex, ey + 1, w, 1, OL); b.set(ex + (which === 'R' ? 0 : w - 1), ey, OL); break;
-        case 'wide': b.rect(ex, ey - 1, w, 1, OL); b.rect(ex, ey, w, 4, I[0]); b.rect(ex, ey + 3, w, 1, I[1]); b.set(ex, ey, pal.glint); b.set(ex + 1, ey + 1, pal.glint); break;
-        case 'x': b.set(ex, ey, OL); b.set(ex + w - 1, ey + 2, OL); b.set(ex + w - 1, ey, OL); b.set(ex, ey + 2, OL); b.set(ex + 1, ey + 1, OL); break;
-        case 'wink': if (which === 'R' || which === 'near') { b.set(ex, ey + 1, OL); b.set(ex + 1, ey, OL); if (w === 3) b.set(ex + 2, ey + 1, OL); break; } // fall through
+        case 'blink': case 'closed': b.rect(ex, ey + 2, w, 1, OL); b.set(outer, ey + 1, OL); break;
+        case 'happy': b.rect(ex + 1, ey + 1, w - 2, 1, OL); b.set(ex, ey + 2, OL); b.set(ex + w - 1, ey + 2, OL); break;
+        case 'cry': b.rect(ex, ey + 2, w, 1, OL); b.set(s > 0 ? ex : ex + w - 1, ey + 1, OL); break;
+        case 'x': b.set(ex, ey, OL); b.set(ex + w - 1, ey, OL); b.set(ex + 1, ey + 1, OL); b.set(ex + w - 2, ey + 1, OL); b.set(ex, ey + 2, OL); b.set(ex + w - 1, ey + 2, OL); break;
+        case 'wink': if (s > 0) { b.rect(ex + 1, ey + 1, w - 2, 1, OL); b.set(ex, ey + 2, OL); b.set(ex + w - 1, ey + 2, OL); break; } // fall through
         // eslint-disable-next-line no-fallthrough
-        default:
-          b.rect(ex, ey - 1, w, 1, OL);
-          b.rect(ex, ey, w, 3, I[0]);
-          b.rect(ex, ey + 2, w, 1, I[1]);
-          b.set(ex, ey, pal.glint);
-          if (which === 'L') b.set(ex - 1, ey - 1, OL); else b.set(ex + w, ey - 1, OL); // lash flick
+        default: {
+          const sad = p.eyes === 'sad', wide = p.eyes === 'wide';
+          b.rect(ex, ey - 1, w, 1, OL); b.set(outer, ey - 2, OL);          // lash with a flick
+          b.rect(ex, ey, w, wide ? 5 : 4, I[0]);
+          b.rect(ex, ey + (wide ? 3 : 2), w, wide ? 2 : 2, I[1]);
+          b.set(s > 0 ? ex + 1 : ex + w - 2, ey, pal.glint); b.set(s > 0 ? ex + 1 : ex + w - 2, ey + 1, pal.glint);
+          if (sad) b.set(s > 0 ? ex : ex + w - 1, ey - 2, OL);
+        }
+      }
+      // brows
+      if (!side || s > 0) {
+        if (p.eyes === 'angry' || p.mouth === 'frown') { b.set(s > 0 ? ex : ex + w - 1, ey - 3, H4[3]); b.set(s > 0 ? ex + 1 : ex + w - 2, ey - 3, H4[3]); b.set(s > 0 ? ex + 2 : ex + w - 3, ey - 2, H4[3]); }
       }
     }
-    // mouth
-    const mx = side ? fcx + 5 : hx - 1, my = hy + 19;
+    // mouth: small "u" smile
+    const mx = side ? fcx + 4 : hx - 2, my = hy + 19;
     const M = pal.mouth;
     switch (p.mouth) {
-      case 'open': b.rect(mx, my, 2, 2, M); break;
-      case 'o': b.set(mx, my, M); b.set(mx, my + 1, M); break;
-      case 'grin': b.rect(mx - 1, my, 4, 1, M); b.rect(mx, my + 1, 2, 1, M); break;
-      case 'frown': b.set(mx - 1, my + 1, M); b.rect(mx, my, 2, 1, M); b.set(mx + 2, my + 1, M); break;
-      case 'wail': b.rect(mx - 1, my, 4, 2, M); b.rect(mx, my + 2, 2, 1, M); break;
-      case 'flat': b.rect(mx, my, 2, 1, M); break;
-      default: b.set(mx - 1, my, M); b.rect(mx, my + 1, 2, 1, M); b.set(mx + 2, my, M);
+      case 'open': b.rect(mx + 1, my, 2, 2, M); break;
+      case 'o': b.rect(mx + 1, my, 2, 2, M); break;
+      case 'grin': b.rect(mx, my, 4, 1, M); b.rect(mx + 1, my + 1, 2, 1, M); break;
+      case 'frown': b.rect(mx + 1, my, 2, 1, M); b.set(mx, my + 1, M); b.set(mx + 3, my + 1, M); break;
+      case 'wail': b.rect(mx, my, 4, 2, M); b.rect(mx + 1, my + 2, 2, 1, M); break;
+      case 'flat': b.rect(mx + 1, my, 2, 1, M); break;
+      default: b.set(mx, my, M); b.rect(mx + 1, my + 1, 2, 1, M); b.set(mx + 3, my, M);
     }
-    if (p.blush) { b.rect(hx - 7, ey + 4, 2, 1, pal.mouth); b.rect(hx + 5, ey + 4, 2, 1, pal.mouth); }
+    if (p.blush) { b.rect(hx - 8, ey + 5, 2, 1, pal.cheek); b.rect(hx + 6, ey + 5, 2, 1, pal.cheek); }
   }
 
   // ---------------------------------------------------------------- skeleton presets
   // arm/leg presets are [elbow|knee, hand|ankle] offsets from the shoulder/hip
   const ARMS = {
-    down: [[1.0, 4.6], [1.6, 9]], out: [[3, 3], [6, 5]], wave1: [[4, -2], [8, -6]], wave2: [[4, -3], [6, -8]],
+    down: [[1.6, 4.4], [2.9, 8.6]], out: [[3, 3], [6, 5]], wave1: [[4, -2], [8, -6]], wave2: [[4, -3], [6, -8]],
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
@@ -220,8 +248,8 @@
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 4.3, 31.4 + oy];
-    const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 4.3, 31.4 + oy];
+    const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 3.9, 31.4 + oy];
+    const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 3.9, 31.4 + oy];
     const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 2.5, 42.6 + oy];
     const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
@@ -256,10 +284,10 @@
     // front-view standing legs: straight inner edge with a thin gap, outer edge
     // tapering from the hip to a flat rounded foot, glowing line down each leg
     const drawStandLeg = (t, sgn) => {
-      const pts = [[1.05, 42.2], [4.6, 42.2], [4.85, 44.6], [4.6, 47.4], [4.2, 50.2], [3.9, 52.6], [3.8, 53.7], [3.2, 55], [1.4, 55], [1.05, 53.8]];
+      const pts = [[1.05, 42.2], [4.05, 42.2], [4.2, 44.6], [3.95, 47.4], [3.7, 50.2], [3.45, 52.6], [3.35, 53.7], [2.95, 55], [1.4, 55], [1.05, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
-        const outer = d > 4.05 + (y > 48 ? -0.6 : 0);
+        const outer = d > 3.3 + (y > 48 ? -0.4 : 0);
         if (y >= 54) return B4[3];                  // sole
         if (sgn < 0) return outer ? B4[1] : d < 2.2 ? B4[2] : B4[1];
         return outer ? B4[3] : d < 2.2 ? B4[2] : B4[1];
@@ -267,8 +295,8 @@
     };
     const standing = (k) => k === 'stand' || k === 'apart';
     const drawArm = (t, arm, tones) => {
-      t.limb(arm, side ? [1.55, 1.1, 0.95] : [1.5, 1.3, 1.2], tones);
-      t.limb([arm[2], arm[2]], side ? [1.2, 1.2] : [1.55, 1.55], tones);
+      t.limb(arm, side ? [1.55, 1.1, 0.95] : [1.3, 1.1, 1.0], tones);
+      t.limb([arm[2], arm[2]], side ? [1.2, 1.2] : [1.3, 1.3], tones);
     };
     // pixel column for an x position, mirror-exact on the left side
     const colOf = (x, sgn) => sgn > 0 ? Math.floor(x) : W - 1 - Math.floor(W - x);
@@ -280,12 +308,12 @@
     const T = (pts) => pts.map(([x, y]) => [x + ox, (side ? 30.4 + (y - 30.4) * 0.86 : y) + oy]);
     const torso = side
       ? T([[-3, 30.5], [1.5, 30.5], [3.4, 32], [5.8, 34.2], [5, 36.6], [2.1, 37.8], [2, 39.5], [2.9, 42], [2.4, 44.6], [-1, 45.6], [-5.6, 45.2], [-7, 42.6], [-5, 39.6], [-3.1, 38.4], [-3.2, 36], [-3.6, 33]])
-      : T([[-2.6, 29.6], [2.6, 29.6], [4.3, 30.8], [5.0, 32.4], [5.1, 35], [4.8, 37.6], [4.9, 40], [5.3, 42.2], [5.0, 43.8], [1.2, 44.8], [0, 44.6], [-1.2, 44.8], [-5.0, 43.8], [-5.3, 42.2], [-4.9, 40], [-4.8, 37.6], [-5.1, 35], [-5.0, 32.4], [-4.3, 30.8]]);
+      : T([[-2.2, 29.6], [2.2, 29.6], [3.8, 30.8], [4.3, 32.4], [4.6, 34.4], [4.0, 36.6], [3.4, 38.2], [3.6, 40], [4.3, 42], [4.4, 43.6], [1.2, 44.8], [0, 44.6], [-1.2, 44.8], [-4.4, 43.6], [-4.3, 42], [-3.6, 40], [-3.4, 38.2], [-4.0, 36.6], [-4.6, 34.4], [-4.3, 32.4], [-3.8, 30.8]]);
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
         if (side && rel < -0.55 && y > 37 + oy) return B4[2];  // the booty catches a little light
-        if (!side) return rel < -0.62 ? B4[1] : rel > 0.62 ? B4[3] : B4[2];
+        if (!side) return rel < -0.55 ? B4[1] : rel > 0.55 ? B4[3] : B4[2];
         return rel < -0.42 ? B4[1] : rel > 0.45 ? B4[3] : B4[2];
       });
       if (side) {
@@ -306,9 +334,9 @@
       const sym = (dx, y, c) => { body.set(ox + dx, y + oy, c); body.set(ox - 1 - dx, y + oy, c); };
       // bust: two soft rounded shapes and a cleavage line
       for (const sgn of [-1, 1]) {
-        const cx = ox + sgn * 2.2, cy = 33.4 + oy;
+        const cx = ox + sgn * 2.0, cy = 33.4 + oy;
         body.each(cx - 3, cy - 3, cx + 3, cy + 3, (x, y) => {
-          const nx = (x + 0.5 - cx) / 2.55, ny = (y + 0.5 - cy) / 2.15;
+          const nx = (x + 0.5 - cx) / 2.35, ny = (y + 0.5 - cy) / 2.05;
           if (nx * nx + ny * ny > 1) return null;
           if (ny > 0.2 && nx * nx + ny * ny > 0.55) return B4[3];
           return B4[2];
@@ -317,15 +345,15 @@
       sym(1, 32, B4[1]); sym(2, 32, B4[1]); sym(1, 33, B4[1]);   // the light catches the top of each curve
       sym(0, 31, B4[3]); sym(0, 32, B4[3]); sym(0, 33, B4[3]); sym(0, 34, pal.outline);  // cleavage line
       // glowing hologram lines: shoulders, around the bust, a diamond on the belly, down the legs
-      const lines = [[3, 30], [4, 31], [4, 32], [5, 33], [4, 35], [3, 36], [2, 37], [1, 38], [1, 39], [2, 40], [3, 41], [3, 42]];
-      if (standing(p.legA) && standing(p.legB)) lines.push([2, 44], [2, 45], [3, 46], [3, 47], [3, 48], [2, 49], [2, 50], [3, 51], [3, 52]);
+      const lines = [[2, 30], [3, 31], [3, 32], [4, 33], [3, 35], [2, 36], [2, 37], [1, 38], [1, 39], [2, 40], [2, 41], [3, 42]];
+      if (standing(p.legA) && standing(p.legB)) lines.push([2, 44], [2, 45], [2, 46], [2, 47], [2, 48], [1, 49], [1, 50], [2, 51], [2, 52]);
       for (const [dx, y] of lines) sym(dx, y, B4[0]);
     } else {
       body.set(ox, 31 + oy, L); body.set(ox + 1, 32 + oy, L); body.set(ox - 1, 39 + oy, L); body.set(ox, 40 + oy, L);
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1));
     }
     // neck + head
-    body.rect(ox - 1, 27 + oy, 3, 4, pal.body[3]);
+    body.rect(ox - 1, 27 + oy, 2, 4, pal.body[2]);
     part(body, pal.outline, (t) => drawHead(t, p, pal, ox + (side ? -1 : 0), 6 + oy));
     // arms in front
     const armLines = (t, arm, sgn) => {
@@ -356,9 +384,9 @@
 
   // ---------------------------------------------------------------- animations
   const ANIMS = {
-    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'down', armB: 'down' }) },
-    walk:  { frames: 4, fps: 8, pose: f => ({ view: 'side', bob: f % 2 ? -1 : 0, legA: ['stepB', 'pass', 'stepF', 'stand'][f], legB: ['stepF', 'stand', 'stepB', 'pass'][f], armA: ['swingF', 'down', 'swingB', 'down'][f], armB: ['swingB', 'down', 'swingF', 'down'][f] }) },
-    run:   { frames: 4, fps: 12, pose: f => ({ view: 'side', dx: 1, bob: f % 2 ? -1 : 0, legA: ['runB', 'runUp', 'runF', 'stand'][f], legB: ['runF', 'stand', 'runB', 'runUp'][f], armA: f < 2 ? 'swingF' : 'swingB', armB: f < 2 ? [[-2, 3], [-1, 7]] : [[3, 3], [5, 5]], mouth: 'grin' }) },
+    idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'down', armB: 'down', sway: [0, 0.4, 0, -0.4][f] }) },
+    walk:  { frames: 4, fps: 8, pose: f => ({ view: 'side', sway: [-1, -1.4, -1, -0.6][f], bob: f % 2 ? -1 : 0, legA: ['stepB', 'pass', 'stepF', 'stand'][f], legB: ['stepF', 'stand', 'stepB', 'pass'][f], armA: ['swingF', 'down', 'swingB', 'down'][f], armB: ['swingB', 'down', 'swingF', 'down'][f] }) },
+    run:   { frames: 4, fps: 12, pose: f => ({ view: 'side', sway: [-2, -2.6, -2, -1.6][f], dx: 1, bob: f % 2 ? -1 : 0, legA: ['runB', 'runUp', 'runF', 'stand'][f], legB: ['runF', 'stand', 'runB', 'runUp'][f], armA: f < 2 ? 'swingF' : 'swingB', armB: f < 2 ? [[-2, 3], [-1, 7]] : [[3, 3], [5, 5]], mouth: 'grin' }) },
     wave:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open' }) },
     talk:  { frames: 4, fps: 7, pose: f => ({ mouth: ['smile', 'open', 'smile', 'o'][f], armB: f % 2 ? 'hold' : 'down', armA: 'hip' }) },
     point: { frames: 2, fps: 3, pose: f => ({ armB: 'point', armA: 'hip', eyes: f ? 'open' : 'wink', mouth: 'grin' }) },
