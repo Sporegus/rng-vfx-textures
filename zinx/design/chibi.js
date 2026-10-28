@@ -340,8 +340,8 @@
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 3.7, 32.0 + oy];
-    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 3.7, 32.0 + oy];
+    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 4.3, 32.0 + oy];
+    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 4.3, 32.0 + oy];
     const hipA = side ? [ox - 1.4, 42.6 + oy] : [ox - 2.5, 42.6 + oy];
     const hipB = side ? [ox - 0.4, 42.6 + oy] : [ox + 2.5, 42.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
@@ -439,7 +439,7 @@
     const halfW = profile(WAIST);
     // her side silhouette, facing right: chest, bust, tummy, hip and thigh in
     // front; shoulder blades, small of the back and a round bum behind
-    const sideFront = profile([[29.8, 1.6], [31.2, 3.0], [33.2, 4.5], [35.0, 4.1], [36.4, 2.2], [38.2, 1.3], [40.4, 2.2], [42.6, 2.7], [44.8, 2.0], [45.6, 1.4]]);
+    const sideFront = profile([[29.8, 1.6], [31.2, 3.1], [33.3, 4.9], [35.1, 4.5], [36.4, 2.1], [38.2, 1.3], [40.4, 2.2], [42.6, 2.7], [44.8, 2.0], [45.6, 1.4]]);
     const sideBack = profile([[29.8, -3.0], [32.0, -3.4], [35.0, -3.0], [37.6, -2.5], [39.4, -3.4], [41.2, -4.5], [42.8, -4.8], [44.2, -4.3], [45.2, -3.2], [45.6, -2.4]]);
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
     const bothLegsStand = standing(p.legA) && standing(p.legB);
@@ -470,12 +470,11 @@
         if (!side) return rel < -0.72 ? B4[1] : rel > 0.72 ? B4[3] : B4[2];
         return rel < -0.8 ? B4[1] : rel > 0.62 ? B4[3] : B4[2];
       });
-      if (side) {   // bust in profile: shine on top, an outline under it
-        const cx = ox + 2.3, cy = 33.5 + oy;
+      if (side) {   // bust in profile: shine on top (its outline is drawn last)
+        const cx = ox + 2.6, cy = 33.6 + oy;
         t.each(cx - 2.5, cy - 2.5, cx + 2.5, cy + 2.5, (x, y) => {
           const nx = (x + 0.5 - cx) / 1.9, ny = (y + 0.5 - cy) / 2.0, r = Math.hypot(nx, ny);
           if (r > 1 || t.getP(Math.round(tx(x + 0.5) * K - 0.5), Math.round(ty(y + 0.5) * K - 0.5)) == null) return null;
-          if (ny > 0.3 && r > 0.72 && nx > -0.5) return pal.outline;
           if (ny < -0.2 && r < 0.55) return B4[1];
           return null;
         });
@@ -487,21 +486,20 @@
         part(body, null, (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, B4, sg), [[hip[0], hip[1], 2.8]]);
     }
     // bust: a soft shadow under each curve, a little shine on top, a cleavage line
+    // (the outlines under the breasts are drawn after the glow lines)
     if (back) {
       body.each(ox - 1, 42 + oy, ox + 1, 45 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 42.8 + oy ? B4[3] : null);
     } else if (!side) {
       for (const sgn of [-1, 1]) {
-        const cx = ox + sgn * 2.4, cy = 34.0 + oy;
+        const cx = ox + sgn * 1.9, cy = 34.0 + oy;
         body.each(cx - 3.5, cy - 4, cx + 3.5, cy + 4, (x, y) => {
-          const nx = (x + 0.5 - cx) / 2.5, ny = (y + 0.5 - cy) / 2.9, r = Math.hypot(nx, ny);
+          const nx = (x + 0.5 - cx) / 2.0, ny = (y + 0.5 - cy) / 2.9, r = Math.hypot(nx, ny);
           if (r > 1) return null;
-          if (ny > 0.2 && r > 0.82) return pal.outline;                  // the outline under each breast
           if (ny > 0.15 && r > 0.55) return B4[3];
           if (ny < -0.15 && r < 0.55 && nx * sgn < 0.35) return B4[1];    // shine
           return B4[2];
         });
       }
-      body.each(ox - 1, 31.8 + oy, ox + 1, 35 + oy, (x, y) => Math.abs(x + 0.5 - ox) < 0.34 && y > 32.4 + oy && y < 34.6 + oy ? B4[3] : null);
     } else {
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1), [[hipB[0] - 0.6, hipB[1] - 0.6, 3.4]]);
     }
@@ -514,6 +512,14 @@
       for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
       glow(body, sideCurve, true, B4[0], true);
       for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
+    }
+    // a U-shaped outline under each breast (in profile, under the bust)
+    if (side) glow(body, [[4.6, 34.6], [4.0, 35.7], [3.0, 36.2], [1.8, 36.0]], false, pal.outline);
+    else if (!back) {
+      // pixel-drawn U under each breast, the two meeting at her center line
+      const U = ['X.......X', 'X.......X', '.X.....X.', '..XXXXX..'], Y0 = Math.round(ty(33.3 + oy) * K);
+      body.glyphP(midX, Y0, U, { X: pal.outline });
+      body.glyphP(midX - U[0].length, Y0, U, { X: pal.outline }, true);
     }
     // neck + head
     body.rect(ox - 1, 27 + oy, 2, 4, (pal.skin || pal.body)[2]);
