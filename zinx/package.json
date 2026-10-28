@@ -1,0 +1,24 @@
+{
+  "name": "zinx",
+  "productName": "Zinx",
+  "version": "0.1.0",
+  "description": "Zinx - a little desktop buddy that lives on your screen and helps out.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win portable nsis"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.zinx.desktop",
+    "productName": "Zinx",
+    "files": ["main.js", "preload.js", "actions/**", "src/**", "assets/**"],
+    "win": { "icon": "assets/icon.png" },
+    "nsis": { "oneClick": true, "perMachine": false }
+  }
+}

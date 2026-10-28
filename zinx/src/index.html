@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Zinx</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="fx"></canvas>
+  <div id="zinx"><canvas id="sprite"></canvas></div>
+  <div id="tag" class="hidden"></div>
+  <div id="hi" class="hidden">hi</div>
+  <div id="bubble" class="hidden">
+    <div class="b-head">
+      <span class="b-name">ZINX</span>
+      <span class="b-chip">ONLINE</span>
+      <button class="b-x" title="Close">×</button>
+    </div>
+    <div id="b-text"></div>
+    <div id="b-body"></div>
+  </div>
+  <script src="sprites.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<title>Zinx Desktop Buddy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout: a full-screen pretend Windows desktop; Zinx's real UI floats on top. Single dark look on purpose. */
+:root {
+  color-scheme: dark;
+  --wall: radial-gradient(1200px 600px at 78% 8%, #3a1f73 0%, transparent 60%), radial-gradient(900px 500px at 10% 90%, #0f3b52 0%, transparent 60%), linear-gradient(180deg, #0b0718 0%, #130b2b 100%);
+  --chrome: #1c1926;
+  --chrome-2: #24202f;
+  --line: #352f45;
+  --text: #ece8f5;
+  --muted: #9b94b0;
+  --pop: #7fd3ff;
+  --hot: #ff3d8b;
+  --ui: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --pixel: "Silkscreen", "Cascadia Mono", monospace;
+  --font: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: #0b0718; color: var(--text); font-family: var(--ui); overflow: hidden; }
+body.light { --chrome: #f3f1f8; --chrome-2: #e7e3f0; --line: #d2cce0; --text: #1d1828; --muted: #625a78; }
+
+#desk { position: fixed; inset: 0 0 46px 0; background: var(--wall); transition: background 0.4s; }
+
+.win {
+  position: absolute; display: flex; flex-direction: column;
+  background: var(--chrome); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; color: var(--text);
+}
+.win.max { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
+.win-bar { display: flex; align-items: center; gap: 8px; height: 34px; padding-left: 12px; background: var(--chrome-2); cursor: move; touch-action: none; flex: none; }
+.win-title { font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win-bar button { width: 44px; height: 34px; border: 0; background: none; color: var(--muted); font: 14px var(--ui); cursor: pointer; }
+.win-bar button:hover { background: var(--line); color: var(--text); }
+.win-bar button[data-act=close]:hover { background: #c42b1c; color: #fff; }
+.win-bar button:focus-visible, .task-btn:focus-visible, #tray-btn:focus-visible { outline: 2px solid var(--pop); outline-offset: -2px; }
+
+#win-readme { left: max(16px, 5vw); top: 6vh; width: min(360px, calc(100vw - 32px)); }
+#win-explorer { left: min(48vw, calc(100vw - 476px)); top: 16vh; width: min(460px, calc(100vw - 32px)); height: min(380px, 52vh); }
+#win-notes { left: max(16px, 12vw); top: 48vh; width: min(300px, calc(100vw - 32px)); }
+
+.readme { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5; }
+.readme h1 { margin: 0; font: 700 28px/1 var(--pixel); letter-spacing: 1px; color: var(--pop); text-shadow: 3px 3px 0 #2b74d1; }
+.readme p { margin: 0; color: var(--muted); max-width: 60ch; }
+.readme ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.readme kbd { font: 600 11px var(--font); background: var(--chrome-2); border: 1px solid var(--line); padding: 0 5px; border-radius: 3px; }
+.readme .fine { font-size: 11px; }
+
+.ex-path { font-size: 12px; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.ex-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+.ex-row { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; padding: 4px 12px; font-size: 12px; }
+.ex-row .ex-ic { color: #f2c14e; }
+.ex-row .ex-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-row .ex-size { color: var(--muted); font-variant-numeric: tabular-nums; }
+.ex-row.hit { background: color-mix(in srgb, var(--pop) 22%, transparent); outline: 1px solid var(--pop); }
+
+#notes-list { margin: 0; padding: 12px 14px 14px 30px; font: 13px/1.6 var(--font); }
+
+#taskbar {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 46px; z-index: 30;
+  display: flex; align-items: center; gap: 4px;
+  padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px));
+  background: rgba(20, 16, 32, .92); border-top: 1px solid #2c2640; backdrop-filter: blur(12px);
+}
+.start { width: 34px; height: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 9px; }
+.start i { background: var(--pop); border-radius: 1px; }
+.task-btn { height: 36px; padding: 0 12px; border: 0; border-radius: 4px; background: none; color: #d9d3ea; font: 12px var(--ui); cursor: pointer; position: relative; white-space: nowrap; }
+.task-btn:hover { background: #2a2440; }
+.task-btn.open::after { content: ""; position: absolute; left: 40%; right: 40%; bottom: 3px; height: 3px; border-radius: 2px; background: #7d7596; }
+.task-btn.on::after { left: 30%; right: 30%; background: var(--pop); }
+.tray { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+#tray-btn { width: 38px; height: 38px; border: 0; border-radius: 4px; background: none; cursor: pointer; display: grid; place-items: center; }
+#tray-btn:hover { background: #2a2440; }
+#tray-zinx { width: 36px; height: 36px; image-rendering: pixelated; }
+#clock { font-size: 12px; color: #d9d3ea; font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
+
+#toast {
+  position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 40;
+  max-width: calc(100vw - 32px); padding: 9px 14px; font: 600 12px var(--font);
+  background: #120a22; color: #f1ecff; border: 2px solid var(--hot); box-shadow: 4px 4px 0 var(--hot);
+}
+#lock { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(5, 3, 12, .86); backdrop-filter: blur(16px); font: 700 22px var(--pixel); color: var(--pop); text-align: center; }
+#flash { position: fixed; inset: 0; z-index: 50; background: #fff; }
+
+@media (max-width: 640px) {
+  #win-readme { top: 12px; }
+  #win-explorer { left: 16px; top: auto; bottom: 16px; height: 34vh; }
+  .task-btn .long { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #zinx.glitch canvas { animation: none; } #desk { transition: none; } }
+</style>
+<style>/*APP_CSS*/</style>
+
+<div id="desk">
+  <section class="win" id="win-readme" data-title="Meet Zinx">
+    <div class="win-bar"><span class="win-title">Meet Zinx.txt</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
+    <div class="readme">
+      <h1>ZINX</h1>
+      <p>Zinx is a holographic AI assistant that lives on your Windows desktop. This is a playable demo on a pretend desktop, so nothing here touches your files.</p>
+      <ul>
+        <li>Click Zinx to open the menu.</li>
+        <li>Grab Zinx and throw her.</li>
+        <li>Try <b>Wallpaper › Synthwave</b>.</li>
+        <li>Type <kbd>find resume</kbd> or <kbd>timer 1 min</kbd> in the menu.</li>
+        <li>Close this window while she sits on it.</li>
+        <li>Double-click Zinx for some love.</li>
+      </ul>
+      <p class="fine">On your PC the same menu really cleans, sorts, finds and repaints.</p>
+    </div>
+  </section>
+  <section class="win" id="win-explorer" data-title="Downloads">
+    <div class="win-bar"><span class="win-title">Downloads</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
+    <div class="ex-path">This PC › Downloads</div>
+    <div class="ex-list"></div>
+  </section>
+  <section class="win" id="win-notes" data-title="Zinx Notes" hidden>
+    <div class="win-bar"><span class="win-title">Zinx Notes.txt</span><button data-act="max" title="Maximize">▢</button><button data-act="close" title="Close">✕</button></div>
+    <ol id="notes-list"></ol>
+  </section>
+</div>
+
+<nav id="taskbar">
+  <span class="start" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <button class="task-btn" data-win="win-readme">Meet<span class="long"> Zinx</span></button>
+  <button class="task-btn" data-win="win-explorer"><span class="long">File </span>Explorer</button>
+  <button class="task-btn" data-win="win-notes">Notes</button>
+  <div class="tray">
+    <button id="tray-btn" title="Zinx"><canvas id="tray-zinx" width="36" height="36"></canvas></button>
+    <span id="clock"></span>
+  </div>
+</nav>
+<div id="toast" hidden></div>
+<div id="lock" hidden>LOCKED<br>(demo)</div>
+<div id="flash" hidden></div>
+
+<canvas id="fx"></canvas>
+<div id="zinx"><canvas id="sprite"></canvas></div>
+<div id="tag" class="hidden"></div>
+<div id="hi" class="hidden">hi</div>
+<div id="bubble" class="hidden">
+  <div class="b-head">
+    <span class="b-name">ZINX</span>
+    <span class="b-chip">ONLINE</span>
+    <button class="b-x" title="Close">×</button>
+  </div>
+  <div id="b-text"></div>
+  <div id="b-body"></div>
+</div>
+<script>/*SPRITES_JS*/</script>
+<script>/*DEMO_JS*/</script>
+<script>/*RENDERER_JS*/</script>
