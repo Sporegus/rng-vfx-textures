@@ -375,7 +375,7 @@
     // front-view standing legs: straight inner edge with a thin gap, outer edge
     // tapering from the hip to a flat rounded foot
     const drawStandLeg = (t, sgn) => {
-      const pts = [[0.3, 43.4], [5.1, 42.6], [5.2, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [0.3, 55], [0.3, 53.8]];
+      const pts = [[0.3, 43.4], [4.9, 42.6], [5.05, 44.4], [4.8, 46.8], [4.3, 49.6], [3.9, 52.2], [3.7, 53.7], [3.4, 55], [0.3, 55], [0.3, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
         const outer = d > (y < 47 ? 4.4 : 3.2);
@@ -399,7 +399,7 @@
     // on her other side, mirror-exact around her center.
     const suit = new Set(B4.slice(1));
     const midX = Math.round(tx(ox) * K);
-    const glow = (buf, pts, mirror, c = B4[0]) => {
+    const glow = (buf, pts, mirror, c = B4[0], thin = false) => {
       const P = pts.map(([x, y]) => [Math.round(tx(ox + x) * K), Math.round(ty(y + oy) * K)]);
       const dot = (X, Y) => { if (suit.has(buf.getP(X, Y))) buf.setP(X, Y, c); };
       for (let i = 0; i < P.length - 1; i++) {
@@ -407,7 +407,7 @@
         for (let k = 0; k <= n; k++) {
           const X = Math.round(x0 + (x1 - x0) * k / n), Y = Math.round(y0 + (y1 - y0) * k / n);
           // two pixels thick: widen across the line's direction
-          const [ex, ey] = Math.abs(x1 - x0) > Math.abs(y1 - y0) ? [0, 1] : [1, 0];
+          const [ex, ey] = thin ? [0, 0] : Math.abs(x1 - x0) > Math.abs(y1 - y0) ? [0, 1] : [1, 0];
           dot(X, Y); dot(X + ex, Y + ey);
           if (mirror) { dot(2 * midX - 1 - X, Y); dot(2 * midX - 1 - X - ex, Y + ey); }
         }
@@ -425,7 +425,7 @@
     };
     const i0 = (pts) => pts.slice(0, -1).concat([pts[pts.length - 1]]);
     // her front silhouette: half-width at each height, smoothed into an hourglass
-    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.8], [34.0, 5.0], [35.6, 4.3], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.6], [43.2, 5.4], [44.4, 5.3], [45.0, 5.0]];
+    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.8], [34.0, 5.0], [35.6, 4.3], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.5], [43.2, 5.15], [44.4, 5.15], [45.0, 4.95]];
     const halfW = (y) => {
       const k = WAIST, n = k.length;
       if (y <= k[0][0]) return k[0][1];
@@ -437,19 +437,18 @@
     };
     const span = (y0, y1, f) => { const out = []; for (let y = y0; y <= y1 + 1e-6; y += 0.5) out.push([f(y), y]); return out; };
     const bothLegsStand = standing(p.legA) && standing(p.legB);
-    const sideCurve = span(35.6, 44.4, (y) => halfW(y) - 1.6).concat(bothLegsStand ? [[3.6, 45.6], [3.3, 47.4], [2.8, 49.8], [2.5, 52.4], [2.3, 53.6]] : []);
+    const sideCurve = span(35.6, 40.6, (y) => halfW(y) - 1.2);          // thin, from the bust to the waist
+    const legOuter = bothLegsStand ? [[[3.4, 46.4], [3.1, 48.2], [2.7, 50.4], [2.4, 52.6], [2.3, 53.6]]] : [];
     const legInner = bothLegsStand ? [[[1.9, 45.6], [2.1, 48.2], [1.9, 51], [1.8, 53.6]]] : [];
     const FRONT_LINES = [
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],                            // collar to shoulder
-      sideCurve,                                                         // down her curves
       [[0.6, 37.6], [0.7, 39.0], [1.5, 40.8], [1.9, 42.8]],              // belly
-    ].concat(legInner);
+    ].concat(legInner, legOuter);
     const BACK_LINES = [
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],
       [[0.6, 31.8], [2.0, 32.8], [3.4, 32.2]],                            // shoulder blades
-      sideCurve,
       [[0.5, 36.2], [1.2, 38.6], [0.6, 41.0]],                            // small of the back
-    ].concat(legInner);
+    ].concat(legInner, legOuter);
     const SIDE_LINES = [
       [[1.2, 30.2], [2.2, 31.4], [2.6, 32.6]],                            // collar
       [[1.4, 36.6], [1.0, 38.4], [1.6, 40.4], [1.6, 42.6]],              // belly
@@ -506,6 +505,7 @@
       limbGlow(body, legB, 0.5);
     } else {
       for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
+      glow(body, sideCurve, true, B4[0], true);
       for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
     }
     // neck + head
