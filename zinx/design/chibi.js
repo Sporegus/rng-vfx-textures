@@ -452,7 +452,7 @@
       // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
       // shine up top, shadow underneath, and a dark outline round the bottom
       // each breast is a little narrower than it is tall, so the pair sit close together
-      const R = 3.9, RX = 3.6, cyP = Math.round(ty(34.6 + oy) * K);   // sized so the U underneath is a smooth curve
+      const R = 4.1, RX = 3.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
       const inB = (i, Y) => Math.hypot((i + 0.5 - RX) / RX, (Y + 0.5 - cyP) / R) <= 1;
       for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * RX + 1; i++) {
         if (!inB(i, Y)) continue;
