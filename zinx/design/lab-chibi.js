@@ -6,7 +6,7 @@
   const ctx = cv.getContext('2d');
   const box = document.getElementById('stage-box');
   let pal = 'red';
-  let hair = 'twin';
+  let hair = 'long';
   let anim = 'idle', frame = 0, ft = 0;
   let showBase = true;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -27,9 +27,9 @@
   }
   // whole-number pixel scale, bigger closer to the front
   const scaleAt = (y) => {
-    const front = Math.max(3, Math.min(6, Math.floor(Math.min(H * 0.5, W * 0.45) / Z.H)));
+    const front = Math.max(1, Math.min(4, Math.floor(Math.min(H * 0.56, W * 0.5) / Z.H)));
     const d = Math.max(0, Math.min(1, (y - horizon) / (H - horizon)));
-    return Math.max(2, Math.round(front * (0.55 + 0.45 * d)));
+    return Math.max(1, Math.round(front * (0.55 + 0.45 * d)));
   };
   const glowOf = () => Z.PALETTES[pal].hair[1];
 
@@ -214,7 +214,7 @@
   function drawSheet() {
     const sc = document.getElementById('sheet');
     const names = Object.keys(Z.ANIMS);
-    const cols = 8, s = 2, cw = Z.W * s, chh = Z.H * s, lab = 14;
+    const cols = 8, s = 1, cw = Z.W * s, chh = Z.H * s, lab = 14;
     sc.width = cols * cw; sc.height = names.length * (chh + lab);
     const g = sc.getContext('2d');
     g.fillStyle = '#07040a'; g.fillRect(0, 0, sc.width, sc.height);
@@ -249,13 +249,6 @@
       drawFloor(); drawSheet();
     });
     colorRow.append(b);
-  });
-  const hairRow = document.getElementById('hairs');
-  Object.entries(Z.HAIRS).forEach(([k, label]) => {
-    const b = document.createElement('button');
-    b.textContent = label; b.setAttribute('aria-pressed', k === hair);
-    b.addEventListener('click', () => { hair = k; hairRow.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawSheet(); });
-    hairRow.append(b);
   });
   document.getElementById('base').addEventListener('click', (e) => { showBase = !showBase; e.currentTarget.setAttribute('aria-pressed', showBase); });
   document.getElementById('tp').addEventListener('click', () => {
