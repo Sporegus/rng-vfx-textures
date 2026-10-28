@@ -468,8 +468,12 @@
     const legInner = bothLegsStand ? [[[1.9, 45.6], [2.1, 48.2], [1.9, 51], [1.8, 53.6]]] : [];
     const FRONT_LINES = [
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],                            // collar to shoulder
-      [[0.6, 37.6], [0.7, 39.0], [1.5, 40.8], [1.9, 42.8]],              // belly
     ].concat(legInner, legOuter);
+    // suit detail under the bust: two curved glow lines on each side of her tummy, ( ( ) )
+    const TUMMY = [
+      [[1.2, 37.5], [1.8, 38.6], [1.9, 40.0], [1.5, 41.4], [1.2, 42.2]],
+      [[0.5, 37.8], [0.9, 38.8], [0.95, 40.0], [0.6, 41.0]],
+    ];
     const BACK_LINES = [
       [[1.2, 30.2], [2.6, 30.7], [3.6, 31.6]],
       [[0.6, 31.8], [2.0, 32.8], [3.4, 32.2]],                            // shoulder blades
@@ -519,6 +523,7 @@
     } else {
       for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
       glow(body, sideCurve, true, B4[0], true);
+      if (!back) for (const l of TUMMY) glow(body, l, true, B4[0], true);
       for (const [lg, key] of [[legA, p.legA], [legB, p.legB]]) if (!standing(key)) limbGlow(body, lg, 0.4);
     }
     // a U-shaped outline under each breast (in profile, under the bust)
