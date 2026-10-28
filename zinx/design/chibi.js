@@ -68,9 +68,10 @@
     return out;
   }
   // draw a part on its own layer and give it an inner outline where it covers the body
-  function part(dst, col, fn) {
+  function part(dst, col, fn, blendAt) {
     const b = new Buf(); fn(b);
-    if (col) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!b.get(x, y) && dst.get(x, y) && near(b, x, y)) dst.set(x, y, col);
+    const blended = (x, y) => blendAt && blendAt.some(([bx, by, r]) => (x - bx) ** 2 + (y - by) ** 2 < r * r);
+    if (col) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!b.get(x, y) && dst.get(x, y) && near(b, x, y) && !blended(x, y)) dst.set(x, y, col);
     for (let i = 0; i < b.p.length; i++) if (b.p[i]) dst.p[i] = b.p[i];
   }
 
@@ -203,10 +204,10 @@
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
   };
   const LEGS = {
-    stand: [[0, 5.5], [0, 11]], apart: [[1, 5.5], [1.5, 11]],
+    stand: [[-0.6, 5.4], [0.1, 11]], apart: [[0, 5.4], [1.3, 11]],
     stepF: [[2, 5], [4, 10.5]], stepB: [[-1.5, 5], [-4, 10]], pass: [[1.5, 4.5], [0, 9]],
     runF: [[4, 4], [7, 9]], runB: [[-3, 5], [-7, 8]], runUp: [[4, 3], [2, 7]],
-    sit: [[1, 2.5], [1.5, 9]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
+    sit: [[0.6, 2.5], [1, 9]], tuck: [[3, 3], [0, 6]], dangle: [[0.5, 5.5], [1, 11]], kneel: [[3, 4], [-2, 6]],
   };
 
   // ---------------------------------------------------------------- the character
@@ -219,14 +220,14 @@
     const body = new Buf();
     const fx = new Buf();
 
-    const shA = side ? [ox - 0.5, 31.6 + oy] : [ox - 5.6, 31.6 + oy];
-    const shB = side ? [ox - 0.5, 31.6 + oy] : [ox + 5.6, 31.6 + oy];
-    const hipA = side ? [ox - 1.6, 43 + oy] : [ox - 3.4, 43 + oy];
-    const hipB = side ? [ox - 0.4, 43 + oy] : [ox + 3.4, 43 + oy];
+    const shA = side ? [ox - 0.5, 31.4 + oy] : [ox - 5, 31.4 + oy];
+    const shB = side ? [ox - 0.5, 31.4 + oy] : [ox + 5, 31.4 + oy];
+    const hipA = side ? [ox - 1.6, 41.6 + oy] : [ox - 3.3, 41.6 + oy];
+    const hipB = side ? [ox - 0.4, 41.6 + oy] : [ox + 3.3, 41.6 + oy];
     const mirror = (o, s) => [o[0] * s, o[1]];
     const joint = (base, preset, table, s, leg) => {
       const v = Array.isArray(preset) ? preset : table[preset] || table.down || table.stand;
-      const k = leg ? 0.9 : 1;
+      const k = leg ? 1.03 : 1;
       const e = mirror(v[0], s), h = mirror(v[1], s);
       const end = [base[0] + h[0], base[1] + h[1] * k];
       if (leg && oy > 0) end[1] -= oy; // feet stay planted when she bobs down
@@ -241,14 +242,15 @@
 
     // shapely leg: thick thigh, slim knee, calf, ankle, small foot
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
-      const calf = [knee[0] + (ankle[0] - knee[0]) * 0.35, knee[1] + (ankle[1] - knee[1]) * 0.35];
-      t.limb([hip, knee, calf, ankle], side ? [2.9, 1.6, 1.75, 1.0] : [3.4, 1.7, 1.85, 1.0], tones);
-      const fx0 = Math.round(ankle[0]), fy0 = Math.round(ankle[1]);
-      if (side) t.rect(fx0 - 1, fy0, 4, 1, tones[3]);
-      else t.rect(fx0 - 1 + (sgn > 0 ? 0 : -0), fy0, 3, 1, tones[3]);
+      const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
+      const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
+      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [3.3, 2.6, 1.4, 1.7, 0.9], tones);
+      // foot: a small rounded shoe pointing slightly outward (forward in side view)
+      const toe = side ? [ankle[0] + 2.2, ankle[1] + 1] : [ankle[0] + sgn * 0.9, ankle[1] + 1.1];
+      t.limb([ankle, toe], [1.05, 0.9], [tones[2], tones[2], tones[3], tones[3]]);
     };
     const drawArm = (t, arm, tones) => {
-      t.limb(arm, [1.3, 1.05, 0.9], tones);
+      t.limb(arm, [1.55, 1.1, 0.95], tones);
       t.limb([arm[2], arm[2]], [1.2, 1.2], tones);
     };
 
@@ -256,45 +258,45 @@
     if (side) { drawLeg(body, legA, dark, 1); drawArm(body, armA, dark); }
 
     // torso: hourglass with a bust and round hips
-    const T = (pts) => pts.map(([x, y]) => [x + ox, y + oy]);
+    const T = (pts) => pts.map(([x, y]) => [x + ox, 30.4 + (y - 30.4) * 0.86 + oy]);
     const torso = side
       ? T([[-3, 30.5], [1.5, 30.5], [3.4, 32], [5.8, 34.2], [5, 36.6], [2.1, 37.8], [2, 39.5], [2.9, 42], [2.4, 44.6], [-1, 45.6], [-5.6, 45.2], [-7, 42.6], [-5, 39.6], [-3.1, 38.4], [-3.2, 36], [-3.6, 33]])
       : T([[-4, 30.4], [4, 30.4], [5.4, 32], [6.1, 34.6], [4.6, 37], [2.6, 38.6], [3, 39.8], [5.8, 41.6], [7.1, 43.6], [6.2, 45.6], [3.2, 46.4], [0, 45.8], [-3.2, 46.4], [-6.2, 45.6], [-7.1, 43.6], [-5.8, 41.6], [-3, 39.8], [-2.6, 38.6], [-4.6, 37], [-6.1, 34.6], [-5.4, 32]]);
     part(body, pal.outline, (t) => {
       t.poly(torso, (x, y) => {
         const rel = (x + 0.5 - ox) / (side ? 4.5 : 6);
-        if (side && rel < -0.55 && y > 39 + oy) return B4[2];  // the booty catches a little light
+        if (side && rel < -0.55 && y > 37 + oy) return B4[2];  // the booty catches a little light
         return rel < -0.42 ? B4[1] : rel > 0.45 ? B4[3] : B4[2];
       });
       if (side) {
-        t.set(ox + 3, 33 + oy, B4[1]); t.set(ox + 4, 34 + oy, B4[0]); t.set(ox + 4, 33 + oy, B4[1]); t.rect(ox + 1, 36 + oy, 5, 1, B4[3]);  // bust
-        t.set(ox - 6, 41 + oy, B4[1]); t.set(ox - 6, 42 + oy, B4[0]); t.set(ox - 5, 43 + oy, B4[1]);          // booty shine
+        t.set(ox + 3, 33 + oy, B4[1]); t.set(ox + 4, 33 + oy, B4[0]); t.set(ox + 4, 32 + oy, B4[1]); t.rect(ox + 1, 35 + oy, 5, 1, B4[3]);  // bust
+        t.set(ox - 6, 39 + oy, B4[1]); t.set(ox - 6, 40 + oy, B4[0]); t.set(ox - 5, 41 + oy, B4[1]);          // booty shine
       } else {
-        t.set(ox - 6, 43 + oy, B4[1]); t.set(ox - 5, 44 + oy, B4[1]);  // hip highlight
+        t.set(ox - 6, 41 + oy, B4[1]); t.set(ox - 5, 42 + oy, B4[1]);  // hip highlight
       }
     });
     if (!side) {
       // legs blend into the hips; a line only where the two legs meet
       part(body, null, (t) => drawLeg(t, legA, B4, -1));
       part(body, null, (t) => { drawLeg(t, legB, B4, 1); });
-      for (let y = Math.round(45 + oy); y < 54; y++) if (body.get(ox, y) && body.get(ox - 1, y) && body.get(ox + 1, y)) body.set(ox, y, B4[3]);
+      for (let y = Math.round(43 + oy); y < 54; y++) if (body.get(ox, y) && body.get(ox - 1, y) && body.get(ox + 1, y)) body.set(ox, y, B4[3]);
       redrawBust(body, ox, oy, B4, pal);
     }
     // hologram lines on the suit
     if (!side) {
       body.set(ox - 3, 31 + oy, L); body.set(ox - 2, 32 + oy, L); body.set(ox + 2, 32 + oy, L); body.set(ox + 3, 31 + oy, L);
-      body.set(ox - 4, 41 + oy, L); body.set(ox - 3, 42 + oy, L); body.set(ox - 2, 43 + oy, L);
-      body.set(ox + 4, 41 + oy, L); body.set(ox + 3, 42 + oy, L); body.set(ox + 2, 43 + oy, L);
+      body.set(ox - 4, 39 + oy, L); body.set(ox - 3, 40 + oy, L); body.set(ox - 2, 41 + oy, L);
+      body.set(ox + 4, 39 + oy, L); body.set(ox + 3, 40 + oy, L); body.set(ox + 2, 41 + oy, L);
     } else {
-      body.set(ox, 31 + oy, L); body.set(ox + 1, 32 + oy, L); body.set(ox - 1, 41 + oy, L); body.set(ox, 42 + oy, L);
+      body.set(ox, 31 + oy, L); body.set(ox + 1, 32 + oy, L); body.set(ox - 1, 39 + oy, L); body.set(ox, 40 + oy, L);
       part(body, pal.outline, (t) => drawLeg(t, legB, B4, 1));
     }
     // neck + head
     body.rect(ox - 1, 27 + oy, 3, 4, B4[3]);
     part(body, pal.outline, (t) => drawHead(t, p, pal, ox + (side ? -1 : 0), 6 + oy));
     // arms in front
-    if (!side) part(body, pal.outline, (t) => drawArm(t, armA, B4));
-    part(body, pal.outline, (t) => drawArm(t, armB, B4));
+    if (!side) part(body, pal.outline, (t) => drawArm(t, armA, B4), [[shA[0], shA[1], 2.8]]);
+    part(body, pal.outline, (t) => drawArm(t, armB, B4), [[shB[0], shB[1], 2.8]]);
 
     // props / effects
     if (p.panel) {
@@ -309,7 +311,7 @@
   // front-view bust: two rounded shapes, a cleavage line and a soft shadow under each
   function redrawBust(t, ox, oy, B4, pal) {
     for (const sgn of [-1, 1]) {
-      const cx = ox + sgn * 2.75, cy = 34.6 + oy;
+      const cx = ox + sgn * 2.75, cy = 34 + oy;
       t.each(cx - 3.6, cy - 3.2, cx + 3.6, cy + 3.2, (x, y) => {
         const nx = (x + 0.5 - cx) / 3.45, ny = (y + 0.5 - cy) / 2.9;
         if (nx * nx + ny * ny > 1) return null;
@@ -319,7 +321,7 @@
       });
       t.set(Math.round(cx - 1), Math.round(cy - 1), B4[0]); t.set(Math.round(cx - 1), Math.round(cy), B4[0]);
     }
-    t.set(ox, 33 + oy, pal.outline); t.set(ox, 34 + oy, pal.outline); t.set(ox, 35 + oy, pal.outline); t.set(ox, 36 + oy, B4[3]);
+    t.set(ox, 33 + oy, pal.outline); t.set(ox, 34 + oy, pal.outline); t.set(ox, 35 + oy, B4[3]);
     t.set(ox - 1, 32 + oy, B4[3]); t.set(ox + 1, 32 + oy, B4[3]);
   }
   // floating effects (sparkles, hearts, zzz) are added after any rotation
@@ -339,7 +341,7 @@
     point: { frames: 2, fps: 3, pose: f => ({ armB: 'point', armA: 'hip', eyes: f ? 'open' : 'wink', mouth: 'grin' }) },
     think: { frames: 4, fps: 3, pose: f => ({ armB: 'chin', armA: 'heart', eyes: 'open', mouth: 'flat', fx: [['q', 42, 2 + (f % 2), 'line']] }) },
     cheer: { frames: 4, fps: 8, pose: f => ({ bob: [0, -3, -4, -2][f], legA: f ? 'tuck' : 'stand', legB: f ? 'tuck' : 'stand', armA: 'up', armB: 'up', eyes: 'happy', mouth: 'open', fx: f % 2 ? [['spark', 4, 6, 'line'], ['spark2', 46, 10, '#ffffff']] : [['spark2', 6, 10, '#ffffff'], ['spark', 44, 4, 'line']] }) },
-    sit:   { frames: 4, fps: 3, footY: 46, pose: f => ({ legA: 'sit', legB: 'sit', armA: [[1, 5], [2, 9]], armB: [[1, 5], [2, 9]], bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open' }) },
+    sit:   { frames: 4, fps: 3, footY: 44, pose: f => ({ legA: 'sit', legB: 'sit', armA: [[1, 5], [2, 9]], armB: [[1, 5], [2, 9]], bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open' }) },
     sleep: { frames: 4, fps: 2, lie: true, pose: f => ({ eyes: 'closed', mouth: 'o', armA: 'down', armB: 'down', legB: 'apart', bob: 0, fx: [['z', 14, 27 - f, 'line'], ['zBig', 19, 20 - (f % 2), 'line']].slice(0, 1 + (f % 2)) }) },
     cry:   { frames: 4, fps: 5, pose: f => ({ armA: 'eyes', armB: 'eyes', eyes: 'cry', mouth: 'wail', bob: f % 2, tears: [[-9, 25 + (f % 2) * 3], [7, 26 + ((f + 1) % 2) * 3]] }) },
     sad:   { frames: 2, fps: 2, pose: f => ({ armA: 'down', armB: 'back', eyes: 'sad', mouth: 'frown', bob: 1, tears: f ? [[-8, 27]] : [] }) },
