@@ -6,7 +6,7 @@
   const ctx = cv.getContext('2d');
   const box = document.getElementById('stage-box');
   let pal = 'red';
-  let hair = 'layered';
+  let hair = 'long';
   let face = 'sparkle';
   let anim = 'idle', frame = 0, ft = 0;
   let showBase = true;
