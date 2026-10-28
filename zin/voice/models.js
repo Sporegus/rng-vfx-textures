@@ -29,6 +29,18 @@ const MINDS = {
   small: ['hf:Qwen/Qwen2.5-1.5B-Instruct-GGUF:Q4_K_M'],
 };
 
+// The natural voice (Orpheus TTS, 3B, about 2 GB) and its sound decoder (SNAC).
+// Several copies of the same model are listed in case one goes missing.
+const ORPHEUS = [
+  'hf:unsloth/orpheus-3b-0.1-ft-GGUF:Q4_K_M',
+  'hf:isaiahbjork/orpheus-3b-0.1-ft-Q4_K_M-GGUF/orpheus-3b-0.1-ft-q4_k_m.gguf',
+  'hf:lex-au/Orpheus-3b-FT-Q4_K_M.gguf/Orpheus-3b-FT-Q4_K_M.gguf',
+];
+const SNAC = [
+  'https://huggingface.co/onnx-community/snac_24khz-ONNX/resolve/main/onnx/decoder_model.onnx',
+  'https://huggingface.co/onnx-community/snac_24khz-ONNX/resolve/main/onnx/decoder_model_fp16.onnx',
+];
+
 const where = (root, key) => path.join(root, MODELS[key].file || MODELS[key].dir);
 const have = (root, key) => fs.existsSync(where(root, key));
 
@@ -82,4 +94,27 @@ async function ensure(root, key, onProgress, signal) {
   return target;
 }
 
-module.exports = { MODELS, MINDS, ensure, have, where };
+// makes sure the natural voice is on disk; returns { gguf, snac }
+async function ensureOrpheus(root, onProgress) {
+  const dir = path.join(root, 'orpheus');
+  fs.mkdirSync(dir, { recursive: true });
+  const snac = path.join(dir, 'snac_24khz_decoder.onnx');
+  if (!fs.existsSync(snac)) {
+    let err = null;
+    for (const url of SNAC) {
+      try { await download(url, snac + '.part', onProgress); fs.renameSync(snac + '.part', snac); err = null; break; }
+      catch (e) { err = e; fs.rmSync(snac + '.part', { force: true }); }
+    }
+    if (err) throw err;
+  }
+  const L = await import('node-llama-cpp');
+  let gguf = null, err = null;
+  for (const uri of ORPHEUS) {
+    try { gguf = await L.resolveModelFile(uri, { directory: dir, cli: false, onProgress: ({ downloadedSize, totalSize }) => onProgress && onProgress(downloadedSize, totalSize) }); break; }
+    catch (e) { err = e; }
+  }
+  if (!gguf) throw err || new Error('Could not download the natural voice');
+  return { gguf, snac };
+}
+
+module.exports = { MODELS, MINDS, ORPHEUS, SNAC, ensure, ensureOrpheus, have, where };

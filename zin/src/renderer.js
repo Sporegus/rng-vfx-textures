@@ -1355,7 +1355,11 @@
   // Zin's own voices (made to sound like a real person) and the expressive ones keep
   // their natural pitch; the pitch boost is for the stock steady voices
   const OWN = ['pixie'];
-  const pitch = () => (settings.cute && !EMOTIONAL.includes(settings.voiceName) && !OWN.includes(settings.voiceName) ? 1.1 : 1);
+  // the natural voices (Orpheus, on the graphics card)
+  const NATURAL = ['tara', 'leah', 'jess', 'mia', 'zoe'];
+  const pitch = () => (settings.cute && ![...EMOTIONAL, ...OWN, ...NATURAL].includes(settings.voiceName) ? 1.1 : 1);
+  // sound tags (<giggle>) are heard, not shown
+  const shownText = (t) => String(t).replace(/<[a-z]+>\s*/g, '').trim();
   const voiceOpts = (mood) => ({ voice: settings.voiceName, mood: mood || 'cute', speed: 1 / pitch(), speak: !!(settings.voice && voice.ready) });
 
   // how she feels saying something, from the words (the chat brain picks its own)
@@ -1447,6 +1451,8 @@
       voice.chats.set(id, {
         sentence(t, mood) {
           const from = shown.length ? shown.length + 1 : 0;
+          t = shownText(t);
+          if (!t) return;
           shown = shown ? shown + ' ' + t : t;
           if (z.hold) z.hold.until = 0;
           if (MOOD_ANIM[mood]) play(MOOD_ANIM[mood], 1400);
@@ -1551,9 +1557,9 @@
     }
     if (v === 'pick') {
       if (!voice.ready) return setupVoice();
-      const names = { pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
-      const n = await ask('Which voice? I\'ll say hi in it. ⭐ Pixie is my own smooth voice. 💖 ones are extra expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
-        ...(EMOTIONAL.includes(settings.voiceName) || OWN.includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
+      const names = { tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
+      const n = await ask('Which voice? I\'ll say hi in it. 🌟 ones are the most natural (they use your graphics card). ⭐ Pixie is my own quick voice. 💖 ones are expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
+        ...([...EMOTIONAL, ...OWN, ...NATURAL].includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
       if (n === '__back' || !n) return n && voiceMenu();
       settings = await api.setSettings(n === '__cute' ? { cute: !settings.cute } : { voiceName: n, voice: true });
       await say(pick(['Hiii! Is this one cute? 💕', 'Hey! How do I sound now?', 'Ta-da! New voice, who dis? ✨']), { ms: 3000 });
@@ -1567,6 +1573,10 @@
     switch (m.type) {
       case 'status':
         if (m.what === 'models') voice.have = m.have.voice;
+        if (m.what === 'voice' && m.state === 'slow') {
+          say(`My natural voice is a bit slow on this PC (${m.speed} of the ${m.need} sounds a second I need), so I might pause while I talk. Pixie is quicker! 🐢`, { ms: 8000 });
+          break;
+        }
         if (m.what === 'voice') {
           voice.ready = m.state === 'ready';
           if (voice.ready) { voice.have = true; voice.download = null; syncMic(); }

@@ -118,6 +118,21 @@ sentences it was never tuned on, graded by a second, independent speaker model:
 | Expressive (Pocket TTS) | – | 0.54 | 0.58 | 95% |
 | Stock Kokoro voice | 171 Hz | 0.89 | 0.55 | 98% |
 
+**Natural voices (Orpheus, needs a graphics card).** Tara, Leah, Jess, Mia and Zoe
+use Orpheus TTS, a 3B voice model that sounds far more natural and can giggle,
+laugh, sigh and gasp (the chat brain adds those where they fit). It runs on the
+graphics card through llama.cpp, needs about 2.5 GB of downloads, and has to make
+84 sound tokens a second to talk without pausing; an RTX 2070 or better should
+manage. Try them first with:
+
+```
+npm run voice-check
+```
+
+It downloads the models, measures your graphics card, and saves a sample of each
+voice to "Zin voice check" on your Desktop. Pick one under **Voice** in the tray.
+If a natural voice can't keep up on your PC, Zin says so; Pixie is the quick one.
+
 Moods (cute, happy, excited, sad, calm, confused, proud, pouty, shy, love) change
 how she says things: a little faster, higher and louder when excited, slower and
 softer when sad, quieter when shy. It stays one voice, so it's seamless. She

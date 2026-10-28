@@ -10,11 +10,13 @@ const { Mind } = require('./mind');
 const port = process.parentPort;
 const send = (m) => port.postMessage(m);
 let root = null, ears = null, mind = null, listening = false, chatModel = null;
-const mouths = {}; // 'emotional' and/or 'classic', loaded when first needed
+const mouths = {};
+let warnedSlow = false; // 'emotional' and/or 'classic', loaded when first needed
 // the mood clips ship with Zin; when packaged they sit outside the app archive so the voice engine can read them
 const unpacked = (d) => path.join(__dirname, d).replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 const EMOTIONS = unpacked('emotions'), STYLES = unpacked('styles');
-const kindOf = (voice) => (EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
+const { OrpheusMouth, VOICES: NATURAL, REAL_TIME } = require('./orpheus');
+const kindOf = (voice) => (NATURAL.includes(voice) ? 'natural' : EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
 const busy = {};
 
 // ---------------------------------------------------------------- asking the app for things
@@ -39,6 +41,11 @@ const host = {
 const progress = (what) => (done, total) => send({ type: 'progress', what, done, total });
 async function loadMouth(kind) {
   if (mouths[kind]) return mouths[kind];
+  if (kind === 'natural') {
+    const { gguf, snac } = await models.ensureOrpheus(root, progress('voice'));
+    mouths[kind] = await OrpheusMouth.load(gguf, snac);
+    return mouths[kind];
+  }
   const dir = await models.ensure(root, kind === 'emotional' ? 'voiceEmo' : 'voice', progress('voice'));
   mouths[kind] = new Mouth(dir, kind, kind === 'emotional' ? EMOTIONS : STYLES);
   return mouths[kind];
@@ -76,6 +83,8 @@ async function say(id, text, opts) {
   if (!mouth) return send({ type: 'said', id });
   await mouth.say(text, opts, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how }))
     .catch((e) => send({ type: 'error', what: 'speak', message: e.message }));
+  // the natural voice needs a fast enough graphics card; say so if it can't keep up
+  if (mouth.speed && mouth.speed < REAL_TIME * 0.85 && !warnedSlow) { warnedSlow = true; send({ type: 'status', what: 'voice', state: 'slow', speed: Math.round(mouth.speed), need: REAL_TIME }); }
   send({ type: 'said', id });
 }
 const hushAll = () => { for (const m of Object.values(mouths)) m.hush(); };

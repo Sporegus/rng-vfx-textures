@@ -37,10 +37,13 @@ window.ZinVoiceIO = (function () {
     const src = out.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = pitch;
-    // a short fade in and out so pieces join without clicks
-    const g = out.createGain(), at0 = Math.max(out.currentTime + 0.03, next), dur = samples.length / rate / pitch;
-    g.gain.setValueAtTime(0, at0); g.gain.linearRampToValueAtTime(gain, at0 + 0.008);
-    g.gain.setValueAtTime(gain, Math.max(at0 + 0.008, at0 + dur - 0.012)); g.gain.linearRampToValueAtTime(0, at0 + dur);
+    // a short fade in when speech starts, so it doesn't click; pieces that carry
+    // straight on from the last one join without one (the natural voice sends many small pieces)
+    const at0 = Math.max(out.currentTime + 0.03, next), dur = samples.length / rate / pitch;
+    const joined = next > 0 && at0 - next < 0.002;
+    const g = out.createGain();
+    if (joined) g.gain.setValueAtTime(gain, at0);
+    else { g.gain.setValueAtTime(0, at0); g.gain.linearRampToValueAtTime(gain, at0 + 0.008); }
     src.connect(g); g.connect(analyser);
     src.start(at0);
     next = at0 + dur;

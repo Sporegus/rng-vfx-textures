@@ -163,7 +163,7 @@ class Mouth {
   // Resolves when done (or when hush() is called).
   async say(text, { voice = 'heart', mood = 'cute', speed = 1 } = {}, onChunk) {
     const my = ++this.token;
-    const t = speakable(text);
+    const t = speakable(text).replace(/<[a-z]+>\s*/g, ''); // sound tags like <giggle> are for the natural voice
     if (!t) return;
     const d = this.kind === 'emotional' ? { speed: 1, pitch: 1, gain: 1 } : DELIVERY[mood] || DELIVERY.cute;
     const go = (samples) => { if (my !== this.token) return 0; if (onChunk && samples.length) onChunk(Float32Array.from(samples), { pitch: d.pitch, gain: d.gain }); return 1; };
