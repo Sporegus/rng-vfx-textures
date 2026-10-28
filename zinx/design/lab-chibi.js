@@ -141,7 +141,7 @@
     if (ft >= 1 / a.fps) { ft = 0; frame = a.loop ? frame + 1 : Math.min(frame + 1, a.frames - 1); }
     // walking and running actually move her, turning around at the edges
     if ((anim === 'walk' || anim === 'run') && !tele) {
-      const s = scaleAt(her.y), speed = (anim === 'run' ? 26 : 11) * s;
+      const s = scaleAt(her.y), speed = (anim === 'run' ? 30 : 14) * s;
       her.x += her.facing * speed * dt;
       const m = Z.W * s * 0.35;
       if (her.x > W - m) { her.x = W - m; her.facing = -1; }

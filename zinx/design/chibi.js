@@ -213,15 +213,33 @@
       for (let j = 0; j < PX_MOUTH.h; j++) for (let i = 0; i < PX_MOUTH.w; i++) if (rows[PX_MOUTH.y + j][PX_MOUTH.x + i] === 'N') rows[PX_MOUTH.y + j][PX_MOUTH.x + i] = 'S';
       mouth = PX_MOUTHS[mk] || MOUTHS[mk];
     }
+    // three-quarter turn toward the viewer's right: slide the eyes, blush and mouth
+    // over (the far eye a little less, and one column narrower)
+    if (p.turn) {
+      const feat = [];
+      for (let y = 16; y < 31; y++) for (let x = 17; x < 45; x++) {
+        const c = rows[y][x];
+        const inEye = y >= PX_EYE.y && y < PX_EYE.y + PX_EYE.h && ((x >= 19 && x <= 26) || (x >= 35 && x <= 42));
+        const inMouth = y >= PX_MOUTH.y && y < PX_MOUTH.y + PX_MOUTH.h && x >= 26 && x <= 35;
+        if ((inEye && 'OWij'.includes(c)) || (inMouth && c === 'N') || (c === 's' && y >= 24)) {
+          feat.push([x, y, c]); rows[y][x] = 'S';
+        }
+      }
+      for (const [x, y, c] of feat) {
+        if (x === 42 && y >= PX_EYE.y && y < PX_EYE.y + PX_EYE.h) continue;
+        const nx = x + (x > 31 ? 1 : 2);
+        if ('Ssp'.includes(rows[y][nx])) rows[y][nx] = c;
+      }
+    }
     const X0 = Math.round(tx(hx) * K) - 31, Y0 = Math.round(ty(hy + 23.2) * K) - 32;
     rows.forEach((r, j) => r.forEach((c, i) => { if (c !== '.') b.setP(X0 + i, Y0 + j, col[c]); }));
-    if (mouth) b.glyphP(X0 + 31 - Math.floor(mouth[0].length / 2), Y0 + PX_MOUTH.y, mouth, { M: pal.mouth, I: pal.mouthIn || pal.mouth, T: pal.cheek, W: '#ffffff' });
+    if (mouth) b.glyphP(X0 + 31 + (p.turn ? 2 : 0) - Math.floor(mouth[0].length / 2), Y0 + PX_MOUTH.y, mouth, { M: pal.mouth, I: pal.mouthIn || pal.mouth, T: pal.cheek, W: '#ffffff' });
   }
 
   // ---------------------------------------------------------------- skeleton presets
   // arm/leg presets are [elbow|knee, hand|ankle] offsets from the shoulder/hip
   const ARMS = {
-    down: [[2.0, 4.3], [3.7, 8.4]], out: [[3, 3], [6, 5]], wave1: [[4, -2], [8, -6]], wave2: [[4, -3], [6, -8]],
+    down: [[2.0, 4.3], [3.7, 8.4]], out: [[3, 3], [6, 5]], wave1: [[4, -1.5], [8.4, -4.6]], wave2: [[3.6, -2.6], [5.6, -7.6]],
     up: [[3, -4], [6, -8]], hip: [[4.7, 3.1], [2.3, 7.8]], chin: [[2, 4], [-1, -1]], eyes: [[2, 4], [-2, -4]],
     point: [[4, 1], [9, 0]], hold: [[2, 5], [6, 5]], swingF: [[2, 4], [4, 9]], swingB: [[-2, 4], [-4, 9]],
     flail: [[4, -3], [8, -6]], heart: [[2, 4], [-1, 2]], type: [[2, 5], [6, 4]], back: [[-1, 5], [-3, 9]],
@@ -266,7 +284,7 @@
     const drawLeg = (t, [hip, knee, ankle], tones, sgn) => {
       const thigh = [hip[0] + (knee[0] - hip[0]) * 0.45, hip[1] + (knee[1] - hip[1]) * 0.45];
       const calf = [knee[0] + (ankle[0] - knee[0]) * 0.3, knee[1] + (ankle[1] - knee[1]) * 0.3];
-      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.95, 2.0, 1.1, 1.3, 0.75], tones);
+      t.limb([hip, thigh, knee, calf, ankle], side ? [2.9, 2.3, 1.35, 1.65, 0.9] : [2.3, 1.85, 1.15, 1.3, 0.8], tones, side ? undefined : [-0.62, 0.62]);
       // foot: a little shoe, wider than the ankle, toes pointing out (forward in side view)
       // mirror-exact pixel for the left foot so both feet match
       const ax = side ? Math.round(ankle[0]) : sgn > 0 ? Math.floor(ankle[0]) : LW - 1 - Math.floor(LW - ankle[0]), ay = Math.round(ankle[1]);
@@ -287,9 +305,11 @@
       });
     };
     const standing = (k) => k === 'stand' || k === 'apart';
+    // arms in the suit, bare hands so they stand out against her red hair
+    const SK = pal.skin || pal.body, hand = [null, SK[1], SK[1], SK[2]];
     const drawArm = (t, arm, tones) => {
       t.limb(arm, side ? [1.55, 1.1, 0.95] : [1.3, 1.1, 1.0], tones);
-      t.limb([arm[2], arm[2]], side ? [1.2, 1.2] : [1.3, 1.3], tones);
+      t.limb([arm[2], arm[2]], side ? [1.2, 1.2] : [1.3, 1.3], tones === dark ? [null, SK[2], SK[2], SK[3]] : hand);
     };
 
     // far limbs in side view sit behind the body
@@ -310,9 +330,12 @@
       if (side) t.rect(ox + 1, 35 + oy, 4, 1, B4[3]);  // shadow under the bust
     });
     if (!side) {
-      // legs blend into the hips; a line only where the two legs meet
-      part(body, null, (t) => standing(p.legA) ? drawStandLeg(t, -1) : drawLeg(t, legA, B4, -1));
-      part(body, null, (t) => standing(p.legB) ? drawStandLeg(t, 1) : drawLeg(t, legB, B4, 1));
+      // legs blend into the hips. Turned (walking), the far leg (B) goes first in
+      // shadow and the near leg gets a line where it crosses in front of it.
+      const legs = [[legA, p.legA, -1, hipA], [legB, p.legB, 1, hipB]];
+      if (p.turn) legs.reverse();
+      legs.forEach(([lg, key, sg, hip], i) => part(body, p.turn && i ? pal.outline : null,
+        (t) => standing(key) ? drawStandLeg(t, sg) : drawLeg(t, lg, p.turn && !i ? dark : B4, sg), [[hip[0], hip[1], 2.8]]));
     }
     // bust: a soft shadow under each curve, a little shine on top, a cleavage line
     if (!side) {
@@ -355,10 +378,33 @@
   
 
   // ---------------------------------------------------------------- animations
+  // Walking and running, three-quarter view facing right: the lifted foot swings
+  // forward, the arms swing against the legs, and she rises as a leg passes under.
+  // Offsets are converted to each limb's mirrored preset space (A is the left limb).
+  function stride(f, n, run) {
+    const ph = (f / n) * Math.PI * 2;
+    const reach = run ? 1.1 : 0.6, lift = run ? 3.6 : 2.4, swing = run ? 2.0 : 1.3;
+    // u: -1 foot behind, +1 foot ahead; the foot is in the air while it swings forward
+    const leg = (s, u, air) => {
+      const up = air * lift, ax = u * reach + up * 0.35, kx = ax * 0.5 + up * 0.6;
+      return [[0.5 + s * kx, 5.4 - up * 0.5], [0.7 + s * ax, 10.6 - up]];
+    };
+    const arm = (s, u) => run
+      ? [[2.0 + s * u * swing * 0.4, 3.6], [2.4 + s * u * swing, 6.6 - Math.abs(u) * 0.8]]
+      : [[2.0 + s * u * swing * 0.35, 4.3], [3.4 + s * u * swing, 8.3 - Math.abs(u) * 0.5]];
+    const u = Math.sin(ph), c = Math.cos(ph);
+    return {
+      turn: 1, sway: run ? -1.2 : -0.6,
+      bob: Math.abs(c) > 0.6 ? -1 : 0,                 // highest as a leg passes under her
+      legA: leg(-1, u, Math.max(0, c)), legB: leg(1, -u, Math.max(0, -c)),
+      armA: arm(-1, -u), armB: arm(1, u),
+      mouth: run ? 'grin' : 'smile',
+    };
+  }
   const ANIMS = {
     idle:  { frames: 4, fps: 3, pose: f => ({ bob: f === 2 ? 1 : 0, eyes: f === 3 ? 'blink' : 'open', armA: 'down', armB: 'down', sway: [0, 0.4, 0, -0.4][f] }) },
-    walk:  { frames: 4, fps: 8, pose: f => ({ view: 'side', sway: [-1, -1.4, -1, -0.6][f], bob: f % 2 ? -1 : 0, legA: ['stepB', 'pass', 'stepF', 'stand'][f], legB: ['stepF', 'stand', 'stepB', 'pass'][f], armA: ['swingF', 'down', 'swingB', 'down'][f], armB: ['swingB', 'down', 'swingF', 'down'][f] }) },
-    run:   { frames: 4, fps: 12, pose: f => ({ view: 'side', sway: [-2, -2.6, -2, -1.6][f], dx: 1, bob: f % 2 ? -1 : 0, legA: ['runB', 'runUp', 'runF', 'stand'][f], legB: ['runF', 'stand', 'runB', 'runUp'][f], armA: f < 2 ? 'swingF' : 'swingB', armB: f < 2 ? [[-2, 3], [-1, 7]] : [[3, 3], [5, 5]], mouth: 'grin' }) },
+    walk:  { frames: 8, fps: 10, pose: f => stride(f, 8, false) },
+    run:   { frames: 8, fps: 14, pose: f => stride(f, 8, true) },
     wave:  { frames: 4, fps: 6, pose: f => ({ armB: f % 2 ? 'wave2' : 'wave1', armA: 'hip', eyes: 'happy', mouth: 'open' }) },
     talk:  { frames: 4, fps: 7, pose: f => ({ mouth: ['smile', 'open', 'smile', 'o'][f], armB: f % 2 ? 'hold' : 'down', armA: 'hip' }) },
     point: { frames: 2, fps: 3, pose: f => ({ armB: 'point', armA: 'hip', eyes: f ? 'open' : 'wink', mouth: 'grin' }) },
@@ -377,6 +423,29 @@
     angry: { frames: 2, fps: 6, pose: f => ({ armA: 'hip', armB: 'hip', eyes: 'angry', mouth: 'frown', dx: f ? 1 : 0, fx: [['bang', 44, 6, '#ffffff']] }) },
     dizzy: { frames: 4, fps: 6, pose: f => ({ eyes: 'x', mouth: 'wail', dx: [-1, 0, 1, 0][f], armA: 'out', armB: 'out', fx: [['spark2', 18 + f * 3, 2, '#ffe14d'], ['spark2', 34 - f * 3, 3, '#ffe14d']] }) },
   };
+  // Smoother motion: these animations get in-between frames, with limbs, bob and
+  // drift blended between key poses (faces and effects come from the nearer key).
+  const SMOOTH = { idle: 2, wave: 2, think: 2, cheer: 2, cry: 2, sad: 2, dance: 2, dangle: 2, fall: 2, land: 2, love: 2, angry: 2, dizzy: 2 };
+  const resolve = (v, table) => Array.isArray(v) ? v : table[v];
+  const mix = (a, b, t) => a.map((pt, i) => pt.map((x, j) => x + (b[i][j] - x) * t));
+  function blendPose(p0, p1, t) {
+    if (t === 0) return p0;
+    const out = Object.assign({}, t < 0.5 ? p0 : p1);
+    for (const [k, table, def] of [['armA', ARMS, 'down'], ['armB', ARMS, 'down'], ['legA', LEGS, 'stand'], ['legB', LEGS, 'stand']]) {
+      const a = p0[k] || def, b = p1[k] || def;
+      if (a !== b) out[k] = mix(resolve(a, table), resolve(b, table), t);
+    }
+    for (const k of ['bob', 'dx', 'sway']) out[k] = (p0[k] || 0) + ((p1[k] || 0) - (p0[k] || 0)) * t;
+    return out;
+  }
+  for (const [k, sub] of Object.entries(SMOOTH)) {
+    const a = ANIMS[k], keys = a.frames, pose = a.pose, loop = a.loop !== false;
+    a.frames = keys * sub; a.fps = a.fps * sub;
+    a.pose = (g) => {
+      const i = Math.floor(g / sub), j = loop ? (i + 1) % keys : Math.min(i + 1, keys - 1);
+      return blendPose(pose(i), pose(j), (g % sub) / sub);
+    };
+  }
   Object.keys(ANIMS).forEach(k => { const a = ANIMS[k]; if (a.loop === undefined) a.loop = true; a.footY = Math.round(ty((a.footY || GROUND) + 1) * K) - 1; });
 
   // ---------------------------------------------------------------- rendering
