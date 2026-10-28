@@ -571,19 +571,31 @@
     dizzy: { frames: 8, fps: 8, pose: f => ({ eyes: 'x', mouth: 'wail', dx: SIN(f, 8), bob: COS(f, 8) * 0.5, tails: -SIN(f, 8) * 1.5, armA: 'out', armB: 'out',
       fx: [0, 1, 2].map(k => { const a = (f / 8 + k / 3) * Math.PI * 2; return [Math.sin(a) > 0 ? 'star' : 'spark2', Math.round(26 + Math.cos(a) * 14), Math.round(19 + Math.sin(a) * 2.5), '#ffe14d']; }) }) },
   };
-  // Smoother motion: these animations get in-between frames, with limbs, bob and
-  // drift blended between key poses (faces and effects come from the nearer key).
-  const SMOOTH = { idle: 2, back: 2, wave: 2, point: 2, think: 2, cheer: 2, sit: 2, cry: 2, sad: 2, dance: 2, dangle: 2, land: 2, love: 2 };
+  // Smoother motion: every animation gets in-between frames (this many per key
+  // pose). Limbs, bob, drift, tails and head lag ease between the keys; floating
+  // effects and tears glide when both keys have the same ones nearby; faces come
+  // from the nearer key.
+  const SMOOTH = { idle: 4, back: 4, wave: 3, talk: 2, point: 3, think: 3, cheer: 3, sit: 3, sleep: 3, cry: 3, sad: 4, dance: 3, dangle: 3, fall: 2, land: 3, work: 2, love: 3, angry: 2, dizzy: 2 };
   const resolve = (v, table) => Array.isArray(v) ? v : table[v];
   const mix = (a, b, t) => a.map((pt, i) => pt.map((x, j) => x + (b[i][j] - x) * t));
+  const ease = (t) => t * t * (3 - 2 * t);
+  // glide a list of [name?, x, y, ...] items between keys, if they line up
+  const glide = (A, B, t, xi, yi) => {
+    if (!A || !B || A.length !== B.length) return t < 0.5 ? A : B;
+    if (A.some((a, i) => (xi && a[0] !== B[i][0]) || Math.abs(a[xi] - B[i][xi]) > 6 || Math.abs(a[yi] - B[i][yi]) > 6)) return t < 0.5 ? A : B;
+    return A.map((a, i) => { const o = a.slice(); o[xi] = Math.round(a[xi] + (B[i][xi] - a[xi]) * t); o[yi] = Math.round(a[yi] + (B[i][yi] - a[yi]) * t); return o; });
+  };
   function blendPose(p0, p1, t) {
     if (t === 0) return p0;
+    const e = ease(t);
     const out = Object.assign({}, t < 0.5 ? p0 : p1);
     for (const [k, table, def] of [['armA', ARMS, 'down'], ['armB', ARMS, 'down'], ['legA', LEGS, 'stand'], ['legB', LEGS, 'stand']]) {
       const a = p0[k] || def, b = p1[k] || def;
-      if (a !== b) out[k] = mix(resolve(a, table), resolve(b, table), t);
+      if (a !== b) out[k] = mix(resolve(a, table), resolve(b, table), e);
     }
-    for (const k of ['bob', 'dx', 'sway', 'tails', 'hdy']) out[k] = (p0[k] || 0) + ((p1[k] || 0) - (p0[k] || 0)) * t;
+    for (const k of ['bob', 'dx', 'sway', 'tails', 'hdy']) out[k] = (p0[k] || 0) + ((p1[k] || 0) - (p0[k] || 0)) * e;
+    out.fx = glide(p0.fx, p1.fx, t, 1, 2);
+    out.tears = glide(p0.tears, p1.tears, t, 0, 1);
     return out;
   }
   for (const [k, sub] of Object.entries(SMOOTH)) {
