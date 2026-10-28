@@ -476,10 +476,10 @@
         body.setP(X, Y, a); body.setP(2 * midX - 1 - X, Y, b);
         body.setP(X, Y - 1, pal.outline); body.setP(2 * midX - 1 - X, Y - 1, pal.outline);
       });
-      // the cleavage line runs two pixels further up between them
+      // the cleavage line runs a pixel further up between them
       let top = Infinity;
       for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) if (body.getP(midX, Y) === pal.outline) top = Math.min(top, Y);
-      for (let Y = top - 2; Y < top; Y++) { body.setP(midX - 1, Y, pal.outline); body.setP(midX, Y, pal.outline); }
+      for (let Y = top - 1; Y < top; Y++) { body.setP(midX - 1, Y, pal.outline); body.setP(midX, Y, pal.outline); }
       // suit lines carry on over the chest: an arc over the top of each breast and a
       // V neckline running down to the cleavage
       const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
