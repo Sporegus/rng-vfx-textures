@@ -449,29 +449,34 @@
 
     // the bust sits in front of her upper arms
     if (!back) {
-      // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
-      // shine up top, shadow underneath, and a dark outline round the bottom
-      // each breast is a little narrower than it is tall, so the pair sit close together
-      const R = 3.9, RX = 3.6, cyP = Math.round(ty(34.6 + oy) * K);   // sized so the U underneath is a smooth curve
-      const inB = (i, Y) => Math.hypot((i + 0.5 - RX) / RX, (Y + 0.5 - cyP) / R) <= 1;
-      for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * RX + 1; i++) {
+      // two breasts in real pixels (mirror-exact), teardrop shaped: the top slopes
+      // gently out of her chest and the bottom is full and round, with a dark outline
+      // round the bottom, a shine, and shadow underneath
+      const R = 3.9, RX = 3.6, RT = R * 1.7, cyP = Math.round(ty(34.6 + oy) * K);   // R/RX keep the U underneath smooth
+      const inB = (i, Y) => {
+        const nx = (i + 0.5 - RX) / RX, dy = Y + 0.5 - cyP;
+        if (dy >= 0) return Math.hypot(nx, dy / R) <= 1;
+        const ny = dy / RT, w = Math.sqrt(Math.max(0, 1 - ny * ny)) * (1 + 0.5 * ny);   // narrower toward the top
+        return Math.abs(nx + 0.35 * ny) <= w;                                            // and leaning in to the chest
+      };
+      for (let Y = Math.floor(cyP - RT); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * RX + 1; i++) {
         if (!inB(i, Y)) continue;
-        const X = midX + i, nx = (i + 0.5 - RX) / RX, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
+        const X = midX + i, nx = (i + 0.5 - RX) / RX, ny = (Y + 0.5 - cyP) / R;
         // the lowest pixel of each column, and the outermost pixels below the middle, are outline
         const c = (ny > 0.05 && (!inB(i, Y + 1) || !inB(i - 1, Y) || !inB(i + 1, Y))) ? pal.outline
-          : ny > 0.35 && r > 0.55 ? B4[3]
-          : ny < -0.1 && r < 0.6 && nx < 0.25 ? B4[1]
+          : ny > 0.3 && Math.hypot(nx, ny) > 0.5 ? B4[3]
+          : ny > -0.55 && ny < 0.1 && Math.abs(nx + 0.15) < 0.4 ? B4[1]
           : B4[2];
         body.setP(X, Y, c); body.setP(2 * midX - 1 - X, Y, c);
       }
-      // suit lines carry on over the chest: an arc over the top of each breast and a
-      // V neckline running down to the cleavage
+      // suit lines carry on over the chest: a line down the outer curve of each breast
+      // and a V neckline running down to the cleavage
       const glowP = (X, Y) => { if (suit.has(body.getP(X, Y))) { body.setP(X, Y, B4[0]); body.setP(2 * midX - 1 - X, Y, B4[0]); } };
-      for (let a = 200; a <= 335; a += 4) {
-        const t = a * Math.PI / 180, r = R - 1.6;
-        glowP(Math.round(midX + RX + Math.cos(t) * (RX - 1.4) - 0.5), Math.round(cyP + Math.sin(t) * r * 0.95 - 0.5));
+      for (let Y = Math.floor(cyP - RT * 0.75); Y <= cyP; Y++) {
+        let edge = -1; for (let i = 0; i < 2 * RX + 1; i++) if (inB(i, Y)) edge = i;
+        if (edge > 0) glowP(midX + edge - 1, Y);
       }
-      const neckTop = Math.round(cyP - R) - 3;
+      const neckTop = Math.round(cyP - RT) - 1;
       for (let k = 0; k <= 3; k++) glowP(midX + 3 - k, neckTop + k);
     }
     // props / effects
