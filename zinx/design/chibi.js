@@ -385,7 +385,7 @@
     };
     const i0 = (pts) => pts.slice(0, -1).concat([pts[pts.length - 1]]);
     // her front silhouette: half-width at each height, smoothed into an hourglass
-    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.9], [34.2, 5.3], [35.8, 4.4], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.5], [43.2, 5.15], [44.4, 5.15], [45.0, 4.95]];
+    const WAIST = [[29.6, 1.8], [30.4, 3.3], [31.4, 4.4], [32.6, 4.8], [34.2, 5.1], [35.8, 4.3], [37.2, 3.1], [38.6, 2.5], [40.2, 3.2], [41.8, 4.5], [43.2, 5.15], [44.4, 5.15], [45.0, 4.95]];
     // Catmull-Rom through [y, x] knots
     const profile = (k) => (y) => {
       const n = k.length;
@@ -451,7 +451,7 @@
     if (!back) {
       // two full, round breasts drawn in real pixels (mirror-exact): mid tone with a
       // shine up top, shadow underneath, and a dark outline round the bottom
-      const R = 4.6, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
+      const R = 4.1, cyP = Math.round(ty(34.6 + oy) * K) + 0.5;
       for (let Y = Math.floor(cyP - R); Y <= Math.ceil(cyP + R); Y++) for (let i = 0; i < 2 * R + 1; i++) {
         const X = midX + i, nx = (i + 0.5 - R) / R, ny = (Y + 0.5 - cyP) / R, r = Math.hypot(nx, ny);
         if (r > 1) continue;
