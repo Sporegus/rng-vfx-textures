@@ -19,3 +19,7 @@ The clips were trimmed, had pauses shortened, and were volume-normalized.
 | Mochi | p011 | cute (cuteness), happy (amusement), excited (amazement), sad (sadness), calm (serenity), confused (confusion), proud (pride), pouty (anger), shy (embarassment), love (adoration) |
 | Pixie | p062 | same |
 | Luna | p068 | same |
+
+**Pixie** (`voice/styles/pixie.bin`) is a Kokoro voice found by searching blends
+of Kokoro's own voices for the closest match to EARS speaker p062's recordings,
+so it is also covered by these terms.

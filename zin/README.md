@@ -87,30 +87,48 @@ Hey Zin, what's the weather tomorrow?  Zin, remind me at 5pm to call mom
 Zin… (she says "Yes?") …what time is it?
 ```
 
-She answers out loud, with feeling: excited when she finds something, sad when
-she can't, shy when you thank her, pouty when you throw her around. After she answers she keeps listening
+She answers out loud in her own voice, **Pixie**, with feeling: excited when she
+finds something, sad when she can't, shy when you thank her, pouty when you
+throw her around. After she answers she keeps listening
 for a few seconds so you can reply without saying her name again. Turn it on
 from **Voice & chat** in her menu or **Voice** in the tray. Other ways to talk:
 **Ctrl+Alt+V** listens once without her name (push to talk), and "stop talking"
 or "stop listening" do what they say.
 
-The first time, she downloads her ears and voice (about 580 MB, once). They are
+The first time, she downloads her ears and voice (about 830 MB, once). They are
 free, open models that run on your PC, so nothing you say is sent anywhere:
 
 | Part | Model | Notes |
 |---|---|---|
 | Notices talking | Silero VAD | Tiny; only listens for when speech starts and stops |
 | Ears | NVIDIA Parakeet TDT 0.6B (int8) | The most accurate one we tested; a 3 s request takes about 0.4 s. **Smaller speech model** in the tray switches to Moonshine tiny for slow PCs |
-| Emotional voice | Kyutai Pocket TTS | **Mochi, Pixie or Luna**, each in 10 moods: cute, happy, excited, sad, calm, confused, proud, pouty, shy, love. It copies the voice and mood of a short clip in `voice/emotions` |
-| Classic voice (optional) | Kokoro v1.0 | Six steady voices with no moods; quicker to start talking, so better on slow PCs. Downloaded (350 MB) only if you pick one |
+| Voice | Kokoro v1.0 | **Pixie**, Zin's own voice, plus six stock ones. Steady and quick to start talking |
+| Extra expressive voices (optional) | Kyutai Pocket TTS | **Sparkle, Mochi, Luna**: more feeling, but the voice drifts a little between sentences. Downloaded (98 MB) only if you pick one |
 
-She picks the mood from what she's saying ("Sorry, I couldn't find it" is sad,
-"All sorted!" is proud), and with the chat brain on, the chat brain chooses a
-mood for every sentence. Her animation follows the mood too.
+**Pixie** was made for Zin: a search over blends of Kokoro's 54 voices for the one
+that sounds most like a real speaker with a bright, cute voice (EARS speaker
+p062), scored by a speaker-identity model. On sentences it was never tuned on,
+graded by a second, independent speaker model:
 
-The emotion clips come from the EARS dataset, which is licensed for
-**non-commercial use only** (see `voice/emotions/LICENSE.md`). Zin can't be sold
-with them; to sell her, swap in recordings you own, or use the classic voices.
+| | Same person every sentence | Sounds like the real speaker | Words heard right |
+|---|---|---|---|
+| Pixie | 0.88 | 0.69 | 98% |
+| Expressive (Pocket TTS) | 0.54 | 0.58 | 95% |
+| Stock Kokoro voice | 0.89 | 0.55 | 98% |
+
+Moods (cute, happy, excited, sad, calm, confused, proud, pouty, shy, love) change
+how she says things: a little faster, higher and louder when excited, slower and
+softer when sad, quieter when shy. It stays one voice, so it's seamless. She
+picks the mood from what she's saying ("Sorry, I couldn't find it" is sad, "All
+sorted!" is proud); with the chat brain on, it chooses a mood for every
+sentence. Her animation follows the mood too. Voice files live in
+`voice/styles` (one 510 x 256 Kokoro voice each); add one and it appears as a
+voice of that name.
+
+Pixie and the expressive voices' mood clips come from the EARS dataset, which is
+licensed for **non-commercial use only** (see `voice/emotions/LICENSE.md`). Zin
+can't be sold with them; to sell her, use the stock voices or make a voice from
+recordings you own.
 
 While she listens, Windows shows its microphone icon in the taskbar. The sound
 stays in memory just long enough to be turned into text, and is never saved.
