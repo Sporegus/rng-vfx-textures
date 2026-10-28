@@ -256,13 +256,13 @@
     // front-view standing legs: straight inner edge with a thin gap, outer edge
     // tapering from the hip to a flat rounded foot, glowing line down each leg
     const drawStandLeg = (t, sgn) => {
-      const pts = [[2.05, 41.4], [4.9, 41.4], [5.35, 44.4], [5.05, 47.2], [4.6, 49.6], [4.1, 52.2], [3.95, 53.7], [3.3, 55], [2.3, 55], [2.05, 53.8]];
+      const pts = [[1.05, 41.4], [4.9, 41.4], [5.35, 44.4], [5.05, 47.2], [4.6, 49.6], [4.1, 52.2], [3.95, 53.7], [3.3, 55], [1.4, 55], [1.05, 53.8]];
       t.poly(pts.map(([x, y]) => [ox + sgn * x, y + Math.min(0, oy)]), (x, y) => {
         const d = Math.abs(x + 0.5 - ox);         // distance from her center line
         const outer = d > 4.05 + (y > 48 ? -0.6 : 0);
         if (y >= 54) return B4[3];                  // sole
-        if (sgn < 0) return outer ? B4[1] : d < 3 ? B4[1] : B4[2];
-        return outer ? B4[3] : d < 3 ? B4[1] : B4[2];
+        if (sgn < 0) return outer ? B4[1] : d < 2.2 ? B4[2] : B4[1];
+        return outer ? B4[3] : d < 2.2 ? B4[2] : B4[1];
       });
       for (const [x, y] of [[3, 45], [4, 46], [4, 47], [3, 49], [3, 50], [3, 52]]) t.set(ox + (sgn > 0 ? x : -x - 1), y + Math.min(0, oy), L);
     };
