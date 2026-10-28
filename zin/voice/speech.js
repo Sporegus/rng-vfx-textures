@@ -96,9 +96,11 @@ const DELIVERY = {
 // a mood also changes how fast she talks
 const PACE = { excited: 1.06, happy: 1.03, sad: 0.92, calm: 0.92, shy: 0.96 };
 
-// words written for reading that sound wrong spoken
+// words written for reading that sound wrong spoken (and words the voice
+// mispronounces, like "resume" and "Roblox": see pronounce.js)
+const { pronounce } = require('./pronounce');
 function speakable(text) {
-  return String(text)
+  return pronounce(String(text))
     .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '')
     .replace(/[›»→←↩⏱⏰…•·×]/g, (c) => (c === '…' ? '...' : c === '›' || c === '»' ? ', ' : ' '))
     .replace(/(\d)\s?°F/g, '$1 degrees').replace(/(\d)\s?°C?/g, '$1 degrees')
