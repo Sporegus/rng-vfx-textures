@@ -508,17 +508,7 @@
     if (side) {
       for (const l of SIDE_LINES) glow(body, l, false);
       glow(body, span(31.2, 41.4, (y) => sideBack(y) + 1.1), false, B4[0], true);         // down her back
-      // bum in profile: a round cheek with an outline along its underside and a shine on top
-      {
-        const cx = ox - 2.7 * 1.0, cy = 42.5 + oy;
-        body.each(cx - 3, cy - 3.5, cx + 3, cy + 3.5, (x, y) => {
-          const nx = (x + 0.5 - cx) / 2.1, ny = (y + 0.5 - cy) / 2.6, r = Math.hypot(nx, ny);
-          if (r > 1 || !suit.has(body.getP(Math.round(tx(x + 0.5) * K - 0.5), Math.round(ty(y + 0.5) * K - 0.5)))) return null;
-          if (r > 0.8 && ny > -0.1 && nx > -0.7) return pal.outline;
-          if (ny < -0.25 && r < 0.5) return B4[1];
-          return null;
-        });
-      }
+      glow(body, [[-4.3, 44.0], [-3.6, 44.7], [-2.8, 45.1]], false, pal.outline, true);   // fold under the bum
       limbGlow(body, legB, 0.5);
     } else {
       for (const l of back ? BACK_LINES : FRONT_LINES) glow(body, l, true);
