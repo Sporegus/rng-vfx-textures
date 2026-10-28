@@ -14,11 +14,11 @@ const mouths = {};
 let warnedSlow = false; // 'emotional' and/or 'classic', loaded when first needed
 // the mood clips ship with Zin; when packaged they sit outside the app archive so the voice engine can read them
 const unpacked = (d) => path.join(__dirname, d).replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
-const EMOTIONS = unpacked('emotions'), STYLES = unpacked('styles');
+const EMOTIONS = unpacked('emotions'), STYLES = unpacked('styles'), NOVA = unpacked('nova');
 const { OrpheusMouth, VOICES: NATURAL, REAL_TIME } = require('./orpheus');
 const { ElevenMouth } = require('./eleven');
 let elevenCreds = null;
-const kindOf = (voice) => (voice === 'eleven' ? 'eleven' : NATURAL.includes(voice) ? 'natural' : EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
+const kindOf = (voice) => (voice === 'nova' ? 'clone' : voice === 'eleven' ? 'eleven' : NATURAL.includes(voice) ? 'natural' : EMOTIONAL.includes(voice) ? 'emotional' : 'classic');
 const busy = {};
 
 // ---------------------------------------------------------------- asking the app for things
@@ -48,6 +48,12 @@ async function loadMouth(kind) {
     mouths[kind] = new ElevenMouth(elevenCreds);
     return mouths[kind];
   }
+  if (kind === 'clone') {
+    const dir = await models.ensure(root, 'clone', progress('voice'));
+    const vocoder = await models.ensure(root, 'vocos', progress('voice'));
+    mouths[kind] = new Mouth(dir, 'clone', { clips: NOVA, vocoder });
+    return mouths[kind];
+  }
   if (kind === 'natural') {
     const { gguf, snac } = await models.ensureOrpheus(root, progress('voice'));
     mouths[kind] = await OrpheusMouth.load(gguf, snac);
@@ -63,7 +69,7 @@ async function setupVoice(light, voice) {
     const vad = await models.ensure(root, 'vad', progress('listening'));
     const asr = await models.ensure(root, light ? 'earsLight' : 'ears', progress('ears'));
     // if the chosen voice can't load (ElevenLabs not set up, a missing download), start with Pixie
-    await loadMouth(kindOf(voice)).catch(async (e) => { send({ type: 'error', what: kindOf(voice) === 'eleven' ? 'eleven' : 'speak', message: e.message }); await loadMouth('classic'); });
+    await loadMouth(kindOf(voice)).catch(async (e) => { send({ type: 'error', what: kindOf(voice) === 'eleven' ? 'eleven' : 'speak', message: e.message }); await loadMouth('clone'); });
     send({ type: 'status', what: 'voice', state: 'loading' });
     ears = new Ears(vad, asr);
     send({ type: 'status', what: 'voice', state: 'ready' });
@@ -94,8 +100,8 @@ async function say(id, text, opts) {
       // ElevenLabs can fail (no internet, out of credits): say it with Pixie instead, and tell the page once
       if (mouth instanceof ElevenMouth) {
         send({ type: 'error', what: 'eleven', message: e.message });
-        const local = await mouthFor('pixie');
-        if (local) await local.say(text, { ...opts, voice: 'pixie' }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: local.sampleRate, ...how })).catch(() => {});
+        const local = await mouthFor('nova');
+        if (local) await local.say(text, { ...opts, voice: 'nova' }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: local.sampleRate, ...how })).catch(() => {});
       } else send({ type: 'error', what: 'speak', message: e.message });
     });
   // the natural voice needs a fast enough graphics card; say so if it can't keep up
@@ -129,7 +135,7 @@ port.on('message', async ({ data: m }) => {
   switch (m.type) {
     case 'setup':
       root = m.root; chatModel = m.chatModel || null; elevenCreds = m.eleven || null;
-      send({ type: 'status', what: 'models', have: { voice: (models.have(root, 'voiceEmo') || models.have(root, 'voice')) && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight')) } });
+      send({ type: 'status', what: 'models', have: { voice: ((models.have(root, 'clone') && models.have(root, 'vocos')) || models.have(root, 'voiceEmo') || models.have(root, 'voice')) && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight')) } });
       if (m.voice) setupVoice(m.light, m.voiceName);
       if (m.chat) setupMind();
       break;

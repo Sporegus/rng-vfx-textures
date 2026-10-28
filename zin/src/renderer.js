@@ -1354,7 +1354,7 @@
   const EMOTIONAL = ['mochi', 'sparkle', 'luna'];
   // Zin's own voices (made to sound like a real person) and the expressive ones keep
   // their natural pitch; the pitch boost is for the stock steady voices
-  const OWN = ['pixie'];
+  const OWN = ['nova', 'pixie'];
   // the natural voices (Orpheus, on the graphics card)
   const NATURAL = ['tara', 'leah', 'jess', 'mia', 'zoe'];
   const pitch = () => (settings.cute && ![...EMOTIONAL, ...OWN, ...NATURAL, 'eleven'].includes(settings.voiceName) ? 1.1 : 1);
@@ -1519,7 +1519,7 @@
   async function setupVoice() {
     if (!voice.service) return say('My voice only works in the app, not in this demo. 🎙️');
     if (voice.ready) { settings = await api.setSettings({ voice: true, listen: true }); syncMic(); return say('I\'m all ears! Say "Zin" and then what you need. 🎙️', { ms: 5000 }); }
-    const v = voice.have ? 'go' : await ask('Want me to talk and listen? I need to download my voice and ears first (about 830 MB, one time). It all runs on your PC, so nothing you say leaves it.', [
+    const v = voice.have ? 'go' : await ask('Want me to talk and listen? I need to download my voice and ears first (about 650 MB, one time). It all runs on your PC, so nothing you say leaves it.', [
       { icon: '🎙️', label: 'Yes, download', value: 'go', primary: true }, { label: 'Not now', value: 'no', ghost: true }]);
     settings = await api.setSettings({ voiceOffered: true });
     if (v !== 'go') return v && say('Okay! You can turn it on any time in Voice & chat.', { ms: 3500 });
@@ -1583,8 +1583,8 @@
     }
     if (v === 'pick') {
       if (!voice.ready) return setupVoice();
-      const names = { ...(settings.elevenReady ? { eleven: '🎤 My ElevenLabs voice' } : {}), tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', pixie: '⭐ Pixie', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede', nova: 'Nova' };
-      const n = await ask('Which voice? I\'ll say hi in it. 🌟 ones are the most natural (they use your graphics card). ⭐ Pixie is my own quick voice. 💖 ones are expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
+      const names = { nova: '⭐ Nova', ...(settings.elevenReady ? { eleven: '🎤 My ElevenLabs voice' } : {}), tara: '🌟 Tara', leah: '🌟 Leah', jess: '🌟 Jess', mia: '🌟 Mia', zoe: '🌟 Zoe', sparkle: '💖 Sparkle', mochi: '💖 Mochi', luna: '💖 Luna', heart: 'Heart', bella: 'Bella', nicole: 'Nicole', sky: 'Sky', aoede: 'Aoede' };
+      const n = await ask('Which voice? I\'ll say hi in it. 🌟 ones are the most natural (they use your graphics card). ⭐ Nova is my own voice. 💖 ones are expressive but less steady.', [...Object.entries(names).map(([k, l]) => ({ label: l, value: k, on: settings.voiceName === k })),
         { label: settings.elevenReady ? 'Change ElevenLabs voice…' : '🎤 Use my ElevenLabs voice…', value: '__eleven' },
         ...([...EMOTIONAL, ...OWN, ...NATURAL, 'eleven'].includes(settings.voiceName) ? [] : [{ label: settings.cute ? 'Normal pitch' : 'Cuter pitch', value: '__cute' }]), back], { cols: 3 });
       if (n === '__back' || !n) return n && voiceMenu();
@@ -1602,7 +1602,7 @@
       case 'status':
         if (m.what === 'models') voice.have = m.have.voice;
         if (m.what === 'voice' && m.state === 'slow') {
-          say(`My natural voice is a bit slow on this PC (${m.speed} of the ${m.need} sounds a second I need), so I might pause while I talk. Pixie is quicker! 🐢`, { ms: 8000 });
+          say(`My natural voice is a bit slow on this PC (${m.speed} of the ${m.need} sounds a second I need), so I might pause while I talk. Nova is quicker! 🐢`, { ms: 8000 });
           break;
         }
         if (m.what === 'voice') {

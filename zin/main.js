@@ -14,8 +14,8 @@ const DEFAULTS = {
   skin: 'holo', hat: 'none', size: 3, sound: true,
   wander: true, followWindows: true, startWithWindows: false, introDone: false,
   // voice: talk out loud, listen for "Zin", which voice, a little higher pitch, the smaller speech model
-  // (pixie is Zin's own smooth voice; sparkle, mochi and luna are extra expressive; heart, bella... stock ones)
-  voice: false, listen: false, voiceName: 'pixie', cute: true, earsLight: false, voiceOffered: false,
+  // (nova is Zin's own voice; sparkle, mochi and luna are extra expressive; heart, bella... stock ones)
+  voice: false, listen: false, voiceName: 'nova', cute: true, earsLight: false, voiceOffered: false,
   // chat: the local AI model for conversation; what she remembers about you
   // chatModel: your own model instead (a .gguf file or an hf: name), for tinkerers
   chat: false, chatModel: null, memory: [], userName: null, city: null, units: null,
@@ -134,17 +134,17 @@ function buildTrayMenu() {
       check('Listen for "Zin"', 'listen'),
       { label: 'Push to talk', accelerator: 'Ctrl+Alt+V', click: () => send('ptt') },
       { type: 'separator' },
+      radio('Nova (Zin\'s voice, free)', 'voiceName', 'nova'),
+      { type: 'separator' },
       { label: 'My ElevenLabs voice (online)', type: 'radio', checked: settings.voiceName === 'eleven', enabled: !!settings.elevenReady, click: () => saveSettings({ voiceName: 'eleven' }) },
       { label: settings.elevenReady ? 'Change my ElevenLabs voice…' : 'Set up my ElevenLabs voice…', click: () => { if (!win.isVisible()) toggleVisible(); send('eleven-setup'); } },
       { type: 'separator' },
       { label: 'Natural (needs a graphics card, 2.5 GB)', enabled: false },
       ...['tara', 'leah', 'jess', 'mia', 'zoe'].map(k => radio(k[0].toUpperCase() + k.slice(1), 'voiceName', k)),
-      { label: 'Zin\'s own', enabled: false },
-      radio('Pixie (smooth, quick)', 'voiceName', 'pixie'),
       { label: 'Extra expressive (less steady)', enabled: false },
       ...[['sparkle', 'Sparkle (bright, playful)'], ['mochi', 'Mochi (sweet, bubbly)'], ['luna', 'Luna (soft, gentle)']].map(([k, l]) => radio(l, 'voiceName', k)),
       { label: 'Other smooth voices', enabled: false },
-      ...[['heart', 'Heart (sweet)'], ['bella', 'Bella (bright)'], ['nicole', 'Nicole (soft)'], ['sky', 'Sky (airy)'], ['aoede', 'Aoede (warm)'], ['nova', 'Nova (clear)']].map(([k, l]) => radio(l, 'voiceName', k)),
+      ...[['heart', 'Heart (sweet)'], ['bella', 'Bella (bright)'], ['nicole', 'Nicole (soft)'], ['sky', 'Sky (airy)'], ['aoede', 'Aoede (warm)']].map(([k, l]) => radio(l, 'voiceName', k)),
       check('Higher, cuter pitch (other smooth voices)', 'cute'),
       { type: 'separator' },
       check('Smaller speech model (for slower PCs)', 'earsLight'),

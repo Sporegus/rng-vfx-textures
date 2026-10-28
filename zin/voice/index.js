@@ -65,7 +65,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
     if (proc) proc.postMessage({ type: 'eleven', creds: eleven() });
     return { ok: true };
   });
-  ipcMain.handle('eleven:forget', () => { fs.rmSync(keyFile, { force: true }); keyCache = null; saveSettings({ elevenReady: false, voiceName: 'pixie' }); if (proc) proc.postMessage({ type: 'eleven', creds: null }); return { ok: true }; });
+  ipcMain.handle('eleven:forget', () => { fs.rmSync(keyFile, { force: true }); keyCache = null; saveSettings({ elevenReady: false, voiceName: 'nova' }); if (proc) proc.postMessage({ type: 'eleven', creds: null }); return { ok: true }; });
 
   function start() {
     proc = utilityProcess.fork(path.join(__dirname, 'service.js'), [], { serviceName: 'Zin voice', stdio: 'ignore' });

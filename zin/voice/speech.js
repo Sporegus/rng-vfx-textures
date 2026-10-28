@@ -131,11 +131,21 @@ function customVoices(dir, stylesDir) {
 }
 
 class Mouth {
-  // dir: the Kokoro folder (steady) or the Pocket TTS folder (expressive);
-  // extra: the expressive clips folder, or the folder of Zin's own steady voices
+  // dir: the Kokoro folder (steady), the Pocket TTS folder (expressive) or the
+  // ZipVoice folder (clone); extra: the expressive clips folder, the folder of Zin's
+  // own steady voices, or for a clone { clips: her clips folder, vocoder: vocos file }
   constructor(dir, kind = 'classic', extra = null) {
     const f = (n) => path.join(dir, n);
     this.kind = kind;
+    if (kind === 'clone') {
+      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens: f('tokens.txt'), encoder: f('encoder.int8.onnx'), decoder: f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data') }, numThreads: threads(), debug: 0 }, maxNumSentences: 1 });
+      this.sampleRate = this.tts.sampleRate;
+      this.cloneDir = extra.clips;
+      this.lines = JSON.parse(fs.readFileSync(path.join(extra.clips, 'lines.json'), 'utf8'));
+      this.clips = {};
+      this.token = 0;
+      return;
+    }
     const voicesFile = kind === 'emotional' ? null : customVoices(dir, extra);
     this.tts = new so.OfflineTts(kind === 'emotional'
       ? { model: { pocket: { lmFlow: f('lm_flow.int8.onnx'), lmMain: f('lm_main.int8.onnx'), encoder: f('encoder.onnx'), decoder: f('decoder.int8.onnx'), textConditioner: f('text_conditioner.onnx'), vocabJson: f('vocab.json'), tokenScoresJson: f('token_scores.json'), voiceEmbeddingCacheCapacity: 40 }, numThreads: threads(), debug: 0 }, maxNumSentences: 1 }
@@ -144,6 +154,13 @@ class Mouth {
     this.emotionsDir = kind === 'emotional' ? extra : null;
     this.clips = {};
     this.token = 0;
+  }
+
+  // a clone's clip for this mood (and the words said in it)
+  cloneClip(mood) {
+    const m = this.lines[mood] ? mood : 'cute';
+    if (!this.clips[m]) this.clips[m] = { wave: so.readWave(path.join(this.cloneDir, m + '.wav'), false), text: this.lines[m] };
+    return this.clips[m];
   }
 
   clip(voice, mood) {
@@ -165,8 +182,19 @@ class Mouth {
     const my = ++this.token;
     const t = speakable(text).replace(/<[a-z]+>\s*/g, ''); // sound tags like <giggle> are for the natural voice
     if (!t) return;
-    const d = this.kind === 'emotional' ? { speed: 1, pitch: 1, gain: 1 } : DELIVERY[mood] || DELIVERY.cute;
+    const d = this.kind !== 'classic' ? { speed: 1, pitch: 1, gain: 1 } : DELIVERY[mood] || DELIVERY.cute;
     const go = (samples) => { if (my !== this.token) return 0; if (onChunk && samples.length) onChunk(Float32Array.from(samples), { pitch: d.pitch, gain: d.gain }); return 1; };
+    if (this.kind === 'clone') {
+      // the clip for her mood sets both her voice and how she feels; each sentence
+      // arrives as soon as it's made, so she starts talking after the first one
+      const c = this.cloneClip(mood);
+      await this.tts.generateAsync({
+        text: unstretch(t), enableExternalBuffer: false,
+        generationConfig: new so.GenerationConfig({ speed, referenceAudio: c.wave.samples, referenceSampleRate: c.wave.sampleRate, referenceText: c.text, numSteps: 4, extra: { min_char_in_sentence: 10 } }),
+        onProgress: ({ samples }) => go(samples),
+      });
+      return;
+    }
     if (this.kind !== 'emotional') {
       // played back d.pitch times faster, so say it that much slower to keep the pace
       await this.tts.generateAsync({ text: t, sid: VOICES[voice] ?? VOICES.heart, speed: speed * (BASE_SPEED[voice] || 1) * d.speed / d.pitch, enableExternalBuffer: false, onProgress: ({ samples }) => go(samples) });

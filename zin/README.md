@@ -87,7 +87,7 @@ Hey Zin, what's the weather tomorrow?  Zin, remind me at 5pm to call mom
 Zin… (she says "Yes?") …what time is it?
 ```
 
-She answers out loud in her own voice, **Pixie**, with feeling: excited when she
+She answers out loud in her own voice, **Nova**, with feeling: excited when she
 finds something, sad when she can't, shy when you thank her, pouty when you
 throw her around. After she answers she keeps listening
 for a few seconds so you can reply without saying her name again. Turn it on
@@ -95,14 +95,15 @@ from **Voice & chat** in her menu or **Voice** in the tray. Other ways to talk:
 **Ctrl+Alt+V** listens once without her name (push to talk), and "stop talking"
 or "stop listening" do what they say.
 
-The first time, she downloads her ears and voice (about 830 MB, once). They are
+The first time, she downloads her ears and voice (about 650 MB, once). They are
 free, open models that run on your PC, so nothing you say is sent anywhere:
 
 | Part | Model | Notes |
 |---|---|---|
 | Notices talking | Silero VAD | Tiny; only listens for when speech starts and stops |
 | Ears | NVIDIA Parakeet TDT 0.6B (int8) | The most accurate one we tested; a 3 s request takes about 0.4 s. **Smaller speech model** in the tray switches to Moonshine tiny for slow PCs |
-| Voice | Kokoro v1.0 | **Pixie**, Zin's own voice, plus six stock ones. Steady and quick to start talking |
+| Voice | ZipVoice (distilled, int8) + Vocos | **Nova**, Zin's own voice: it copies the voice and mood of the clips in `voice/nova` (a voice made on ElevenLabs), free and offline. About 1 s to start talking on a typical PC |
+| Other voices (optional) | Kokoro v1.0 | Six steady stock voices; downloaded (350 MB) only if you pick one |
 | Extra expressive voices (optional) | Kyutai Pocket TTS | **Sparkle, Mochi, Luna**: more feeling, but the voice drifts a little between sentences. Downloaded (98 MB) only if you pick one |
 
 **Pixie** was made for Zin: a search over blends of Kokoro's 54 voices for the one

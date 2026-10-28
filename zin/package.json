@@ -45,7 +45,8 @@
       "node_modules/sherpa-onnx-*/**",
       "node_modules/node-llama-cpp/**",
       "node_modules/@node-llama-cpp/**",
-      "voice/emotions/**"
+      "voice/emotions/**",
+      "voice/nova/**"
     ]
   },
   "dependencies": {
