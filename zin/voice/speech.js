@@ -83,6 +83,8 @@ const MOODS = ['cute', 'happy', 'excited', 'sad', 'calm', 'confused', 'proud', '
 // voices take over unused slots at the end (see customVoices)
 const VOICES = { heart: 3, bella: 2, nicole: 6, sky: 10, aoede: 1, nova: 7, jessica: 4, kore: 5 };
 const CUSTOM_SLOTS = [53, 52, 51, 50];
+// Zin's own voices were tuned at a livelier pace than Kokoro's default
+const BASE_SPEED = { pixie: 1.1 };
 // how each mood is delivered by a steady voice: pace, pitch (played back higher or
 // lower) and loudness. Small changes, so it stays the same voice.
 const DELIVERY = {
@@ -167,7 +169,7 @@ class Mouth {
     const go = (samples) => { if (my !== this.token) return 0; if (onChunk && samples.length) onChunk(Float32Array.from(samples), { pitch: d.pitch, gain: d.gain }); return 1; };
     if (this.kind !== 'emotional') {
       // played back d.pitch times faster, so say it that much slower to keep the pace
-      await this.tts.generateAsync({ text: t, sid: VOICES[voice] ?? VOICES.heart, speed: speed * d.speed / d.pitch, enableExternalBuffer: false, onProgress: ({ samples }) => go(samples) });
+      await this.tts.generateAsync({ text: t, sid: VOICES[voice] ?? VOICES.heart, speed: speed * (BASE_SPEED[voice] || 1) * d.speed / d.pitch, enableExternalBuffer: false, onProgress: ({ samples }) => go(samples) });
       return;
     }
     const ref = this.clip(voice, mood);
