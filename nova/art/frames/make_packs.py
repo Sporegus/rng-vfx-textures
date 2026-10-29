@@ -1,7 +1,7 @@
 # Turns Nova's animation sheets (from the artist) into frame packs the app plays.
 #   python3 make_packs.py        -> src/frames/<pack>/NN.png and src/frames/packs.js
 # Each sheet is cut by sheets.py. Frames are sized so she's the same size on every sheet
-# (her walk sets the size: 74 sprite units from halo to soles; SIZE corrects sheets the artist
+# (her idle sets the size: 74 sprite units from halo to soles; SIZE corrects sheets the artist
 # drew bigger or smaller) and placed by her hips (across) and the ground line (down).
 # Frames face right; the app mirrors them when she faces left.
 import json, os
@@ -14,16 +14,18 @@ OUT = os.path.join(HERE, '..', '..', 'src', 'frames')
 HEIGHT = 74              # her standing height in sprite units, as in cartoon.js
 GROUND, CENTRE = 78, 24  # where her feet and hips go in the 48 x 80 sprite box
 
-# how big each sheet draws her, compared with the walk sheet (bigger number = drawn bigger)
-SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'sleep': 1.6,
-        # standing sheets: sized so her body (halo to soles, not the marks around her) is as tall as in her walk
-        'idle': 'stand', 'talk': 'stand', 'wave': 'stand', 'think': 'stand', 'point': 'stand', 'typing': 'stand',
-        # sitting: as big as in her idle sheet, by the size of her crop top
-        'sit': ('like', 'idle'),
-        'paint': ('like', 'idle'), 'clean': ('like', 'idle'), 'carry': 'stand', 'search': ('like', 'idle'),
-        'delete1': ('stand', [0, 1, 2, 3]), 'delete2': ('stand', [2, 3]),   # (by her standing frames)
-        'warp': ('stand', [0]),
-        'shrug': 'stand', 'angry': 'stand', 'shy': 'stand', 'dance': 'stand', 'dizzy': ('like', 'idle'), 'cheer': ('like', 'idle')}
+# how big each sheet draws her, measured against her idle (so she's the same size in every animation):
+#   ('height', frames): her body height (halo to soles) in those frames, where she stands upright
+#   ('top', frames): the width of her crop top in those frames, for sheets where she never stands
+#   ('fixed', ratio): set by eye
+#   (None = all frames)
+SIZE = {'idle': ('height', None), 'talk': ('height', None), 'wave': ('height', None), 'think': ('height', None),
+        'point': ('height', None), 'typing': ('height', None), 'shrug': ('height', None), 'angry': ('height', None),
+        'shy': ('height', None), 'carry': ('height', None), 'dizzy': ('height', None), 'clean': ('height', None),
+        'cheer': ('height', [3]), 'search': ('height', [0, 1, 4]), 'paint': ('height', [3]),
+        'delete1': ('height', None), 'delete2': ('height', [2, 3]), 'warp': ('height', [0, 1, 10]),
+        'dance': ('top', [1, 2, 3, 6, 7]), 'sit': ('top', None), 'bored': ('top', None), 'sleep': ('fixed', 1.16),
+        'drag': ('top', [1, 2]), 'jump': ('fixed', 0.7)}   # (jump, sleep: she's never upright; matched to idle by her head and halo)
 ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]]}   # (its title badge touches a frame)
 FILE = {'delete1': 'delete', 'delete2': 'delete'}   # sheets cut from the same picture
 BURST = dict(sheet='delete2', over=2, boxes=[(1015, 512, 1276, 1000)], keep=[])
@@ -60,7 +62,6 @@ SEAT = 46   # where the ledge she sits on is in the sprite box (the window's top
 #   stride: sprite units she travels per cycle, so her feet stay planted;
 #   anchor: 'ground' (as drawn on the sheet's ground line) or 'feet' (her lowest point on the ground,
 #   for frames whose height comes from the app, like being in the air)
-# (no walk or run animations. The walk sheet is still cut, as the size reference for the others)
 PACKS = {
   'jumpstart': dict(sheet='jump', frames=[0, 1], durations=[150, 90], loop=False),
   'jump':      dict(sheet='jump', frames=[2, 3], fps=4, loop=False, anchor='feet'),
@@ -125,7 +126,7 @@ def grip(a):
 
 def build(write=True):
     cuts = {}
-    sheets = {p['sheet'] for p in PACKS.values()} | {fi[0] for p in PACKS.values() for fi in p['frames'] if isinstance(fi, tuple)} | {'walk', 'idle'}
+    sheets = {p['sheet'] for p in PACKS.values()} | {fi[0] for p in PACKS.values() for fi in p['frames'] if isinstance(fi, tuple)} | {'idle'}
     for sh in sorted(sheets):
         if sh in CELLS: cuts[sh] = cut_cells(os.path.join(HERE, sh + '-sheet.png'), **CELLS[sh]); continue
         cuts[sh] = cut_sheet(os.path.join(HERE, FILE.get(sh, sh) + '-sheet.png'), erase=ERASE.get(sh, ()), **CUT.get(sh, {}))
@@ -133,18 +134,12 @@ def build(write=True):
     bs = BURST['sheet']; base = cuts[bs][BURST['over']]
     burst = cut_region(os.path.join(HERE, FILE.get(bs, bs) + '-sheet.png'), BURST['boxes'], base['top'] + base['ground'], keep=BURST['keep'])
     cuts[bs] = {**dict(enumerate(cuts[bs])), 'burst': compose(base, burst)}
-    walk = cuts['walk']
-    upx_walk = HEIGHT / max(f['ground'] for f in walk)             # sprite units per walk-sheet px
-    walk_h = max(f['ground'] for f in walk)
-    for sh, v in list(SIZE.items()):
-        if v == 'stand': SIZE[sh] = float(np.median([body_height(f) for f in cuts[sh]])) / walk_h
-    for sh, v in list(SIZE.items()):
-        if isinstance(v, tuple) and v[0] == 'stand': SIZE[sh] = float(np.median([body_height(cuts[sh][k]) for k in v[1]])) / walk_h
-    for sh, v in list(SIZE.items()):
-        if isinstance(v, tuple):
-            ref = v[1]; fs = lambda k: [f for f in (cuts[k].values() if isinstance(cuts[k], dict) else cuts[k])]
-            ratio = np.median([top_width(f['rgba']) for f in fs(sh)]) / np.median([top_width(f['rgba']) for f in fs(ref)])
-            SIZE[sh] = SIZE[ref] * float(ratio)
+    idle_h = float(np.median([body_height(f) for f in cuts['idle']])); idle_t = float(np.median([top_width(f['rgba']) for f in cuts['idle']]))
+    upx_ref = HEIGHT / idle_h                                     # sprite units per idle-sheet px: her idle is HEIGHT tall
+    for sh, (how, ks) in list(SIZE.items()):
+        if how == 'fixed': SIZE[sh] = ks; continue
+        fs = [cuts[sh][k] for k in (ks if ks is not None else range(len([f for f in cuts[sh] if not isinstance(f, str)])))]
+        SIZE[sh] = float(np.median([body_height(f) for f in fs])) / idle_h if how == 'height' else float(np.median([top_width(f['rgba']) for f in fs])) / idle_t
     print('sizes', {k: round(v, 2) for k, v in SIZE.items()})
     packs = {}
     for name, p in PACKS.items():
@@ -152,7 +147,7 @@ def build(write=True):
         os.makedirs(os.path.join(OUT, name), exist_ok=True)
         for i, fi in enumerate(p['frames']):
             sh, fi = fi if isinstance(fi, tuple) else (p['sheet'], fi)
-            upx = upx_walk / SIZE[sh]; src = cuts[sh]
+            upx = upx_ref / SIZE[sh]; src = cuts[sh]
             if i in p.get('match', ()):   # sized to the median height of the pack's other standing frames on its sheet
                 others = [src[k] for (s2, k) in p['frames'] if s2 == sh and k != fi]
                 upx *= float(np.median([body_height(o) for o in others])) / body_height(src[fi])
