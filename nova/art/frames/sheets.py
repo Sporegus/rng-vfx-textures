@@ -33,13 +33,14 @@ def remove_ledge(A, bg, rows):
     lonely = band & (A.sum(-1) < 300) & ~ndi.binary_dilation(hers, iterations=5)
     A[ndi.binary_dilation(lonely, iterations=1) & band] = bg
 
-def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None, drop=()):
+def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None, drop=(), keep=()):
     """erase: polygons (sheet px) painted over with the background first, for a title touching a frame.
     band: (top, bottom) rows holding the frames (between the header and the captions).
     ground: 'line' (a drawn ground line under each frame) or 'feet' (none: her lowest point is the ground).
     parts: keep small separate bits (motion lines, sparkles) with the nearest frame.
     ledge: rows of a drawn ledge to remove (she sits on it); each frame's 'seat' is its top.
     drop: more boxes (x0, y0, x1, y1) whose contents are left out: titles, notes, number circles
+    keep: boxes whose contents are never dropped (something of hers inside a drop box)
     parts_above: only keep small bits higher than this share of the frame (the artist's notes sit low)
     nframes: frames per row; frames drawn touching are split where they're thinnest
     nrows: how many rows of frames (the lowest lines found; a row of black clothes can look like one too)"""
@@ -68,7 +69,8 @@ def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', p
         for i, (ys, xs) in enumerate(objs):
             if sizes[i] < 30: continue
             if xs.stop <= logo[2] and ys.stop <= logo[3]: continue                  # the NOVA logo and title badge
-            if any(xs.start >= b[0] and ys.start >= b[1] and xs.stop <= b[2] and ys.stop <= b[3] for b in drop): continue
+            inside = lambda bs: any(xs.start >= b[0] and ys.start >= b[1] and xs.stop <= b[2] and ys.stop <= b[3] for b in bs)
+            if inside(drop) and not inside(keep): continue
             if r and ys.stop <= top + 45: continue                                   # labels under the row above
             ok.append(i)
         big = max(sizes[i] for i in ok)
@@ -121,7 +123,7 @@ def clean(A, dist, keep, gy, ground_y):
     dout = ndi.distance_transform_edt(~body)
     rgb[(dout > 0) & (dout <= 2.6)] = INK
     alpha = np.maximum(alpha, np.clip(2.6 - dout + 0.5, 0, 1) * (dout > 0))
-    return dict(rgba=np.dstack([rgb, alpha * 255]).astype(np.uint8), ground=(ground_y - y0) + 4, top=y0 - 4)
+    return dict(rgba=np.dstack([rgb, alpha * 255]).astype(np.uint8), ground=(ground_y - y0) + 4, top=y0 - 4, left=cx0 - 4)
 
 def halo_width(f):
     """width of her halo (a flat ring near the top): used to keep her the same size on every sheet"""
@@ -133,3 +135,25 @@ def halo_width(f):
         sub = lab[s] == i
         if w > 2.2 * hh and w > 25 and sub.mean() < 0.55: best = max(best, w)    # wide, flat, mostly hollow
     return best or None
+
+def cut_region(path, boxes, ground_y, keep=()):
+    """everything drawn wholly inside the boxes (sheet px), cleaned like a frame: for an effect drawn
+    on its own on the sheet (a burst) that's laid over a frame"""
+    A = np.asarray(Image.open(path).convert('RGB')).astype(np.float32); H, W = A.shape[:2]
+    bg = np.median(A[H // 2 - 200:H // 2 + 200, :6].reshape(-1, 3), axis=0)
+    dist = np.sqrt(((A - bg) ** 2).sum(-1))
+    lab, n = ndi.label(dist > 60); objs = ndi.find_objects(lab); mask = np.zeros((H, W), bool)
+    for i, (ys, xs) in enumerate(objs):
+        if (lab[ys, xs] == i + 1).sum() < 8: continue
+        inside = lambda bs: any(xs.start >= b[0] and ys.start >= b[1] and xs.stop <= b[2] and ys.stop <= b[3] for b in bs)
+        if inside(boxes) and not inside(keep): mask[ys, xs] |= lab[ys, xs] == i + 1
+    return clean(A, dist, ndi.binary_fill_holes(mask), H + 3, ground_y)
+
+def compose(base, extra):
+    """lay extra over base, both placed where they are on the sheet"""
+    L = min(base['left'], extra['left']); T = min(base['top'], extra['top'])
+    R = max(base['left'] + base['rgba'].shape[1], extra['left'] + extra['rgba'].shape[1])
+    B = max(base['top'] + base['rgba'].shape[0], extra['top'] + extra['rgba'].shape[0])
+    im = Image.new('RGBA', (R - L, B - T), (0, 0, 0, 0))
+    for f in (base, extra): im.alpha_composite(Image.fromarray(f['rgba']), (f['left'] - L, f['top'] - T))
+    return dict(rgba=np.asarray(im), ground=base['top'] + base['ground'] - T, top=T, left=L)

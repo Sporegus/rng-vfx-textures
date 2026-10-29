@@ -518,6 +518,9 @@
     dizzy: { frames: 4, fps: 6, pose: f => ({ eyes: 'x', mouth: 'tongue', dx: [-1, 0, 1, 0][f], front: 'out', back: 'down', fx: [['spark2', 16 + f * 3, 1, '#ffe14d'], ['star', 30 - f * 3, 0, '#ffe14d']] }) },
     folder:{ frames: 4, fps: 8, pose: f => ({ prop: 'folder', front: 'hold', back: 'swingF', bob: [0, -1, 0, -1][f], legs: 'walk' + f, eyes: 'happy', mouth: 'smile' }) },
   };
+  // (the drawn look has its own frames for these; the pixel looks reuse poses)
+  ANIMS.delete = Object.assign({}, ANIMS.sweep);
+  ANIMS.found = Object.assign({}, ANIMS.cheer);
   Object.keys(ANIMS).forEach(k => { const a = ANIMS[k]; if (a.loop === undefined) a.loop = true; if (!a.footY) a.footY = GROUND; });
 
   // Where the front hand is in a given frame (for drawing pointer arrows).

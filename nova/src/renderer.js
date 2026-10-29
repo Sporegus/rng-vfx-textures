@@ -684,7 +684,8 @@
       if (v !== 'go') return v === 'no' && say('Okay, keeping everything.');
       const paths = checks.filter(([cb]) => cb.checked).map(([, p]) => p);
       if (!paths.length) return say('Nothing ticked, nothing moved!');
-      const res = await withShow(act('files.recycle', { paths }), 'sweep', 1200);
+      const del = S.packOf('delete', settings.skin);   // (the drawn look punts them away)
+      const res = await withShow(act('files.recycle', { paths }), del ? 'delete' : 'sweep', del ? del.durations.reduce((t, d) => t + d, 0) : 1200);
       sfx('ok'); play('cheer', 1400);
       await say(`Sent ${res.moved} file${res.moved === 1 ? '' : 's'} to the Recycle Bin.${res.failed.length ? ` ${res.failed.length} wouldn't budge.` : ''}`);
     });
@@ -777,7 +778,7 @@
         sfx('err'); play('shrug', 2000);
         return ask(`Couldn't find anything called "${query}". 😔`, [{ icon: '🔍', label: 'Try again', value: 'again' }]).then(v => v && findMenu(query));
       }
-      sfx('ok'); play('cheer', 800);
+      sfx('ok'); play(S.packOf('found', settings.skin) ? 'found' : 'cheer', 1200);
       const v = await ask(`Found ${r.total > r.results.length ? r.total + ' (showing ' + r.results.length + ')' : r.total}! Which one?`,
         r.results.slice(0, 8).map(f => ({ icon: f.isDir ? '📁' : '📄', label: f.name, sub: shortDir(f.path), value: f.path })), { cols: 1, wide: true });
       if (v) return revealFile(v, 'here it is!');

@@ -11,7 +11,7 @@ const FILL = '#bfe6ff', INK = '#05070f';
 const K = 74 / (POSES.idle.body[3] - POSES.idle.body[1]);
 // the canvas is a little bigger than the pixel sprite's, for her hair, wide poses and sitting
 // (she sits with her knees up, so her head is higher than the pixel Nova's)
-const PAD = { x: 18, top: 28 };
+const PAD = { x: 68, top: 28 };   // (wide enough for the delete burst)
 // the sheet draws her walk a little smaller than her idle; this keeps her the same size
 const SIZE = { walk1: 1.1, walk2: 1.1, walk3: 1.1, walk4: 1.1 };
 // where each pose stands in the pixel sprite's 48 x 80 box: [centre x, y of her lowest point]
