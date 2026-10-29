@@ -49,17 +49,39 @@ function biquadGain(type, f0, rate, { q = Math.SQRT1_2, db = 0, bw = 0 } = {}) {
   };
 }
 
-const eqCache = {};
-function eqCurve(rate) {
-  if (eqCache[rate]) return eqCache[rate];
-  const peak = biquadGain('peak', 7000, rate, { db: -4, bw: 4000 }), low = biquadGain('low', Math.min(10500, rate * 0.45), rate);
-  const c = new Float32Array(N / 2 + 1);
-  for (let k = 0; k <= N / 2; k++) { const f = k * rate / N; c[k] = peak(f) * low(f); }
-  return (eqCache[rate] = c);
+// Two ways to clean up:
+//   clean: the "everything max" sample: no fizz, but duller than her real clips above 5 kHz
+//   natural: tone matched to her real clips band by band (measured), so she keeps
+//     their airy top end; only the fizz around 9 to 11 kHz is turned down
+const STYLES = {
+  clean: { deess: { th: 0.1, slope: 8, min: 0.25 }, peak: -4, lowpass: 10500, tone: null },
+  natural: {
+    deess: { th: 0.3, slope: 4, min: 0.6 }, peak: 0, lowpass: null,
+    // [Hz, dB]: what her clone voice needs to sound like her clips
+    tone: [[141, 2], [265, 1.1], [418, 1.8], [592, -1.8], [837, -1.8], [1183, -3.2], [1673, -1], [2366, 0.2], [3130, -0.2], [3969, 2.5], [4975, 2.1], [6205, 2], [7714, 1.8], [9220, -3], [10909, -1]],
+  },
+};
+// the tone at f, between the measured points (in octaves)
+function toneAt(tone, f) {
+  if (f <= tone[0][0]) return tone[0][1];
+  for (let i = 1; i < tone.length; i++) {
+    if (f <= tone[i][0]) { const [f0, d0] = tone[i - 1], [f1, d1] = tone[i], t = Math.log(f / f0) / Math.log(f1 / f0); return d0 + t * (d1 - d0); }
+  }
+  return tone[tone.length - 1][1];
 }
 
-function spectral(x, rate, o = {}) {
-  const D = { th: 0.1, slope: 8, min: 0.25, ...o };
+const eqCache = {};
+function eqCurve(rate, st) {
+  const id = rate + JSON.stringify(st);
+  if (eqCache[id]) return eqCache[id];
+  const peak = biquadGain('peak', 7000, rate, { db: st.peak, bw: 4000 }), low = st.lowpass ? biquadGain('low', Math.min(st.lowpass, rate * 0.45), rate) : () => 1;
+  const c = new Float32Array(N / 2 + 1);
+  for (let k = 0; k <= N / 2; k++) { const f = k * rate / N; c[k] = peak(f) * low(f) * (st.tone ? Math.pow(10, toneAt(st.tone, Math.max(20, f)) / 20) : 1); }
+  return (eqCache[id] = c);
+}
+
+function spectral(x, rate, st) {
+  const D = st.deess;
   const bins = N / 2 + 1, frames = Math.max(1, Math.ceil((x.length + N) / HOP));
   const pad = new Float32Array(frames * HOP + N); pad.set(x, N / 2);
   const RE = [], IM = [], P = [];
@@ -84,7 +106,7 @@ function spectral(x, rate, o = {}) {
     let m = 0; for (const p of quiet) m += p[k];
     noise[k] = Math.min(hi, Math.max(lo, m / quiet.length));
   }
-  const eq = eqCurve(rate), GMIN = Math.pow(10, -12 / 20);
+  const eq = eqCurve(rate, st), GMIN = Math.pow(10, -12 / 20);
   const sib = Math.floor(4500 * N / rate), top = Math.min(bins, Math.floor(10000 * N / rate));
   let prev = new Float32Array(bins).fill(1);
   const out = new Float32Array(pad.length);
@@ -95,7 +117,7 @@ function spectral(x, rate, o = {}) {
     for (let k = 1; k < bins - 1; k++) g[k] = (g[k - 1] + 2 * g[k] + g[k + 1]) / 4;
     for (let k = 0; k < bins; k++) { g[k] = Math.max(g[k], 0.6 * prev[k] + 0.4 * g[k]); }
     prev = g;
-    // de-ess: the more of the sound is "s" energy (4.5 to 10 kHz), the more that band is turned down (to -12 dB)
+    // de-ess: the more of the sound is "s" energy (4.5 to 10 kHz), the more that band is turned down
     let all = 0, hiss = 0;
     for (let k = 1; k < top; k++) { all += p[k]; if (k >= sib) hiss += p[k]; }
     const ratio = all > 0 ? hiss / all : 0, duck = ratio > D.th ? Math.max(D.min, 1 - (ratio - D.th) * D.slope) : 1;
@@ -133,9 +155,10 @@ function compress(x, rate) {
   return y;
 }
 
-function polish(samples, rate, o) {
+// style: 'clean' or 'natural' (see STYLES), or your own settings in that shape
+function polish(samples, rate, style = 'clean') {
   if (!samples || samples.length < N) return Float32Array.from(samples || []);
-  return compress(spectral(samples, rate, o), rate);
+  return compress(spectral(samples, rate, typeof style === 'string' ? STYLES[style] || STYLES.clean : style), rate);
 }
 
-module.exports = { polish, fft };
+module.exports = { polish, fft, STYLES };
