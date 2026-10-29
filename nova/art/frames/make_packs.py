@@ -60,9 +60,8 @@ SEAT = 46   # where the ledge she sits on is in the sprite box (the window's top
 #   stride: sprite units she travels per cycle, so her feet stay planted;
 #   anchor: 'ground' (as drawn on the sheet's ground line) or 'feet' (her lowest point on the ground,
 #   for frames whose height comes from the app, like being in the air)
+# (no walk or run animations. The walk sheet is still cut, as the size reference for the others)
 PACKS = {
-  'walk':      dict(sheet='walk', frames=range(8), mirrored=[4, 5, 6, 7], fps=7, loop=True, stride=76),
-  'run':       dict(sheet='run', frames=range(6), fps=11, loop=True, stride=96),
   'jumpstart': dict(sheet='jump', frames=[0, 1], durations=[150, 90], loop=False),
   'jump':      dict(sheet='jump', frames=[2, 3], fps=4, loop=False, anchor='feet'),
   'land':      dict(sheet='jump', frames=[4, 5], durations=[140, 170], loop=False),
