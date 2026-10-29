@@ -303,19 +303,21 @@
     if (z.ft >= 1 / a.fps) { z.ft = 0; z.frame = a.loop ? z.frame + 1 : Math.min(z.frame + 1, a.frames - 1); }
     if (now > z.nextBlink) { z.blinkUntil = now + 130; z.nextBlink = now + rand(1800, 5000); }
     const blink = now < z.blinkUntil && ['idle', 'walk', 'sit', 'point', 'talk'].includes(anim);
-    const s = sc();
-    if (cv.width !== S.W * s || cv.height !== S.H * s) { cv.width = S.W * s; cv.height = S.H * s; lastKey = ''; }
+    const s = sc(), pad = S.padOf(settings.skin); // (her drawn look has a bigger canvas)
+    const cw = (S.W + pad.x * 2) * s, ch = (S.H + pad.top) * s;
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; lastKey = ''; }
     const key = [anim, z.frame % a.frames, settings.skin, settings.hat, z.facing, blink].join('|');
     if (key !== lastKey) {
       ctx.clearRect(0, 0, cv.width, cv.height);
-      S.draw(ctx, { anim, frame: z.frame, skin: settings.skin, hat: settings.hat, scale: s, flip: z.facing < 0, overrides: blink ? { eyes: 'blink' } : null });
+      S.draw(ctx, { anim, frame: z.frame, skin: settings.skin, hat: settings.hat, x: pad.x * s, y: pad.top * s, scale: s, flip: z.facing < 0, overrides: blink ? { eyes: 'blink' } : null });
       lastKey = key;
     }
-    const left = Math.round(z.x - (S.W / 2) * s), top = Math.round(z.y - a.footY * s);
+    const left = Math.round(z.x - (S.W / 2 + pad.x) * s), top = Math.round(z.y - (a.footY + pad.top) * s);
     zEl.style.transform = `translate(${left}px, ${top}px)`;
+    const headY = top + (S.HEAD_TOP + pad.top) * s;
     if (!bubble.classList.contains('hidden')) placeBubble();
-    if (!tagEl.classList.contains('hidden')) tagEl.style.transform = `translate(${Math.round(z.x - tagEl.offsetWidth / 2)}px, ${top + S.HEAD_TOP * s - 26}px)`;
-    if (!hiEl.classList.contains('hidden')) hiEl.style.transform = `translate(${Math.round(z.x + 6 * s)}px, ${top + S.HEAD_TOP * s - 34}px)`;
+    if (!tagEl.classList.contains('hidden')) tagEl.style.transform = `translate(${Math.round(z.x - tagEl.offsetWidth / 2)}px, ${headY - 26}px)`;
+    if (!hiEl.classList.contains('hidden')) hiEl.style.transform = `translate(${Math.round(z.x + 6 * s)}px, ${headY - 34}px)`;
   }
 
   // ================================================================ effects layer
@@ -340,7 +342,7 @@
     const s = sc(), a = S.ANIMS[z.anim];
     const top = z.y - a.footY * s;
     const [hx, hy] = S.handOf(z.anim, z.frame);
-    const left = z.x - (S.W / 2) * s;
+    const left = z.x - (S.W / 2) * s;  // (in the pixel sprite's box, which the drawn look shares)
     return { x: z.facing > 0 ? left + (hx + 0.5) * s : left + (S.W - hx - 0.5) * s, y: top + (hy + 0.5) * s };
   }
   function drawArrow(dt) {
@@ -905,14 +907,15 @@
     } else {
       g.fillStyle = '#05030a'; g.fillRect(0, 0, w, h);
       const zs = Math.max(3, Math.round(h / 110));
-      const tmp = document.createElement('canvas'); tmp.width = S.W * zs; tmp.height = S.H * zs;
+      const pad = S.padOf(settings.skin);
+      const tmp = document.createElement('canvas'); tmp.width = (S.W + pad.x * 2) * zs; tmp.height = (S.H + pad.top) * zs;
       const t = tmp.getContext('2d');
       const x = w / 2 - (S.W / 2) * zs, y = h / 2 - (S.H / 2) * zs;
       for (const [col, dx] of [['#ff2fd0', -10], ['#39f5ff', 10]]) {
         t.clearRect(0, 0, tmp.width, tmp.height);
-        novaAt('idle', 0, 0, 0, zs, t);
+        novaAt('idle', 0, pad.x * zs, pad.top * zs, zs, t);
         t.globalCompositeOperation = 'source-in'; t.fillStyle = col; t.fillRect(0, 0, tmp.width, tmp.height); t.globalCompositeOperation = 'source-over';
-        g.globalAlpha = 0.7; g.drawImage(tmp, x + dx * dpr, y); g.globalAlpha = 1;
+        g.globalAlpha = 0.7; g.drawImage(tmp, x - pad.x * zs + dx * dpr, y - pad.top * zs); g.globalAlpha = 1;
       }
       novaAt('idle', 0, x, y, zs);
       for (let i = 0; i < 26; i++) {

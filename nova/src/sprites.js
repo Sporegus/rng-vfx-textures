@@ -38,7 +38,13 @@
       panel: ['#6b4a1a', '#45300f'], boot: ['#b78d45', '#8a6528', '#5c4318'], glow: '#ffb300', eye: '#ffffff', iris: '#2f6f3a', lips: '#c04a3a', cheek: '#f0a080',
       body: '#ffb300', light: '#fff0c2', dark: '#b37800', tip: '#ffd23f' },
   };
+  // Nova drawn from her character sheet (src/cartoon.js): pixel parts (the tray icon,
+  // the menus' little pictures) use the hologram colours, the rest is drawn from her poses
+  SKINS.drawn = Object.assign({}, SKINS.holo, { name: 'Nova (drawn)', drawn: true });
   const skinOf = (k) => (typeof k === 'object' && k) ? k : (SKINS[k] || SKINS.holo);
+  // how much bigger than the pixel sprite her canvas is (the drawn look needs more room)
+  const NO_PAD = { x: 0, top: 0 };
+  const padOf = (k) => (skinOf(k).drawn && root.NovaCartoon ? root.NovaCartoon.PAD : NO_PAD);
 
   const HATS = ['none', 'headset', 'tiara', 'halo', 'cap', 'witch'];
 
@@ -546,6 +552,7 @@
   let scratch = null;
   function draw(ctx, opts) {
     const { anim = 'idle', frame = 0, skin = 'holo', hat = 'none', x = 0, y = 0, scale = 3, flip = false, overrides } = opts;
+    if (skinOf(skin).drawn && root.NovaCartoon) return root.NovaCartoon.draw(ctx, { anim, frame, x, y, scale, flip });
     if (!scratch) {
       scratch = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });
     }
@@ -560,7 +567,7 @@
     ctx.restore();
   }
 
-  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, handOf, skeleton, frameRGBA, draw, drawNova };
+  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, padOf, handOf, skeleton, frameRGBA, draw, drawNova };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NovaSprites = api;
 })(typeof window !== 'undefined' ? window : globalThis);
