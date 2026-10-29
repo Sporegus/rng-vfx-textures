@@ -176,8 +176,11 @@ class Mouth {
       // extra: { clips: her clips folder, vocoder: the vocos file, hq: the full-size
       // model's folder (clearer) or null for the small one, cache: a folder for lines she's said }
       const hq = extra.hq ? (n) => path.join(extra.hq, n) : null;
-      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens: f('tokens.txt'), encoder: hq ? hq('text_encoder.onnx') : f('encoder.int8.onnx'), decoder: hq ? hq('fm_decoder.onnx') : f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data'), guidanceScale: CLONE_GUIDANCE }, numThreads: ttsThreads(), debug: 0 }, maxNumSentences: 1 });
-      this.hq = !!hq;
+      // her own trained voice (voice/training) comes as a full-size and a smaller copy, with its own word list
+      const enc = extra.small ? 'text_encoder_int8.onnx' : 'text_encoder.onnx', dec = extra.small ? 'fm_decoder_int8.onnx' : 'fm_decoder.onnx';
+      const tokens = hq && fs.existsSync(hq('tokens.txt')) ? hq('tokens.txt') : f('tokens.txt');
+      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens, encoder: hq ? hq(enc) : f('encoder.int8.onnx'), decoder: hq ? hq(dec) : f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data'), guidanceScale: CLONE_GUIDANCE }, numThreads: ttsThreads(), debug: 0 }, maxNumSentences: 1 });
+      this.hq = !!hq; this.small = !!extra.small;
       this.sampleRate = this.tts.sampleRate;
       this.cloneDir = extra.clips;
       this.lines = JSON.parse(fs.readFileSync(path.join(extra.clips, 'lines.json'), 'utf8'));
@@ -186,7 +189,7 @@ class Mouth {
       // how long making speech takes here (seconds of work per second of speech, per
       // step) and how long a letter takes to say; guesses until she has talked a bit
       this.pace = { perStep: hq ? 0.25 : 0.15, perChar: 0.065 };
-      this.cache = extra.cache ? new LineCache(extra.cache, [CLONE_VERSION, hq ? 'hq' : 'int8', this.lines]) : null;
+      this.cache = extra.cache ? new LineCache(extra.cache, [CLONE_VERSION, hq ? extra.hq + (extra.small ? ':small' : '') : 'int8', this.lines]) : null;
       this.fixedSteps = null; // always use this many steps (for testing)
       this.todo = new Map(); // cached lines made in a hurry, to make again at full quality when she's idle
       this.lock = Promise.resolve();

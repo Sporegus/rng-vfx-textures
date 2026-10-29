@@ -19,6 +19,17 @@ const startVoice = require('./voice');
   try { if (fs.existsSync(notes('Zin')) && !fs.existsSync(notes('Nova'))) fs.renameSync(notes('Zin'), notes('Nova')); } catch {}
 })();
 
+// "npm run voice-record": record her training sentences in your ElevenLabs voice
+// (voice/training), then quit, without starting Nova herself
+if (process.argv.includes('--record-voice')) {
+  const { safeStorage } = require('electron');
+  app.whenReady()
+    .then(() => require('./voice/training/record')(app, safeStorage))
+    .catch((e) => { console.error('\n' + e.message + '\n'); process.exitCode = 1; })
+    .finally(() => app.quit());
+  return; // (main.js is a CommonJS module, so this ends it here)
+}
+
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const DEFAULTS = {

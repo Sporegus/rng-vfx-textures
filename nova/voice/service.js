@@ -68,17 +68,22 @@ async function loadMouth(kind) {
 // one (clearer) downloads in the background and takes over when it's ready, unless
 // this PC is too slow for it.
 let clearTooSlow = false, gettingClear = null;
+// her own trained voice (made with voice/training), when there is one, comes first
+const ownVoice = () => { const d = path.join(root, 'nova-own-voice'); return fs.existsSync(path.join(d, 'fm_decoder.onnx')) ? d : null; };
 async function makeClone() {
   const dir = await models.ensure(root, 'clone', progress('voice'));
   const vocoder = await models.ensure(root, 'vocos', progress('voice'));
-  const hq = models.have(root, 'cloneHQ') && !clearTooSlow ? models.where(root, 'cloneHQ') : null;
-  const m = new Mouth(dir, 'clone', { clips: NOVA, vocoder, hq, cache: path.join(root, 'said') });
+  const own = ownVoice();
+  // her own voice's smaller copy is the quick one when the full-size one is too slow here
+  const hq = own || (models.have(root, 'cloneHQ') && !clearTooSlow ? models.where(root, 'cloneHQ') : null);
+  const small = !!own && clearTooSlow;
+  const m = new Mouth(dir, 'clone', { clips: NOVA, vocoder, hq, small, cache: path.join(root, 'said') });
   await m.warmUp();
-  if (hq && m.tooSlow) { clearTooSlow = true; send({ type: 'status', what: 'voiceHQ', state: 'slow' }); return makeClone(); }
+  if (hq && !small && m.tooSlow) { clearTooSlow = true; send({ type: 'status', what: 'voiceHQ', state: 'slow' }); return makeClone(); }
   return m;
 }
 function getClearerVoice() {
-  if (gettingClear || clearTooSlow || (mouths.clone && mouths.clone.hq)) return;
+  if (gettingClear || clearTooSlow || ownVoice() || (mouths.clone && mouths.clone.hq)) return;
   gettingClear = models.ensure(root, 'cloneHQ', progress('voiceHQ'))
     .then(() => makeClone())
     .then((m) => { if (m.hq) { mouths.clone = m; send({ type: 'status', what: 'voiceHQ', state: 'ready' }); } })
@@ -151,7 +156,7 @@ async function say(id, text, opts) {
       } else send({ type: 'error', what: 'speak', message: e.message });
     });
   // the clearer voice turned out too slow here: back to the quick one from the next line
-  if (mouth.hq && mouth.tooSlow && !clearTooSlow) { clearTooSlow = true; delete mouths.clone; send({ type: 'status', what: 'voiceHQ', state: 'slow' }); }
+  if (mouth.hq && !mouth.small && mouth.tooSlow && !clearTooSlow) { clearTooSlow = true; delete mouths.clone; send({ type: 'status', what: 'voiceHQ', state: 'slow' }); }
   // the natural voice needs a fast enough graphics card; say so if it can't keep up
   if (mouth.speed && mouth.speed < REAL_TIME * 0.85 && !warnedSlow) { warnedSlow = true; send({ type: 'status', what: 'voice', state: 'slow', speed: Math.round(mouth.speed), need: REAL_TIME }); }
   send({ type: 'said', id });

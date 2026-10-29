@@ -10,7 +10,10 @@
     "dev": "electron . --dev",
     "dist": "electron-builder --win portable nsis",
     "test": "node brain/test.js && node brain/fresh.js && node brain/fresh2.js && node voice/wake.test.js && node voice/orpheus.test.js && node voice/eleven.test.js && node voice/pronounce.test.js && node voice/polish.test.js && node voice/cues.test.js",
-    "voice-check": "node voice/check.js"
+    "voice-check": "node voice/check.js",
+    "voice-record": "electron . --record-voice",
+    "voice-check-data": "node voice/training/check-data.js",
+    "voice-sample": "node voice/training/sample.js"
   },
   "devDependencies": {
     "electron": "^45.1.0",
@@ -28,6 +31,7 @@
       "voice/**",
       "!voice/*.test.js",
       "!voice/check.js",
+      "!voice/training/**",
       "src/**",
       "assets/**",
       "!node_modules/@node-llama-cpp/*cuda*/**",
