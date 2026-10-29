@@ -95,29 +95,53 @@ from **Voice & chat** in her menu or **Voice** in the tray. Other ways to talk:
 **Ctrl+Alt+V** listens once without her name (push to talk), and "stop talking"
 or "stop listening" do what they say.
 
-The first time, she downloads her ears and voice (about 650 MB, once). They are
-free, open models that run on your PC, so nothing you say is sent anywhere:
+The first time, she downloads her ears and voice (about 650 MB, once), and then,
+in the background while she's already talking, a clearer version of her voice
+(635 MB). They are free, open models that run on your PC, so nothing you say is
+sent anywhere:
 
 | Part | Model | Notes |
 |---|---|---|
 | Notices talking | Silero VAD | Tiny; only listens for when speech starts and stops |
 | Ears | NVIDIA Parakeet TDT 0.6B (int8) | The most accurate one we tested; a 3 s request takes about 0.4 s. **Smaller speech model** in the tray switches to Moonshine tiny for slow PCs |
-| Voice | ZipVoice (distilled, int8) + Vocos | **Nova**, her own voice: it copies the voice and mood of the clips in `voice/nova` (a voice made on ElevenLabs), free and offline. About 1 s to start talking on a typical PC |
+| Voice | ZipVoice (distilled) + Vocos | **Nova**, her own voice: it copies the voice and mood of the clips in `voice/nova` (a voice made on ElevenLabs), free and offline. Starts with the small model (int8, 109 MB), then switches to the full-size one (clearer) once it's downloaded, if your PC is quick enough for it |
 | Other voices (optional) | Kokoro v1.0 | Six steady stock voices; downloaded (350 MB) only if you pick one |
 | Extra expressive voices (optional) | Kyutai Pocket TTS | **Sparkle, Mochi, Luna**: more feeling, but the voice drifts a little between sentences. Downloaded (98 MB) only if you pick one |
 
-**Pixie** was made for Nova: a search over blends of Kokoro's 54 voices for the one
-that sounds most like a real speaker with a bright, cute voice (EARS speaker
-p062), scored by a speaker-identity model plus a bright pitch (240 Hz or more),
-lively intonation and every word understood, at a 10% quicker pace. On
-sentences it was never tuned on, graded by a second, independent speaker model:
+**How her voice is made clear.** Every sentence goes through the same steps:
 
-| | Pitch | Same person every sentence | Sounds like the real speaker | Words heard right |
-|---|---|---|---|---|
-| Pixie | 222 Hz | 0.85 | 0.74 | 98% |
-| First Pixie (too low and slow) | 164 Hz | 0.88 | 0.69 | 98% |
-| Expressive (Pocket TTS) | – | 0.54 | 0.58 | 95% |
-| Stock Kokoro voice | 171 Hz | 0.89 | 0.55 | 98% |
+1. Words are respelled where the voice gets them wrong (`voice/pronounce.js`):
+   numbers become words ("2.4 GB" is "two point four gigabytes", "7:45 PM" is
+   "seven forty-five P M"), because her voice model skips some digits; "your
+   resume" is the document, not the verb; "close Chrome" rhymes with "nose";
+   Roblox, DJ Khaled, lo-fi, "for a sec" and a few others are spelled the way
+   they're said.
+2. The voice makes the sentence with as many refining steps (4 to 8) as there's
+   time for: enough that she starts talking within about 2 seconds, and the next
+   sentence is ready before she finishes the one she's saying. On a quick PC
+   that's 8, the clearest.
+3. The sound is cleaned up (`voice/polish.js`): the faint hiss between words is
+   taken out, sharp "s" sounds are softened, the brittle top end is tamed and
+   the loudness evened out.
+4. Lines the app says often ("Opening Roblox now!") are saved the first time, so
+   next time they play straight away (`said` in her models folder, 100 MB at
+   most; chat replies are never saved). One made in a hurry is remade at full
+   quality later, while she's quiet.
+
+Tested by having her say 60 of her real lines (591 words) and writing down what
+two speech recognizers heard:
+
+| Setting | Words heard right (Parakeet) | (Moonshine) |
+|---|---|---|
+| Full-size model, 8 steps, with the respelling and clean-up | **97.8%** | **95.9%** |
+| Full-size model, 8 steps, before the respelling | 94.6% | 93.7% |
+| Small model, 4 steps (the quick one), before the respelling | 93.6% | 91.5% |
+
+Most of what's left is the recognizers, not her ("gigabytes" written as
+"gigabits", "Ctrl" written for "control"). On this test the full-size model
+needed about 2.7 seconds of work per second of speech on the 4-core test
+machine, which is too slow there, so she used the small one; a desktop
+processor is roughly twice as fast or more.
 
 **Your own ElevenLabs voice (online).** If you made a voice on ElevenLabs, Nova
 can use it: **Voice & chat → Change my voice → Use my ElevenLabs voice**, or
@@ -146,15 +170,17 @@ voice to "Nova voice check" on your Desktop. Pick one under **Voice** in the tra
 If a natural voice can't keep up on your PC, Nova says so; her own voice is the quick one.
 
 Moods (cute, happy, excited, sad, calm, confused, proud, pouty, shy, love) change
-how she says things: a little faster, higher and louder when excited, slower and
-softer when sad, quieter when shy. It stays one voice, so it's seamless. She
+how she says things. Her own voice copies the mood of the matching clip in
+`voice/nova`; the stock voices are a little faster, higher and louder when
+excited, slower and softer when sad, quieter when shy. It stays one voice, so
+it's seamless. She
 picks the mood from what she's saying ("Sorry, I couldn't find it" is sad, "All
 sorted!" is proud); with the chat brain on, it chooses a mood for every
 sentence. Her animation follows the mood too. Voice files live in
 `voice/styles` (one 510 x 256 Kokoro voice each); add one and it appears as a
 voice of that name.
 
-Pixie and the expressive voices' mood clips come from the EARS dataset, which is
+The expressive voices' mood clips (and the older Pixie voice file) come from the EARS dataset, which is
 licensed for **non-commercial use only** (see `voice/emotions/LICENSE.md`). Nova
 can't be sold with them; to sell her, use the stock voices or make a voice from
 recordings you own.
@@ -198,7 +224,7 @@ tray clears her memory. Tinkerers can set `chatModel` in `settings.json` to any
 | `src/sprites.js` | The pixel-art engine. Every frame of every animation is drawn in code, so skins and hats are just data |
 | `brain/` | Understands typed requests: `intents.js` is everything she can do, `brain.js` works out which one you mean |
 | `src/renderer.js` | Physics, walking, sitting on windows, drag-and-throw, menus, the action "shows", and running typed requests |
-| `voice/` | Her voice: `wake.js` spots her name, `speech.js` is her ears and mouth, `mind.js` the chat brain, `service.js` runs them in a background process, `models.js` downloads them |
+| `voice/` | Her voice: `wake.js` spots her name, `speech.js` is her ears and mouth, `pronounce.js` fixes words she'd say wrong, `polish.js` cleans up her voice, `mind.js` the chat brain, `service.js` runs them in a background process, `models.js` downloads them |
 | `src/voice.js` | Microphone in and speaker out for the page |
 | `actions/*.js` | The real work: files, organize, clean, wallpaper, system, apps, music, volume, power, weather, active-window tracking (PowerShell + Win32) |
 | `demo/` | A browser version on a fake desktop (`node demo/build.js` builds `demo/nova-demo.html`) |

@@ -1610,13 +1610,21 @@
           if (voice.ready) { voice.have = true; voice.download = null; syncMic(); }
           if (voice.ready && voice.announce) { voice.announce = false; play('cheer', 1500); say('Hiii! Can you hear me? Say "Nova" and then what you need, like "Nova, open Roblox"! 🎙️', { ms: 7000 }); }
         }
+        // the clearer version of her voice finished downloading (or this PC is too slow for it)
+        if (m.what === 'voiceHQ') {
+          voice.download = null;
+          if (m.state === 'ready' && settings.voice) say('Ooh, my voice just got clearer! Can you hear the difference? ✨', { mood: 'excited', ms: 5000 });
+          if (m.state === 'slow' && !settings.clearVoiceSlow) { settings = await api.setSettings({ clearVoiceSlow: true }); say('My extra-clear voice is too slow on this PC, so I\'m using my quick one. 🐢', { ms: 6000 }); }
+          if (m.state === 'failed') console.warn('Nova could not get her clearer voice:', m.message);
+          break;
+        }
         if (m.what === 'chat' && m.state === 'ready') {
           voice.chat = true; voice.download = null;
           if (voice.announceChat) { voice.announceChat = false; play('cheer', 1500); say('My chat brain is ready! Talk to me about anything. 💬', { ms: 5000 }); }
         }
         break;
       case 'progress': {
-        const name = { listening: 'ears', ears: 'ears', voice: 'voice', chat: 'chat brain' }[m.what] || m.what;
+        const name = { listening: 'ears', ears: 'ears', voice: 'voice', voiceHQ: 'clearer voice', chat: 'chat brain' }[m.what] || m.what;
         voice.download = m.total && m.done < m.total ? `⬇ ${name} ${Math.floor(100 * m.done / m.total)}% of ${MB(m.total)}` : null;
         break;
       }

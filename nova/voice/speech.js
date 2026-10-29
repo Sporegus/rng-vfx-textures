@@ -1,13 +1,16 @@
 // Nova's ears and mouth, both running on your PC (sherpa-onnx).
 //   Ears: notices when someone talks (silero VAD), then writes down what was said.
-//   Mouth: turns text into her voice (Kokoro), a sentence at a time so she can
-//   start talking before the whole reply is ready.
+//   Mouth: turns text into her voice (her own clone voice, ZipVoice; or Kokoro or
+//   Pocket TTS), a sentence at a time so she can start talking before the whole
+//   reply is ready.
 const os = require('os');
 const path = require('path');
 const so = require('sherpa-onnx-node');
 
 const RATE = 16000;
 const threads = () => Math.max(1, Math.min(4, os.cpus().length - 1));
+// making speech gains from more of the processor (half the threads on big PCs: one per core)
+const ttsThreads = () => { const n = os.cpus().length; return Math.max(1, Math.min(8, n >= 8 ? Math.floor(n / 2) : n - 1)); };
 
 // ---------------------------------------------------------------- ears
 class Ears {
@@ -99,6 +102,8 @@ const PACE = { excited: 1.06, happy: 1.03, sad: 0.92, calm: 0.92, shy: 0.96 };
 // words written for reading that sound wrong spoken (and words the voice
 // mispronounces, like "resume" and "Roblox": see pronounce.js)
 const { pronounce } = require('./pronounce');
+const { polish } = require('./polish');
+const { LineCache } = require('./linecache');
 function speakable(text) {
   return pronounce(String(text))
     .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '')
@@ -113,6 +118,30 @@ const unstretch = (t) => t.replace(/\b[Hh]i{2,}\b/g, (m) => m[0] + 'i').replace(
 
 // split into sentences, so she can start talking after the first one
 const sentences = (t) => (t.match(/[^.!?…]+(?:[.!?…]+["')\]]*|$)/g) || [t]).map(x => x.trim()).filter(Boolean);
+
+// Her clone voice: sentences, with tiny ones ("Okay!") joined to the next, and a long
+// first sentence said in two parts (at a comma) so she starts sooner
+function clonePieces(t) {
+  const parts = sentences(t);
+  for (let i = 0; i < parts.length - 1; i++) if (parts[i].length < 10) { parts.splice(i, 2, parts[i] + ' ' + parts[i + 1]); i--; }
+  const comma = parts[0] && parts[0].length > 60 ? parts[0].indexOf(', ', 15) : -1;
+  if (comma > 0 && parts[0].length - comma > 15) parts.splice(0, 1, parts[0].slice(0, comma + 1), parts[0].slice(comma + 2));
+  return parts;
+}
+// Words her clone voice says more clearly when respelled (checked with speech
+// recognition): it reads "a" on its own like the letter ("rolled a 17" sounded like
+// "rolled I 17"), "one" like "on" and "tick" like "take"
+const CLONE_SAY = [
+  [/\b(?:a|A(?! to [A-Z]))(?= [a-z])/g, (m) => (m === 'A' ? 'Uh' : 'uh')],
+  [/\bone\b/gi, (m) => (m[0] === 'O' ? 'Wun' : 'wun')],
+  [/\btick\b/gi, (m) => (m[0] === 'T' ? 'Tik' : 'tik')],
+];
+const cloneText = (t) => CLONE_SAY.reduce((s, [re, to]) => s.replace(re, to), t);
+// refining steps for the clone voice (more is clearer and slower), and how long she
+// may take to start talking
+const MIN_STEPS = 4, MAX_STEPS = 8, FIRST_WAIT = 2;
+// change when something changes how her clone voice sounds, so saved lines are made again
+const CLONE_VERSION = 2;
 
 // Kokoro reads all its voices from one file (54 voices of 510 x 256 numbers).
 // Nova's own voices (voice/styles/<name>.bin, one voice each) are written over
@@ -140,12 +169,23 @@ class Mouth {
     const f = (n) => path.join(dir, n);
     this.kind = kind;
     if (kind === 'clone') {
-      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens: f('tokens.txt'), encoder: f('encoder.int8.onnx'), decoder: f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data') }, numThreads: threads(), debug: 0 }, maxNumSentences: 1 });
+      // extra: { clips: her clips folder, vocoder: the vocos file, hq: the full-size
+      // model's folder (clearer) or null for the small one, cache: a folder for lines she's said }
+      const hq = extra.hq ? (n) => path.join(extra.hq, n) : null;
+      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens: f('tokens.txt'), encoder: hq ? hq('text_encoder.onnx') : f('encoder.int8.onnx'), decoder: hq ? hq('fm_decoder.onnx') : f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data') }, numThreads: ttsThreads(), debug: 0 }, maxNumSentences: 1 });
+      this.hq = !!hq;
       this.sampleRate = this.tts.sampleRate;
       this.cloneDir = extra.clips;
       this.lines = JSON.parse(fs.readFileSync(path.join(extra.clips, 'lines.json'), 'utf8'));
       this.clips = {};
       this.token = 0;
+      // how long making speech takes here (seconds of work per second of speech, per
+      // step) and how long a letter takes to say; guesses until she has talked a bit
+      this.pace = { perStep: hq ? 0.25 : 0.15, perChar: 0.065 };
+      this.cache = extra.cache ? new LineCache(extra.cache, [CLONE_VERSION, hq ? 'hq' : 'int8', this.lines]) : null;
+      this.fixedSteps = null; // always use this many steps (for testing)
+      this.todo = new Map(); // cached lines made in a hurry, to make again at full quality when she's idle
+      this.lock = Promise.resolve();
       return;
     }
     const voicesFile = kind === 'emotional' ? null : customVoices(dir, extra);
@@ -180,23 +220,13 @@ class Mouth {
   // onChunk(samples, { pitch, gain }) is called for each sentence as soon as it's
   // ready; the player applies pitch and gain. speed below 1 is slower.
   // Resolves when done (or when hush() is called).
-  async say(text, { voice = 'heart', mood = 'cute', speed = 1 } = {}, onChunk) {
+  async say(text, { voice = 'heart', mood = 'cute', speed = 1, cache = false } = {}, onChunk) {
     const my = ++this.token;
     const t = speakable(text).replace(/<[a-z]+>\s*/g, ''); // sound tags like <giggle> are for the natural voice
     if (!t) return;
     const d = this.kind !== 'classic' ? { speed: 1, pitch: 1, gain: 1 } : DELIVERY[mood] || DELIVERY.cute;
     const go = (samples) => { if (my !== this.token) return 0; if (onChunk && samples.length) onChunk(Float32Array.from(samples), { pitch: d.pitch, gain: d.gain }); return 1; };
-    if (this.kind === 'clone') {
-      // the clip for her mood sets both her voice and how she feels; each sentence
-      // arrives as soon as it's made, so she starts talking after the first one
-      const c = this.cloneClip(mood);
-      await this.tts.generateAsync({
-        text: unstretch(t), enableExternalBuffer: false,
-        generationConfig: new so.GenerationConfig({ speed, referenceAudio: c.wave.samples, referenceSampleRate: c.wave.sampleRate, referenceText: c.text, numSteps: 4, extra: { min_char_in_sentence: 10 } }),
-        onProgress: ({ samples }) => go(samples),
-      });
-      return;
-    }
+    if (this.kind === 'clone') return this.sayClone(cloneText(unstretch(t)), mood, speed, !!cache, go, my);
     if (this.kind !== 'emotional') {
       // played back d.pitch times faster, so say it that much slower to keep the pace
       await this.tts.generateAsync({ text: t, sid: VOICES[voice] ?? VOICES.heart, speed: speed * (BASE_SPEED[voice] || 1) * d.speed / d.pitch, enableExternalBuffer: false, onProgress: ({ samples }) => go(samples) });
@@ -223,7 +253,79 @@ class Mouth {
     }
   }
 
+  // one piece of speech from her clone voice, cleaned up; the work is measured to plan the next
+  async makeClone(text, mood, speed, steps) {
+    const c = this.cloneClip(mood);
+    const run = async () => {
+      const t0 = Date.now();
+      const a = await this.tts.generateAsync({
+        text, enableExternalBuffer: false,
+        generationConfig: new so.GenerationConfig({ speed, referenceAudio: c.wave.samples, referenceSampleRate: c.wave.sampleRate, referenceText: c.text, numSteps: steps, extra: { min_char_in_sentence: 10 } }),
+      });
+      const secs = a.samples.length / a.sampleRate;
+      if (secs > 0.3) {
+        this.pace.perStep = 0.6 * this.pace.perStep + 0.4 * ((Date.now() - t0) / 1000 / secs / steps);
+        this.pace.perChar = 0.8 * this.pace.perChar + 0.2 * (secs / text.length);
+      }
+      return polish(a.samples, a.sampleRate);
+    };
+    const p = this.lock.then(run);
+    this.lock = p.catch(() => {});
+    return p;
+  }
+
+  // Says each sentence as soon as it's made, making the next while she talks. Each
+  // one gets as many refining steps (4 to 8; more is clearer) as there's time for:
+  // the first so she starts within about 2 seconds, the rest before she gets to them.
+  async sayClone(text, mood, speed, useCache, go, my) {
+    clearTimeout(this.idleTimer);
+    const pieces = clonePieces(text);
+    let playEnd = Date.now(); // when what she's been given so far finishes playing
+    for (let i = 0; i < pieces.length; i++) {
+      if (my !== this.token) return;
+      const s = pieces[i];
+      const key = useCache && this.cache ? this.cache.key(s, mood, speed) : null;
+      let samples = null, steps = MAX_STEPS;
+      const hit = key && this.cache.get(key);
+      if (hit) {
+        samples = hit.samples;
+        if (hit.steps < MAX_STEPS && s.length < 120) this.todo.set(key, { s, mood, speed });
+      } else {
+        const budget = i === 0 ? FIRST_WAIT : (playEnd - Date.now()) / 1000 - 0.2;
+        steps = this.fixedSteps || Math.max(MIN_STEPS, Math.min(MAX_STEPS, Math.floor(budget / (this.pace.perStep * s.length * this.pace.perChar))));
+        samples = await this.makeClone(s, mood, speed, steps);
+        if (key) { this.cache.put(key, samples, steps); if (steps < MAX_STEPS && s.length < 120) this.todo.set(key, { s, mood, speed }); }
+      }
+      if (!go(samples)) return;
+      playEnd = Math.max(playEnd, Date.now()) + 1000 * samples.length / this.sampleRate;
+    }
+    this.idleLater();
+  }
+
+  // when she's been quiet for a while, remake one hurried line at full quality
+  idleLater() {
+    clearTimeout(this.idleTimer);
+    if (!this.todo.size) return;
+    this.idleTimer = setTimeout(async () => {
+      const [key, job] = this.todo.entries().next().value;
+      this.todo.delete(key);
+      const busy = this.token;
+      const samples = await this.makeClone(job.s, job.mood, job.speed, MAX_STEPS).catch(() => null);
+      if (samples) this.cache.put(key, samples, MAX_STEPS);
+      if (busy === this.token) this.idleLater();
+    }, 20000);
+    if (this.idleTimer.unref) this.idleTimer.unref();
+  }
+
+  // a short line to get the voice going (the first one is always slow) and measure this PC
+  async warmUp() {
+    if (this.kind === 'clone') await this.makeClone('Okay, I am ready to help.', 'cute', 1, MIN_STEPS).catch(() => {});
+  }
+
+  // true when even the quickest setting can't keep up (her voice would keep pausing)
+  get tooSlow() { return this.kind === 'clone' && this.pace.perStep * MIN_STEPS > 1.15; }
+
   hush() { this.token++; }
 }
 
-module.exports = { Ears, Mouth, VOICES, EMOTIONAL, MOODS, DELIVERY, RATE, speakable, sentences };
+module.exports = { Ears, Mouth, VOICES, EMOTIONAL, MOODS, DELIVERY, RATE, speakable, sentences, clonePieces, cloneText };

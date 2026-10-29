@@ -49,9 +49,9 @@ async function loadMouth(kind) {
     return mouths[kind];
   }
   if (kind === 'clone') {
-    const dir = await models.ensure(root, 'clone', progress('voice'));
-    const vocoder = await models.ensure(root, 'vocos', progress('voice'));
-    mouths[kind] = new Mouth(dir, 'clone', { clips: NOVA, vocoder });
+    busy.clone = busy.clone || makeClone().finally(() => { busy.clone = null; });
+    mouths[kind] = await busy.clone;
+    getClearerVoice();
     return mouths[kind];
   }
   if (kind === 'natural') {
@@ -63,6 +63,27 @@ async function loadMouth(kind) {
   mouths[kind] = new Mouth(dir, kind, kind === 'emotional' ? EMOTIONS : STYLES);
   return mouths[kind];
 }
+// Her own voice. The small model comes first so she can talk soon; the full-size
+// one (clearer) downloads in the background and takes over when it's ready, unless
+// this PC is too slow for it.
+let clearTooSlow = false, gettingClear = null;
+async function makeClone() {
+  const dir = await models.ensure(root, 'clone', progress('voice'));
+  const vocoder = await models.ensure(root, 'vocos', progress('voice'));
+  const hq = models.have(root, 'cloneHQ') && !clearTooSlow ? models.where(root, 'cloneHQ') : null;
+  const m = new Mouth(dir, 'clone', { clips: NOVA, vocoder, hq, cache: path.join(root, 'said') });
+  await m.warmUp();
+  if (hq && m.tooSlow) { clearTooSlow = true; send({ type: 'status', what: 'voiceHQ', state: 'slow' }); return makeClone(); }
+  return m;
+}
+function getClearerVoice() {
+  if (gettingClear || clearTooSlow || (mouths.clone && mouths.clone.hq)) return;
+  gettingClear = models.ensure(root, 'cloneHQ', progress('voiceHQ'))
+    .then(() => makeClone())
+    .then((m) => { if (m.hq) { mouths.clone = m; send({ type: 'status', what: 'voiceHQ', state: 'ready' }); } })
+    .catch((e) => { gettingClear = null; send({ type: 'status', what: 'voiceHQ', state: 'failed', message: e.message }); });
+}
+
 async function setupVoice(light, voice) {
   if (busy.voice) return busy.voice;
   busy.voice = (async () => {
@@ -95,7 +116,7 @@ async function setupMind() {
 async function say(id, text, opts) {
   const mouth = ears && await mouthFor(opts.voice);
   if (!mouth) return send({ type: 'said', id });
-  await mouth.say(text, opts, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how }))
+  await mouth.say(text, { ...opts, cache: true }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how }))
     .catch(async (e) => {
       // ElevenLabs can fail (no internet, out of credits): say it in her own voice instead, and tell the page once
       if (mouth instanceof ElevenMouth) {
@@ -104,6 +125,8 @@ async function say(id, text, opts) {
         if (local) await local.say(text, { ...opts, voice: 'nova' }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: local.sampleRate, ...how })).catch(() => {});
       } else send({ type: 'error', what: 'speak', message: e.message });
     });
+  // the clearer voice turned out too slow here: back to the quick one from the next line
+  if (mouth.hq && mouth.tooSlow && !clearTooSlow) { clearTooSlow = true; delete mouths.clone; send({ type: 'status', what: 'voiceHQ', state: 'slow' }); }
   // the natural voice needs a fast enough graphics card; say so if it can't keep up
   if (mouth.speed && mouth.speed < REAL_TIME * 0.85 && !warnedSlow) { warnedSlow = true; send({ type: 'status', what: 'voice', state: 'slow', speed: Math.round(mouth.speed), need: REAL_TIME }); }
   send({ type: 'said', id });

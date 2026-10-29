@@ -19,6 +19,10 @@ const MODELS = {
   // her own voice, Nova (ZipVoice): copies the voice and mood of the clips in voice/nova
   clone: { label: 'voice', url: SHERPA + 'tts-models/sherpa-onnx-zipvoice-distill-int8-zh-en-emilia.tar.bz2', dir: 'sherpa-onnx-zipvoice-distill-int8-zh-en-emilia', mb: 109 },
   vocos: { label: 'voice', url: SHERPA + 'vocoder-models/vocos_24khz.onnx', file: 'vocos_24khz.onnx', mb: 54 },
+  // the full-size version of the same voice model: clearer, fewer artifacts, but
+  // slower; downloaded in the background once her voice is working (it also needs
+  // the small one's word list). The parts it doesn't use are deleted after unpacking.
+  cloneHQ: { label: 'clearer voice', url: SHERPA + 'tts-models/sherpa-onnx-zipvoice-distill-zh-en-emilia.tar.bz2', dir: 'sherpa-onnx-zipvoice-distill-zh-en-emilia', mb: 635, drop: ['fm_decoder_int8.onnx', 'text_encoder_int8.onnx', 'pinyin.raw', 'prompt.wav', 'vocos_24khz.onnx'] },
   // her emotional voice (Kyutai Pocket TTS): copies the mood of the clips in voice/emotions
   voiceEmo: { label: 'voice', url: SHERPA + 'tts-models/sherpa-onnx-pocket-tts-int8-2026-01-26.tar.bz2', dir: 'sherpa-onnx-pocket-tts-int8-2026-01-26', mb: 98 },
   // her classic voice (Kokoro v1.0, 54 voices; steady, no moods)
@@ -90,6 +94,7 @@ async function ensure(root, key, onProgress, signal) {
       fs.rmSync(tmp, { recursive: true, force: true });
       fs.mkdirSync(tmp);
       await untar(part, tmp);
+      for (const f of m.drop || []) fs.rmSync(path.join(tmp, m.dir, f), { force: true });
       fs.renameSync(path.join(tmp, m.dir), target);
       fs.rmSync(tmp, { recursive: true, force: true });
     }

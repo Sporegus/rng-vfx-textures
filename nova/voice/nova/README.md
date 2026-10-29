@@ -7,3 +7,8 @@ without ElevenLabs.
 
 To change her voice, replace the clips with new ones (8 to 12 seconds each,
 clean, no music) and update `lines.json` to match word for word.
+
+The clips have had a light clean-up (a little hiss taken out, nothing above
+11.5 kHz), since she copies any noise in them too. The "cute" clip was recorded
+when she was called Zin, so `lines.json` still says "I'm Zin" there: it has to
+match what's said in the clip, and it's never said out loud.
