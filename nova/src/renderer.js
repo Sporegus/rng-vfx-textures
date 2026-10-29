@@ -163,7 +163,8 @@
     x = clamp(x, s.x1, s.x2);
     z.sitting = false; z.asleep = false;
     return new Promise((resolve) => {
-      z.walk = { x, run: !!opts.run, anim: opts.anim || (opts.run ? 'run' : 'walk'), speed: (opts.speed || (opts.run ? 230 : 85)) * sc() / 2, resolve };
+      const anim = opts.anim || (opts.run ? 'run' : 'walk'), pace = S.animInfo(anim, settings.skin).speed;   // (a drawn walk sets its own pace)
+      z.walk = { x, run: !!opts.run, anim, speed: opts.speed ? opts.speed * sc() / 2 : pace ? pace * sc() : (opts.run ? 230 : 85) * sc() / 2, resolve };
     });
   }
   function jumpTo(x, y, perchId) {
@@ -298,7 +299,7 @@
   function animate(dt) {
     const anim = currentAnim();
     if (anim !== z.anim) { z.anim = anim; z.frame = 0; z.ft = 0; }
-    const a = S.ANIMS[anim];
+    const a = S.animInfo(anim, settings.skin);
     z.ft += dt;
     if (z.ft >= 1 / a.fps) { z.ft = 0; z.frame = a.loop ? z.frame + 1 : Math.min(z.frame + 1, a.frames - 1); }
     if (now > z.nextBlink) { z.blinkUntil = now + 130; z.nextBlink = now + rand(1800, 5000); }

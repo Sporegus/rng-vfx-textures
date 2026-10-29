@@ -567,7 +567,12 @@
     ctx.restore();
   }
 
-  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, padOf, handOf, skeleton, frameRGBA, draw, drawNova };
+  // an animation's frame count, speed and looping for a look (the drawn look's frame packs have their own)
+  function animInfo(anim, skin) {
+    const a = ANIMS[anim], p = skinOf(skin).drawn && root.NovaCartoon && root.NovaCartoon.packInfo(anim);
+    return p ? Object.assign({}, a, p) : a;
+  }
+  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, padOf, animInfo, handOf, skeleton, frameRGBA, draw, drawNova };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NovaSprites = api;
 })(typeof window !== 'undefined' ? window : globalThis);

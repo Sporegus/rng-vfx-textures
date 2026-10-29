@@ -11,7 +11,7 @@ const FILL = '#bfe6ff', INK = '#05070f';
 const K = 74 / (POSES.idle.body[3] - POSES.idle.body[1]);
 // the canvas is a little bigger than the pixel sprite's, for her hair, wide poses and sitting
 // (she sits with her knees up, so her head is higher than the pixel Nova's)
-const PAD = { x: 9, top: 28 };
+const PAD = { x: 18, top: 28 };
 // the sheet draws her walk a little smaller than her idle; this keeps her the same size
 const SIZE = { walk1: 1.1, walk2: 1.1, walk3: 1.1, walk4: 1.1 };
 // where each pose stands in the pixel sprite's 48 x 80 box: [centre x, y of her lowest point]
@@ -48,12 +48,34 @@ function frameCanvas(name, scale, flip) {
   return c;
 }
 
+// frame packs: animations drawn frame by frame by the artist (src/frames, made by
+// art/frames/make_packs.py). An animation with a pack plays its frames; the rest use the poses above.
+const PACKS = root.NovaFramePacks || {};
+const images = {};
+function packFrames(anim) {
+  const p = PACKS[anim];
+  if (!p || typeof Image === 'undefined') return null;
+  if (!images[anim]) images[anim] = p.frames.map(f => Object.assign(new Image(), { src: f.src }));
+  return images[anim].every(im => im.complete && im.naturalWidth) ? images[anim] : null;   // (the poses fill in while they load)
+}
+const packInfo = (anim) => PACKS[anim] ? { frames: PACKS[anim].frames.length, fps: PACKS[anim].fps, loop: PACKS[anim].loop, speed: PACKS[anim].speed } : null;
+
 // draws like NovaSprites.draw: x, y is the top-left of the pixel sprite's box
 function draw(ctx, { anim = 'idle', frame = 0, x = 0, y = 0, scale = 3, flip = false } = {}) {
+  const imgs = packFrames(anim);
+  if (imgs) {
+    const i = ((frame % imgs.length) + imgs.length) % imgs.length, f = PACKS[anim].frames[i];
+    ctx.save();
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    if (flip) { ctx.translate(x + 48 * scale, 0); ctx.scale(-1, 1); x = 0; }
+    ctx.drawImage(imgs[i], x + f.x * scale, y + f.y * scale, f.w * scale, f.h * scale);
+    ctx.restore();
+    return;
+  }
   ctx.drawImage(frameCanvas(poseFor(anim, frame), scale, flip), x - PAD.x * scale, y - PAD.top * scale);
 }
 
-const api = { draw, poseFor, PAD, POSES: Object.keys(POSES) };
+const api = { draw, poseFor, packInfo, PAD, POSES: Object.keys(POSES) };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 else root.NovaCartoon = api;
 })(typeof window !== 'undefined' ? window : globalThis);
