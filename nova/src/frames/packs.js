@@ -1115,6 +1115,116 @@ window.NovaFramePacks = {
    900
   ]
  },
+ "warpout": {
+  "loop": false,
+  "frames": [
+   {
+    "src": "frames/warpout/01.png",
+    "x": 3.515,
+    "y": 4.0,
+    "w": 43.352,
+    "h": 74.476
+   },
+   {
+    "src": "frames/warpout/02.png",
+    "x": 7.009,
+    "y": 2.888,
+    "w": 36.524,
+    "h": 75.27
+   },
+   {
+    "src": "frames/warpout/03.png",
+    "x": 5.738,
+    "y": 7.494,
+    "w": 41.129,
+    "h": 70.665
+   },
+   {
+    "src": "frames/warpout/04.png",
+    "x": 5.421,
+    "y": 10.511,
+    "w": 40.652,
+    "h": 67.648
+   },
+   {
+    "src": "frames/warpout/05.png",
+    "x": 4.15,
+    "y": 15.433,
+    "w": 36.365,
+    "h": 62.408
+   },
+   {
+    "src": "frames/warpout/06.png",
+    "x": 7.961,
+    "y": 19.086,
+    "w": 34.142,
+    "h": 44.94
+   }
+  ],
+  "durations": [
+   220,
+   130,
+   110,
+   110,
+   140,
+   120
+  ]
+ },
+ "warpin": {
+  "loop": false,
+  "frames": [
+   {
+    "src": "frames/warpin/01.png",
+    "x": 2.086,
+    "y": 12.258,
+    "w": 40.176,
+    "h": 66.378
+   },
+   {
+    "src": "frames/warpin/02.png",
+    "x": 4.944,
+    "y": 8.446,
+    "w": 33.983,
+    "h": 67.807
+   },
+   {
+    "src": "frames/warpin/03.png",
+    "x": 5.897,
+    "y": 5.747,
+    "w": 42.082,
+    "h": 72.571
+   },
+   {
+    "src": "frames/warpin/04.png",
+    "x": 6.691,
+    "y": 7.494,
+    "w": 39.7,
+    "h": 70.824
+   },
+   {
+    "src": "frames/warpin/05.png",
+    "x": 5.738,
+    "y": 5.112,
+    "w": 39.064,
+    "h": 73.206
+   },
+   {
+    "src": "frames/warpin/06.png",
+    "x": 2.562,
+    "y": 5.112,
+    "w": 41.764,
+    "h": 73.206
+   }
+  ],
+  "durations": [
+   90,
+   120,
+   110,
+   110,
+   160,
+   700
+  ]
+ },
  "sit": {
   "loop": true,
   "frames": [

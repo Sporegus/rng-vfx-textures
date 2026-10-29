@@ -163,3 +163,36 @@ def compose(base, extra):
     im = Image.new('RGBA', (R - L, B - T), (0, 0, 0, 0))
     for f in (base, extra): im.alpha_composite(Image.fromarray(f['rgba']), (f['left'] - L, f['top'] - T))
     return dict(rgba=np.asarray(im), ground=base['top'] + base['ground'] - T, top=T, left=L)
+
+def cut_cells(path, rows, ncols, cut_x=None):
+    """for sheets of effects (glows, glitch strips, frames with no body): each frame is everything in
+    its grid cell, with the glow colours kept (no black outline); only dark fringes become line.
+    rows: [(top, bottom, ground_y)]; cells are split at the emptiest column near each even division,
+    or at cut_x positions given per row."""
+    A = np.asarray(Image.open(path).convert('RGB')).astype(np.float32); H, W = A.shape[:2]
+    bg = np.median(A[rows[0][1]:rows[0][1] + 6].reshape(-1, 3), axis=0)
+    dist = np.sqrt(((A - bg) ** 2).sum(-1)); frames = []
+    for r, (y0, y1, gy) in enumerate(rows):
+        fg = dist[y0:y1] > 60; cols = fg.sum(0)
+        if cut_x: xs = [0] + list(cut_x[r]) + [W]
+        else:
+            xs = [0]
+            for c in range(1, ncols):
+                a, b = int(c * W / ncols - 60), int(c * W / ncols + 60)
+                xs.append(a + int(np.argmin(np.convolve(cols[a:b], np.ones(9), 'same'))))
+            xs.append(W)
+        for x0, x1 in zip(xs, xs[1:]):
+            d = dist[y0:y1, x0:x1]; rgb = A[y0:y1, x0:x1].copy()
+            alpha = np.clip((d - 30) / 60, 0, 1)
+            lab, n = ndi.label(alpha > 0); sz = ndi.sum(np.ones_like(lab), lab, range(1, n + 1))
+            alpha[np.isin(lab, 1 + np.where(sz < 4)[0])] = 0            # (lone specks of jpeg noise)
+            # her lines' fringes mixed with the background become line; the light glows stay as drawn
+            darkish = (rgb.sum(-1) < 330) & (rgb[..., 0] - rgb[..., 2] > 25)
+            rgb[darkish] = INK
+            # pull the background's colour out of half-transparent glow pixels (un-mix it)
+            a3 = np.maximum(alpha, 1e-3)[..., None]
+            rgb = np.clip((rgb - bg * (1 - a3)) / a3, 0, 255)
+            ys, xs_ = np.where(alpha > 0)
+            t, b, l, rr = ys.min(), ys.max() + 1, xs_.min(), xs_.max() + 1
+            frames.append(dict(rgba=np.dstack([rgb, alpha * 255])[t:b, l:rr].astype(np.uint8), ground=gy - y0 - t, top=y0 + t, left=x0 + l))
+    return frames

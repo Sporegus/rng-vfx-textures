@@ -521,6 +521,8 @@
   // (the drawn look has its own frames for these; the pixel looks reuse poses)
   ANIMS.delete = Object.assign({}, ANIMS.sweep);
   ANIMS.found = Object.assign({}, ANIMS.cheer);
+  ANIMS.warpout = Object.assign({}, ANIMS.idle, { loop: false });
+  ANIMS.warpin = Object.assign({}, ANIMS.idle, { loop: false });
   Object.keys(ANIMS).forEach(k => { const a = ANIMS[k]; if (a.loop === undefined) a.loop = true; if (!a.footY) a.footY = GROUND; });
 
   // Where the front hand is in a given frame (for drawing pointer arrows).

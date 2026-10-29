@@ -8,7 +8,7 @@ import json, os
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
-from sheets import cut_sheet, cut_region, compose
+from sheets import cut_sheet, cut_region, compose, cut_cells
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', '..', 'src', 'frames')
 HEIGHT = 74              # her standing height in sprite units, as in cartoon.js
@@ -22,10 +22,13 @@ SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'slee
         'sit': ('like', 'idle'),
         'paint': ('like', 'idle'), 'clean': ('like', 'idle'), 'carry': 'stand', 'search': ('like', 'idle'),
         'delete1': ('stand', [0, 1, 2, 3]), 'delete2': ('stand', [2, 3]),   # (by her standing frames)
+        'warp': ('stand', [0]),
         'shrug': 'stand', 'angry': 'stand', 'shy': 'stand', 'dance': 'stand', 'dizzy': ('like', 'idle'), 'cheer': ('like', 'idle')}
 ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]]}   # (its title badge touches a frame)
 FILE = {'delete1': 'delete', 'delete2': 'delete'}   # sheets cut from the same picture
 BURST = dict(sheet='delete2', over=2, boxes=[(1015, 512, 1276, 1000)], keep=[])
+# effect sheets cut by grid cell, glows kept (see sheets.cut_cells): rows (top, bottom, ground) and columns
+CELLS = {'warp': dict(rows=[(0, 500, 486), (510, 1024, 974)], ncols=6)}
 # how to cut each sheet (see sheets.cut_sheet): the rows between header and captions, how she stands
 CUT = {
   'idle':   dict(band=(205, 882), ground='feet', parts=False),            # (its arrows are the artist's notes)
@@ -87,6 +90,8 @@ PACKS = {
   'found':     dict(sheet='search', frames=[5], fps=1, loop=True),
   'delete':    dict(sheet='delete1', frames=[('delete1', 0), ('delete1', 1), ('delete1', 2), ('delete1', 3), ('delete2', 0), ('delete2', 1), ('delete2', 'burst'), ('delete2', 3)],
                     durations=[420, 380, 330, 330, 260, 260, 650, 900], loop=False),
+  'warpout':   dict(sheet='warp', frames=range(6), durations=[220, 130, 110, 110, 140, 120], loop=False),
+  'warpin':    dict(sheet='warp', frames=range(6, 12), durations=[90, 120, 110, 110, 160, 700], loop=False),
   'sit':       dict(sheet='sit', frames=range(4), durations=[1500, 450, 650, 900], loop=True, anchor='seat'),
 }
 
@@ -107,6 +112,13 @@ def top_width(a):
     for i, (ys, xs) in enumerate(ndi.find_objects(lab), 1):
         if (lab[ys, xs] == i).sum() > 0.004 * a.shape[0] * a.shape[1] and (best is None or ys.start < best[0]): best = (ys.start, xs.stop - xs.start)
     return best[1]
+def body_px(a):
+    """how much of her blue fill a frame has (the warp's frames without her have almost none)"""
+    return int(((a[..., 2] > 230) & (a[..., 0] < 215) & (a[..., 3] > 200)).sum())
+def glow_centre(a):
+    """across: the middle of the brightest light (the beam or burst where she is)"""
+    xs = np.where((a[..., :3].astype(int).min(-1) > 235) & (a[..., 3] > 200))[1]
+    return float(np.median(xs))
 def grip(a):
     """the drag sheets' hand: the top of the drawing"""
     ys, xs = np.where(a[..., 3] > 128); top = ys.min()
@@ -116,6 +128,7 @@ def build(write=True):
     cuts = {}
     sheets = {p['sheet'] for p in PACKS.values()} | {fi[0] for p in PACKS.values() for fi in p['frames'] if isinstance(fi, tuple)} | {'walk', 'idle'}
     for sh in sorted(sheets):
+        if sh in CELLS: cuts[sh] = cut_cells(os.path.join(HERE, sh + '-sheet.png'), **CELLS[sh]); continue
         cuts[sh] = cut_sheet(os.path.join(HERE, FILE.get(sh, sh) + '-sheet.png'), erase=ERASE.get(sh, ()), **CUT.get(sh, {}))
     # the deleted file's burst, laid over the punt
     bs = BURST['sheet']; base = cuts[bs][BURST['over']]
@@ -150,7 +163,7 @@ def build(write=True):
             ground = {'feet': y1, 'seat': f.get('seat')}.get(p.get('anchor')) or f['ground']
             row = SEAT if p.get('anchor') == 'seat' else GROUND
             ax = {'box': (x0 + x1) / 2, 'grip': grip(a)[0]}.get(p.get('align'), None)
-            if ax is None: ax = hips(a)
+            if ax is None: ax = hips(a) if sh not in CELLS or body_px(a) > 15000 else glow_centre(a)
             if fi == 'burst': o = src[BURST['over']]; ax = hips(o['rgba']) + o['left'] - f['left']   # (centred on her, not the burst)
             if p.get('tip') == i:   # her fingertip (the rightmost point), for the app's pointing arrow
                 ty, tx = np.where(a[..., 3] > 128); k = tx.argmax()

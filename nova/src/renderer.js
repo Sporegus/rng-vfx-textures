@@ -202,6 +202,20 @@
     });
   }
   async function teleportTo(x, y) {
+    const out = S.packOf('warpout', settings.skin), inn = S.packOf('warpin', settings.skin);
+    if (out && inn) {   // the drawn look's Halo Warp: scan out where she is, rebuild where she's going
+      const len = (p) => p.durations.reduce((t, d) => t + d, 0);
+      stopMoving();
+      z.mode = 'warp'; z.sitting = false; z.asleep = false;   // (held in place: no physics while she warps)
+      sfx('glitch');
+      await play('warpout', len(out));
+      z.x = x; z.y = Math.min(y, H); z.perch = null;
+      sfx('glitch');
+      await play('warpin', len(inn));
+      if (z.mode !== 'warp') return;   // (picked up mid-warp)
+      if (z.y < H) startFall(0, 0); else z.mode = 'stand';
+      return;
+    }
     sfx('glitch');
     zEl.classList.add('glitch');
     emit('glitch', z.x, z.y - CHEST * sc(), 14);
@@ -1147,7 +1161,7 @@
   async function eightBall() { await play('think', 1200); sfx('pop'); play('cheer', 800); await say('🎱 ' + pick(EIGHT), { ms: 3500 }); }
   async function coin() { play('cheer', 1000); await sleep(900); sfx('ok'); await say(Math.random() < 0.5 ? '🪙 Heads!' : '🪙 Tails!'); }
   async function dice(sides = 6) { play('dance', 900); await sleep(900); sfx('ok'); await say('🎲 You rolled a ' + (1 + Math.floor(Math.random() * sides)) + (sides !== 6 ? ` (d${sides})` : '') + '!'); }
-  async function teleportRandom() { closeBubble(); await teleportTo(rand(80, W - 80), H); play('cheer', 900); }
+  async function teleportRandom() { closeBubble(); await teleportTo(rand(80, W - 80), H); if (!S.packOf('warpin', settings.skin)) play('cheer', 900); }   // (the warp ends on its own pose)
   async function hideAndSeek() {
     closeBubble();
     await say('Count to 3! No peeking!', { ms: 1800 });
@@ -1762,5 +1776,5 @@
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools
-  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, makeWallpaper, intro };
+  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, makeWallpaper, intro };
 })();
