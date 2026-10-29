@@ -355,7 +355,8 @@
   function handPos() {
     const s = sc(), a = S.ANIMS[z.anim];
     const top = z.y - a.footY * s;
-    const [hx, hy] = S.handOf(z.anim, z.frame);
+    const tip = z.anim === 'point' && (S.packOf('point', settings.skin) || {}).tip;   // (the drawn look's fingertip)
+    const [hx, hy] = tip ? [tip[0] - 0.5, tip[1] - 0.5] : S.handOf(z.anim, z.frame);
     const left = z.x - (S.W / 2) * s;  // (in the pixel sprite's box, which the drawn look shares)
     return { x: z.facing > 0 ? left + (hx + 0.5) * s : left + (S.W - hx - 0.5) * s, y: top + (hy + 0.5) * s };
   }

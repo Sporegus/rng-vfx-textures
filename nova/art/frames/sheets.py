@@ -18,20 +18,50 @@ def ground_rows(dark, skip_x=500):
         if not out or min(r) - out[-1] > 120: out.append(min(r))
     return out
 
-def cut_sheet(path, logo=(0, 0, 530, 205), erase=()):
-    """erase: polygons (sheet px) painted over with the background first, for a title touching a frame"""
-    im = Image.open(path).convert('RGB'); A = np.asarray(im).astype(np.float32); H, W = A.shape[:2]
-    bg = np.median(A[:, W // 2 - 50:W // 2 + 50][:8].reshape(-1, 3), axis=0)
+def remove_ledge(A, bg, rows):
+    """paint out a drawn ledge she sits on (rows = (top, bottom) of the ledge and its posts): its
+    fill lies wholly inside those rows, unlike hers, and its lines then have none of her fill nearby"""
+    y0, y1 = rows
+    light = (A.sum(-1) > 450) & (np.sqrt(((A - bg) ** 2).sum(-1)) > 60)
+    lab, n = ndi.label(light); objs = ndi.find_objects(lab)
+    ledge = np.zeros(light.shape, bool)
+    for i, (ys, xs) in enumerate(objs):
+        if ys.start >= y0 - 2 and ys.stop <= y1 + 2: ledge[ys, xs] |= lab[ys, xs] == i + 1
+    A[ledge] = bg
+    hers = light & ~ledge
+    band = np.zeros(light.shape, bool); band[y0 - 2:y1 + 2] = True
+    lonely = band & (A.sum(-1) < 300) & ~ndi.binary_dilation(hers, iterations=5)
+    A[ndi.binary_dilation(lonely, iterations=1) & band] = bg
+
+def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None):
+    """erase: polygons (sheet px) painted over with the background first, for a title touching a frame.
+    band: (top, bottom) rows holding the frames (between the header and the captions).
+    ground: 'line' (a drawn ground line under each frame) or 'feet' (none: her lowest point is the ground).
+    parts: keep small separate bits (motion lines, sparkles) with the nearest frame.
+    ledge: rows of a drawn ledge to remove (she sits on it); each frame's 'seat' is its top.
+    parts_above: only keep small bits higher than this share of the frame (the artist's notes sit low)
+    nframes: frames per row; frames drawn touching are split where they're thinnest
+    nrows: how many rows of frames (the lowest lines found; a row of black clothes can look like one too)"""
+    im = Image.open(path).convert('RGB'); A = np.asarray(im).astype(np.float32).copy(); H, W = A.shape[:2]
+    bg = np.median(A[H // 2 - 200:H // 2 + 200, :6].reshape(-1, 3), axis=0)
     if erase:
         from PIL import ImageDraw
         m = Image.new('1', (W, H)); [ImageDraw.Draw(m).polygon(p, fill=1) for p in erase]
         A[np.asarray(m)] = bg
+    if ledge: remove_ledge(A, bg, ledge)
+    top0, bottom = band or (0, H)
     dist = np.sqrt(((A - bg) ** 2).sum(-1)); dark = A.sum(-1) < 150
-    rows = ground_rows(dark); frames = []
+    if ground == 'line':
+        d = dark.copy(); d[:top0] = False; d[bottom:] = False
+        rows = ground_rows(d)
+        if nrows: rows = rows[-nrows:]
+    else:
+        rows = [bottom + 3]
+    frames = []
     for r, gy in enumerate(rows):
-        top = rows[r - 1] + 8 if r else 0
-        band = np.zeros((H, W), bool); band[top:gy - 3] = True
-        fg = (dist > 60) & band
+        top = rows[r - 1] + 8 if r else top0
+        bandm = np.zeros((H, W), bool); bandm[top:gy - 3] = True
+        fg = (dist > 60) & bandm
         lab, n = ndi.label(fg); objs = ndi.find_objects(lab); sizes = ndi.sum(np.ones_like(lab), lab, range(1, n + 1))
         ok = []
         for i, (ys, xs) in enumerate(objs):
@@ -42,25 +72,37 @@ def cut_sheet(path, logo=(0, 0, 530, 205), erase=()):
         big = max(sizes[i] for i in ok)
         bodies = [i for i in ok if sizes[i] >= 0.15 * big]
         bodies.sort(key=lambda i: objs[i][1].start)
-        parts = {b: [b] for b in bodies}
+        parts_of = {b: [b] for b in bodies}
         for i in ok:
-            if i in parts: continue
+            if i in parts_of or not parts: continue
             ys, xs = objs[i]
             def gap(b):
                 by, bx = objs[b]
                 dx = max(bx.start - xs.stop, xs.start - bx.stop, 0); dy = max(by.start - ys.stop, ys.start - by.stop, 0)
                 return max(dx, dy)
             b = min(bodies, key=gap)
-            if gap(b) < 90: parts[b].append(i)
-        for b in bodies:
-            keep = np.isin(lab, [i + 1 for i in parts[b]])
-            keep = ndi.binary_fill_holes(keep)
-            frames.append(clean(A, dist, keep, gy))
+            if parts_above is not None:
+                by = objs[b][0]
+                if (ys.start + ys.stop) / 2 > by.start + parts_above * (by.stop - by.start): continue
+            if gap(b) < 90: parts_of[b].append(i)
+        feet = max(objs[b][0].stop for b in bodies) if ground == 'feet' else gy
+        masks = [ndi.binary_fill_holes(np.isin(lab, [i + 1 for i in parts_of[b]])) for b in bodies]
+        while nframes and len(masks) < nframes:
+            wid = lambda m: np.ptp(np.where(m.any(0))[0])
+            k = max(range(len(masks)), key=lambda j: wid(masks[j])); m = masks[k]
+            xs = np.where(m.any(0))[0]; a0, a1 = xs.min() + int(0.3 * np.ptp(xs)), xs.min() + int(0.7 * np.ptp(xs))
+            cut = a0 + int(np.argmin(m[:, a0:a1].sum(0)))
+            left, right = m.copy(), m.copy(); left[:, cut:] = False; right[:, :cut] = False
+            masks[k:k + 1] = [left, right]
+        for keep in masks:
+            f = clean(A, dist, keep, gy, feet)
+            if ledge: f['seat'] = ledge[0] + 6 - f['top']   # (the ledge's top surface)
+            frames.append(f)
     return frames
 
-def clean(A, dist, keep, gy):
+def clean(A, dist, keep, gy, ground_y):
     ys, xs = np.where(keep); H, W = keep.shape
-    y0, y1, cx0, cx1 = ys.min(), gy - 3, max(xs.min() - 6, 0), min(xs.max() + 7, W)
+    y0, y1, cx0, cx1 = ys.min(), min(gy - 3, ys.max() + 3), max(xs.min() - 6, 0), min(xs.max() + 7, W)
     d = dist[y0:y1, cx0:cx1]; rgb = A[y0:y1, cx0:cx1].copy(); k = keep[y0:y1, cx0:cx1]
     alpha = np.clip((d - 25) / 50, 0, 1) * ndi.binary_dilation(k, iterations=2)
     # the sheets draw a thin light rim outside her black outline: take it off where a line is just inside
@@ -77,7 +119,7 @@ def clean(A, dist, keep, gy):
     dout = ndi.distance_transform_edt(~body)
     rgb[(dout > 0) & (dout <= 2.6)] = INK
     alpha = np.maximum(alpha, np.clip(2.6 - dout + 0.5, 0, 1) * (dout > 0))
-    return dict(rgba=np.dstack([rgb, alpha * 255]).astype(np.uint8), ground=(y1 - y0) + 4)
+    return dict(rgba=np.dstack([rgb, alpha * 255]).astype(np.uint8), ground=(ground_y - y0) + 4, top=y0 - 4)
 
 def halo_width(f):
     """width of her halo (a flat ring near the top): used to keep her the same size on every sheet"""

@@ -15,8 +15,23 @@ HEIGHT = 74              # her standing height in sprite units, as in cartoon.js
 GROUND, CENTRE = 78, 24  # where her feet and hips go in the 48 x 80 sprite box
 
 # how big each sheet draws her, compared with the walk sheet (bigger number = drawn bigger)
-SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'sleep': 1.6}
+SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'sleep': 1.6,
+        # standing sheets: sized so her body (halo to soles, not the marks around her) is as tall as in her walk
+        'idle': 'stand', 'talk': 'stand', 'wave': 'stand', 'think': 'stand', 'point': 'stand', 'typing': 'stand',
+        # sitting: as big as in her idle sheet, by the size of her crop top
+        'sit': ('like', 'idle')}
 ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]]}   # its title badge touches a frame
+# how to cut each sheet (see sheets.cut_sheet): the rows between header and captions, how she stands
+CUT = {
+  'idle':   dict(band=(205, 882), ground='feet', parts=False),            # (its arrows are the artist's notes)
+  'talk':   dict(band=(200, 866), nrows=1, nframes=6, parts_above=0.55),
+  'wave':   dict(band=(160, 916), nrows=1, parts_above=0.55),
+  'think':  dict(band=(118, 946), ground='feet', parts_above=0.55),
+  'point':  dict(band=(205, 941), nrows=1, parts_above=0.55),
+  'typing': dict(band=(150, 916), ground='feet', parts_above=0.55),
+  'sit':    dict(band=(250, 890), ground='feet', ledge=(590, 730), parts_above=0.55),
+}
+SEAT = 46   # where the ledge she sits on is in the sprite box (the window's top edge)
 
 # the packs: which sheet frames, in order. mirrored: frames drawn facing left.
 #   fps or durations (ms per frame); loop (and loopFrom: frames before it play once, first);
@@ -33,6 +48,13 @@ PACKS = {
   'dangle':    dict(sheet='drag', frames=range(4), durations=[500, 260, 260, 420], loop=True, align='grip'),
   'bored':     dict(sheet='bored', frames=range(6), durations=[1800, 600, 500, 700, 500, 1100], loop=True),
   'sleep':     dict(sheet='sleep', frames=range(6), durations=[900, 1200, 1200, 900, 1300, 1200], loop=True, loopFrom=1, align='box'),
+  'idle':      dict(sheet='idle', frames=range(6), durations=[1300, 650, 110, 150, 550, 800], loop=True),
+  'talk':      dict(sheet='talk', frames=range(6), fps=6, loop=True),
+  'wave':      dict(sheet='wave', frames=range(4), fps=6, loop=True),
+  'think':     dict(sheet='think', frames=range(4), durations=[700, 800, 800, 600], loop=True),
+  'point':     dict(sheet='point', frames=range(3), durations=[160, 1100, 700], loop=True, loopFrom=1, tip=1),
+  'work':      dict(sheet='typing', frames=range(4), fps=8, loop=True),
+  'sit':       dict(sheet='sit', frames=range(4), durations=[1500, 450, 650, 900], loop=True, anchor='seat'),
 }
 
 def hips(a):
@@ -40,6 +62,18 @@ def hips(a):
     h = a.shape[0]; band = a[int(h * 0.35):int(h * 0.7)]
     xs = np.where((band[..., :3].astype(int).sum(-1) < 150) & (band[..., 3] > 200))[1]
     return float(np.median(xs))
+def body_height(f):
+    """halo to ground, for her body only (the biggest piece; marks like a '?' float apart)"""
+    lab, n = ndi.label(f['rgba'][..., 3] > 0); sizes = ndi.sum(np.ones_like(lab), lab, range(1, n + 1))
+    ys = ndi.find_objects(lab)[int(np.argmax(sizes))][0]
+    return f['ground'] - ys.start
+def top_width(a):
+    """the width of her black crop top: the first big black shape from the top"""
+    blk = ndi.binary_opening((a[..., :3].astype(int).sum(-1) < 150) & (a[..., 3] > 200), iterations=2)
+    lab, n = ndi.label(blk); best = None
+    for i, (ys, xs) in enumerate(ndi.find_objects(lab), 1):
+        if (lab[ys, xs] == i).sum() > 0.004 * a.shape[0] * a.shape[1] and (best is None or ys.start < best[0]): best = (ys.start, xs.stop - xs.start)
+    return best[1]
 def grip(a):
     """the drag sheets' hand: the top of the drawing"""
     ys, xs = np.where(a[..., 3] > 128); top = ys.min()
@@ -48,9 +82,17 @@ def grip(a):
 def build(write=True):
     cuts = {}
     for name, p in PACKS.items():
-        if p['sheet'] not in cuts: cuts[p['sheet']] = cut_sheet(os.path.join(HERE, p['sheet'] + '-sheet.png'), erase=ERASE.get(p['sheet'], ()))
+        if p['sheet'] not in cuts: cuts[p['sheet']] = cut_sheet(os.path.join(HERE, p['sheet'] + '-sheet.png'), erase=ERASE.get(p['sheet'], ()), **CUT.get(p['sheet'], {}))
     walk = cuts['walk']
     upx_walk = HEIGHT / max(f['ground'] for f in walk)             # sprite units per walk-sheet px
+    walk_h = max(f['ground'] for f in walk)
+    for sh, v in list(SIZE.items()):
+        if v == 'stand': SIZE[sh] = float(np.median([body_height(f) for f in cuts[sh]])) / walk_h
+    for sh, v in list(SIZE.items()):
+        if isinstance(v, tuple):
+            ref = v[1]; ratio = np.median([top_width(f['rgba']) for f in cuts[sh]]) / np.median([top_width(f['rgba']) for f in cuts[ref]])
+            SIZE[sh] = SIZE[ref] * float(ratio)
+    print('sizes', {k: round(v, 2) for k, v in SIZE.items()})
     packs = {}
     for name, p in PACKS.items():
         upx = upx_walk / SIZE[p['sheet']]
@@ -59,18 +101,23 @@ def build(write=True):
         for i, fi in enumerate(p['frames']):
             f = src[fi]; a = f['rgba'][:, ::-1] if fi in p.get('mirrored', ()) else f['rgba']
             ys, xs = np.where(a[..., 3] > 0); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
-            ground = y1 if p.get('anchor') == 'feet' else f['ground']
+            ground = {'feet': y1, 'seat': f.get('seat')}.get(p.get('anchor')) or f['ground']
+            row = SEAT if p.get('anchor') == 'seat' else GROUND
             ax = {'box': (x0 + x1) / 2, 'grip': grip(a)[0]}.get(p.get('align'), None)
             if ax is None: ax = hips(a)
+            if p.get('tip') == i:   # her fingertip (the rightmost point), for the app's pointing arrow
+                ty, tx = np.where(a[..., 3] > 128); k = tx.argmax()
+                tip = [round(CENTRE + (tx[k] - ax) * upx, 2), round(row - (ground - ty[k]) * upx, 2)]
             if write:   # (64 colours: looks the same, about a ninth of the size)
                 im = Image.fromarray(a[y0:y1, x0:x1], 'RGBA').quantize(colors=64, method=Image.FASTOCTREE, dither=Image.NONE)
                 im.save(os.path.join(OUT, name, f'{i + 1:02d}.png'), optimize=True)
-            meta.append({'src': f'frames/{name}/{i + 1:02d}.png', 'x': round(CENTRE - (ax - x0) * upx, 3), 'y': round(GROUND - (ground - y0) * upx, 3),
+            meta.append({'src': f'frames/{name}/{i + 1:02d}.png', 'x': round(CENTRE - (ax - x0) * upx, 3), 'y': round(row - (ground - y0) * upx, 3),
                          'w': round((x1 - x0) * upx, 3), 'h': round((y1 - y0) * upx, 3)})
         pk = {'loop': p['loop'], 'frames': meta}
         if 'durations' in p: pk['durations'] = p['durations']
         else: pk['fps'] = p['fps']
         if p.get('loopFrom'): pk['loopFrom'] = p['loopFrom']
+        if p.get('tip') is not None: pk['tip'] = tip
         if p.get('stride'): pk['speed'] = round(p['stride'] * p['fps'] / len(meta), 2)
         if p.get('align') == 'grip':   # where her hand is, from her feet (sprite units), for holding her by it
             g = grip(src[p['frames'][0]]['rgba']); pk['grip'] = [0, round(-(src[p['frames'][0]]['ground'] - g[1]) * upx, 2)]
