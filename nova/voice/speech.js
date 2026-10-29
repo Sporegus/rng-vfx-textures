@@ -140,8 +140,12 @@ const cloneText = (t) => CLONE_SAY.reduce((s, [re, to]) => s.replace(re, to), t)
 // refining steps for the clone voice (more is clearer and slower), and how long she
 // may take to start talking
 const MIN_STEPS = 4, MAX_STEPS = 8, FIRST_WAIT = 2;
+// how closely the clone follows her mood clip. 2 copies the mood best (tested against
+// her clips: pitch follows them 0.94, liveliness 0.87, pace 0.64; at 1: 0.77, 0.82,
+// 0.48) and sounds just as much like her; more than 2 is worse again
+const CLONE_GUIDANCE = 2;
 // change when something changes how her clone voice sounds, so saved lines are made again
-const CLONE_VERSION = 2;
+const CLONE_VERSION = 3;
 
 // Kokoro reads all its voices from one file (54 voices of 510 x 256 numbers).
 // Nova's own voices (voice/styles/<name>.bin, one voice each) are written over
@@ -172,7 +176,7 @@ class Mouth {
       // extra: { clips: her clips folder, vocoder: the vocos file, hq: the full-size
       // model's folder (clearer) or null for the small one, cache: a folder for lines she's said }
       const hq = extra.hq ? (n) => path.join(extra.hq, n) : null;
-      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens: f('tokens.txt'), encoder: hq ? hq('text_encoder.onnx') : f('encoder.int8.onnx'), decoder: hq ? hq('fm_decoder.onnx') : f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data') }, numThreads: ttsThreads(), debug: 0 }, maxNumSentences: 1 });
+      this.tts = new so.OfflineTts({ model: { zipvoice: { tokens: f('tokens.txt'), encoder: hq ? hq('text_encoder.onnx') : f('encoder.int8.onnx'), decoder: hq ? hq('fm_decoder.onnx') : f('decoder.int8.onnx'), vocoder: extra.vocoder, lexicon: f('lexicon.txt'), dataDir: f('espeak-ng-data'), guidanceScale: CLONE_GUIDANCE }, numThreads: ttsThreads(), debug: 0 }, maxNumSentences: 1 });
       this.hq = !!hq;
       this.sampleRate = this.tts.sampleRate;
       this.cloneDir = extra.clips;

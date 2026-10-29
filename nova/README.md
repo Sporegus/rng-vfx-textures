@@ -123,7 +123,11 @@ sent anywhere:
 3. The sound is cleaned up (`voice/polish.js`): the faint hiss between words is
    taken out, sharp "s" sounds are softened, the brittle top end is tamed and
    the loudness evened out.
-4. Lines the app says often ("Opening Roblox now!") are saved the first time, so
+4. Her mood comes from the matching clip in `voice/nova`, followed closely
+   (guidance 2): tested on new lines in each of the 10 moods, the clone's pitch
+   follows her real mood clips at 0.94 (1.0 is a perfect match), liveliness at
+   0.87 and pace at 0.64, up from 0.77, 0.82 and 0.48 before.
+5. Lines the app says often ("Opening Roblox now!") are saved the first time, so
    next time they play straight away (`said` in her models folder, 100 MB at
    most; chat replies are never saved). One made in a hurry is remade at full
    quality later, while she's quiet.
@@ -133,7 +137,8 @@ two speech recognizers heard:
 
 | Setting | Words heard right (Parakeet) | (Moonshine) |
 |---|---|---|
-| Full-size model, 8 steps, with the respelling and clean-up | **97.8%** | **95.9%** |
+| Full-size model, 8 steps, respelling, clean-up, guidance 2 | **98.1%** | **97.6%** |
+| Same, guidance 1 | 97.8% | 95.9% |
 | Full-size model, 8 steps, before the respelling | 94.6% | 93.7% |
 | Small model, 4 steps (the quick one), before the respelling | 93.6% | 91.5% |
 
