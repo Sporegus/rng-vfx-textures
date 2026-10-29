@@ -49,7 +49,7 @@ def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', p
     if erase:
         from PIL import ImageDraw
         m = Image.new('1', (W, H)); [ImageDraw.Draw(m).polygon(p, fill=1) for p in erase]
-        A[np.asarray(m)] = bg
+        A[ndi.binary_dilation(np.asarray(m), iterations=4)] = bg   # (a little past the edge, so no outline is left)
     if ledge: remove_ledge(A, bg, ledge)
     top0, bottom = band or (0, H)
     dist = np.sqrt(((A - bg) ** 2).sum(-1)); dark = A.sum(-1) < 150

@@ -21,12 +21,16 @@ SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'slee
         # sitting: as big as in her idle sheet, by the size of her crop top
         'sit': ('like', 'idle'),
         'paint': ('like', 'idle'), 'clean': ('like', 'idle'), 'carry': 'stand', 'search': ('like', 'idle'),
-        'delete2': ('like', 'idle'),
+        'delete1': ('stand', [1, 2, 3]), 'delete2': ('stand', [2, 3]),   # (by her standing frames)
         'shrug': 'stand', 'angry': 'stand', 'shy': 'stand', 'dance': 'stand', 'dizzy': ('like', 'idle'), 'cheer': ('like', 'idle')}
-ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]],   # (title badges touching a frame)
-         'delete2': [[(3, 548), (212, 548), (212, 628), (3, 628)], [(378, 548), (557, 548), (557, 630), (378, 630)], [(828, 543), (1062, 543), (1062, 628), (828, 628)], [(1168, 543), (1359, 543), (1359, 624), (1168, 624)], [(0, 540), (680, 540), (680, 600), (0, 600)], [(1150, 540), (1448, 540), (1448, 604), (1150, 604)]]}
-FILE = {'delete2': 'delete'}   # sheets cut from the same picture
-BURST = dict(sheet='delete2', boxes=[(785, 575, 1178, 1062)], keep=[(784, 638, 862, 727)])
+ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]],   # (its title badge touches a frame)
+         # (badges close to her halo, painted out along their bottom edge)
+         'delete1': [[(0, 0), (400, 0), (400, 132), (0, 160)], [(28, 158), (112, 158), (112, 242), (28, 242)],
+                     [(100, 165), (322, 128), (322, 165), (217, 177), (110, 207)]],
+         'delete2': [[(798, 546), (886, 546), (886, 632), (798, 632)], [(878, 560), (1068, 543), (1068, 576), (927, 601), (878, 611)],
+                     [(1250, 548), (1326, 548), (1326, 633), (1250, 633)], [(1324, 567), (1470, 546), (1462, 591), (1377, 604), (1324, 613)]]}
+FILE = {'delete1': 'delete', 'delete2': 'delete'}   # sheets cut from the same picture
+BURST = dict(sheet='delete2', over=2, boxes=[(1085, 588, 1262, 1000)], keep=[])
 # how to cut each sheet (see sheets.cut_sheet): the rows between header and captions, how she stands
 CUT = {
   'idle':   dict(band=(205, 882), ground='feet', parts=False),            # (its arrows are the artist's notes)
@@ -41,7 +45,11 @@ CUT = {
   'carry': dict(band=(250, 966), ground='feet', parts_above=0.75, logo=(0, 0, 690, 252), drop=[(790, 15, 1448, 295), (369, 514, 471, 598), (714, 514, 816, 598), (1064, 514, 1166, 598), (49, 276, 117, 344), (414, 276, 482, 344), (764, 276, 832, 344), (1129, 277, 1197, 345)]),
   'search': dict(band=(310, 930), ground='feet', parts_above=0.55, logo=(0, 0, 1160, 305), drop=[(1235, 35, 1448, 235), (43, 318, 107, 382), (278, 323, 342, 387), (523, 313, 587, 377), (728, 313, 792, 377), (973, 308, 1037, 372), (1198, 303, 1262, 367)]),
   # delete: two rows drawn at different sizes, cut as two sheets; frame 7 is only the burst, so it's laid over the punt
-  'delete2': dict(band=(560, 1080), ground='feet', parts_above=0.6, logo=(0, 0, 0, 0), drop=[(785, 575, 1178, 1062)], keep=[(784, 638, 862, 727)]),
+  # delete: two rows, each its own cut. Frame 7's burst is drawn apart from her, so it's cut alone and laid over her
+  'delete1': dict(band=(0, 548), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),
+                  drop=[(402, 55, 474, 142), (473, 49, 640, 116), (803, 51, 873, 139), (873, 43, 1014, 111), (1209, 45, 1279, 133), (1277, 25, 1484, 104)]),
+  'delete2': dict(band=(552, 1000), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),
+                  drop=[(30, 545, 292, 640), (385, 548, 578, 642), (770, 694, 826, 726), (1085, 588, 1262, 1000)]),
   # reactions: their titles, notes, number circles and loop arrows are left out with drop boxes
   'shrug': {'band': (270, 925), 'ground': 'feet', 'parts_above': 0.55, 'logo': (0, 0, 820, 275), 'drop': [(800, 20, 1110, 255), (1170, 40, 1448, 235), (48, 273, 116, 341), (401, 266, 469, 334), (761, 266, 829, 334), (1106, 266, 1174, 334)]},
   'angry': {'band': (195, 897), 'ground': 'feet', 'logo': (0, 0, 640, 235), 'drop': [(600, 40, 1448, 205)]},
@@ -85,8 +93,8 @@ PACKS = {
   'folder':    dict(sheet='carry', frames=range(4), fps=6, loop=True),
   'search':    dict(sheet='search', frames=range(5), durations=[300, 300, 500, 500, 400], loop=True),
   'found':     dict(sheet='search', frames=[5], fps=1, loop=True),
-  # (the sheet's top row, frames 1-4, is drawn cut off at the thighs, so only the bottom row is used)
-  'delete':    dict(sheet='delete2', frames=[0, 1, 'burst', 2], durations=[320, 300, 750, 1000], loop=False),
+  'delete':    dict(sheet='delete1', frames=[('delete1', 0), ('delete1', 1), ('delete1', 2), ('delete1', 3), ('delete2', 0), ('delete2', 1), ('delete2', 'burst'), ('delete2', 3)],
+                    durations=[420, 380, 330, 330, 260, 260, 650, 900], loop=False, match=[0]),   # (frame 1 is drawn shorter: matched to 2-4)
   'sit':       dict(sheet='sit', frames=range(4), durations=[1500, 450, 650, 900], loop=True, anchor='seat'),
 }
 
@@ -118,7 +126,7 @@ def build(write=True):
     for sh in sorted(sheets):
         cuts[sh] = cut_sheet(os.path.join(HERE, FILE.get(sh, sh) + '-sheet.png'), erase=ERASE.get(sh, ()), **CUT.get(sh, {}))
     # the deleted file's burst, laid over the punt
-    bs = BURST['sheet']; base = cuts[bs][1]
+    bs = BURST['sheet']; base = cuts[bs][BURST['over']]
     burst = cut_region(os.path.join(HERE, FILE.get(bs, bs) + '-sheet.png'), BURST['boxes'], base['top'] + base['ground'], keep=BURST['keep'])
     cuts[bs] = {**dict(enumerate(cuts[bs])), 'burst': compose(base, burst)}
     walk = cuts['walk']
@@ -126,6 +134,8 @@ def build(write=True):
     walk_h = max(f['ground'] for f in walk)
     for sh, v in list(SIZE.items()):
         if v == 'stand': SIZE[sh] = float(np.median([body_height(f) for f in cuts[sh]])) / walk_h
+    for sh, v in list(SIZE.items()):
+        if isinstance(v, tuple) and v[0] == 'stand': SIZE[sh] = float(np.median([body_height(cuts[sh][k]) for k in v[1]])) / walk_h
     for sh, v in list(SIZE.items()):
         if isinstance(v, tuple):
             ref = v[1]; fs = lambda k: [f for f in (cuts[k].values() if isinstance(cuts[k], dict) else cuts[k])]
@@ -139,6 +149,9 @@ def build(write=True):
         for i, fi in enumerate(p['frames']):
             sh, fi = fi if isinstance(fi, tuple) else (p['sheet'], fi)
             upx = upx_walk / SIZE[sh]; src = cuts[sh]
+            if i in p.get('match', ()):   # sized to the median height of the pack's other standing frames on its sheet
+                others = [src[k] for (s2, k) in p['frames'] if s2 == sh and k != fi]
+                upx *= float(np.median([body_height(o) for o in others])) / body_height(src[fi])
             f = src[fi]; a = f['rgba'][:, ::-1] if fi in p.get('mirrored', ()) else f['rgba']
             a = np.ascontiguousarray(a)
             ys, xs = np.where(a[..., 3] > 0); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
@@ -146,7 +159,7 @@ def build(write=True):
             row = SEAT if p.get('anchor') == 'seat' else GROUND
             ax = {'box': (x0 + x1) / 2, 'grip': grip(a)[0]}.get(p.get('align'), None)
             if ax is None: ax = hips(a)
-            if fi == 'burst': ax = hips(src[1]['rgba']) + src[1]['left'] - f['left']   # (centred on her, not the burst)
+            if fi == 'burst': o = src[BURST['over']]; ax = hips(o['rgba']) + o['left'] - f['left']   # (centred on her, not the burst)
             if p.get('tip') == i:   # her fingertip (the rightmost point), for the app's pointing arrow
                 ty, tx = np.where(a[..., 3] > 128); k = tx.argmax()
                 tip = [round(CENTRE + (tx[k] - ax) * upx, 2), round(row - (ground - ty[k]) * upx, 2)]
