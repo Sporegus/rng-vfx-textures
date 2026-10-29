@@ -505,6 +505,10 @@
     dance: { frames: 8, fps: 8, pose: f => ({ dx: [0, 1, 2, 1, 0, -1, -2, -1][f], bob: f % 2, front: f < 4 ? 'up' : 'hip', back: f < 4 ? 'hip' : 'up', legs: f % 4 === 1 ? 'kick' : f % 4 === 3 ? 'pose' : 'stand', eyes: f % 4 === 2 ? 'wink' : 'happy', mouth: f % 2 ? 'open' : 'smile', fx: [['note', f < 4 ? 2 : 40, 10 + (f % 4), P.note]] }) },
     dangle:{ frames: 2, fps: 5, pose: f => ({ legs: 'dangle', front: 'up', back: 'up', eyes: 'wide', mouth: 'o', dx: f ? 1 : 0 }) },
     fall:  { frames: 2, fps: 10, pose: f => ({ legs: 'tuck', front: f ? 'flail1' : 'flail2', back: 'flail', eyes: 'wide', mouth: 'o' }) },
+    // (the drawn look has its own frames for these three; the pixel looks reuse poses)
+    jumpstart: { frames: 1, fps: 8, loop: false, pose: () => ({ legs: 'squat', bob: 3, front: 'out', back: 'out', eyes: 'closed', mouth: 'flat' }) },
+    jump:  { frames: 2, fps: 10, pose: f => ({ legs: 'tuck', front: f ? 'flail1' : 'flail2', back: 'flail', eyes: 'wide', mouth: 'o' }) },
+    bored: { frames: 8, fps: 5, pose: f => ({ bob: [0, 0, 0, 1, 1, 1, 0, 0][f] }) },
     land:  { frames: 2, fps: 8, loop: false, pose: f => ({ legs: f ? 'stand' : 'squat', bob: f ? 0 : 3, front: f ? 'down' : 'out', back: f ? 'down' : 'out', eyes: f ? 'open' : 'closed', mouth: 'flat' }) },
     sit:   { frames: 4, fps: 3, footY: 46, pose: f => ({ legs: 'sit', bob: f === 2 ? 1 : 0, front: [[1, 10], [4, 18]], back: [[-1, 10], [0, 18]], eyes: f === 3 ? 'blink' : 'open' }) },
     work:  { frames: 4, fps: 8, pose: f => ({ prop: 'panel', front: f % 2 ? 'type1' : 'type2', back: 'hold', eyes: 'down', mouth: 'flat', scan: f }) },
@@ -568,11 +572,18 @@
   }
 
   // an animation's frame count, speed and looping for a look (the drawn look's frame packs have their own)
+  const packOf = (anim, skin) => (skinOf(skin).drawn && root.NovaCartoon && root.NovaCartoon.packInfo(anim)) || null;
   function animInfo(anim, skin) {
-    const a = ANIMS[anim], p = skinOf(skin).drawn && root.NovaCartoon && root.NovaCartoon.packInfo(anim);
+    const a = ANIMS[anim], p = packOf(anim, skin);
     return p ? Object.assign({}, a, p) : a;
   }
-  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, padOf, animInfo, handOf, skeleton, frameRGBA, draw, drawNova };
+  // which drawing a frame count lands on: loops start again from loopFrom (frames before it play once)
+  function frameIndex(a, frame) {
+    const n = a.frames, from = a.loopFrom || 0;
+    if (frame < n) return frame;
+    return a.loop ? from + (frame - from) % (n - from) : n - 1;
+  }
+  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, padOf, packOf, animInfo, frameIndex, handOf, skeleton, frameRGBA, draw, drawNova };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NovaSprites = api;
 })(typeof window !== 'undefined' ? window : globalThis);

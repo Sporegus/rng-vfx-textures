@@ -170,6 +170,15 @@
   function jumpTo(x, y, perchId) {
     stopMoving();
     if (z.mode !== 'stand') return Promise.resolve(false);
+    const crouch = S.packOf('jumpstart', settings.skin);   // (the drawn look crouches first)
+    if (crouch) {
+      z.facing = x >= z.x ? 1 : -1;
+      return play('jumpstart', crouch.durations.reduce((t, d) => t + d, 0)).then(() => leap(x, y, perchId));
+    }
+    return leap(x, y, perchId);
+  }
+  function leap(x, y, perchId) {
+    if (z.mode !== 'stand') return Promise.resolve(false);
     sfx('jump');
     z.sitting = false; z.asleep = false; z.perch = null;
     const dist = Math.hypot(x - z.x, y - z.y);
@@ -181,7 +190,8 @@
   }
   function land(perchId) {
     z.mode = 'stand'; z.vx = z.vy = 0; z.perch = perchId || null;
-    z.landUntil = now + 220;
+    const lp = S.packOf('land', settings.skin);
+    z.landUntil = now + (lp ? lp.durations.reduce((t, d) => t + d, 0) : 220);
     sfx('land');
     emit('dust', z.x, z.y - 4, 6);
   }
@@ -280,7 +290,8 @@
 
   function currentAnim() {
     if (z.mode === 'drag') return 'dangle';
-    if (z.mode === 'fall' || z.mode === 'jump') return 'fall';
+    if (z.mode === 'jump') return 'jump';
+    if (z.mode === 'fall') return 'fall';
     if (now < z.landUntil) return 'land';
     if (z.walk) return z.walk.anim;
     if (z.chase) return Math.abs(mouse.x - z.x) > 30 ? 'run' : 'love';
@@ -301,13 +312,15 @@
     if (anim !== z.anim) { z.anim = anim; z.frame = 0; z.ft = 0; }
     const a = S.animInfo(anim, settings.skin);
     z.ft += dt;
-    if (z.ft >= 1 / a.fps) { z.ft = 0; z.frame = a.loop ? z.frame + 1 : Math.min(z.frame + 1, a.frames - 1); }
+    const hold = a.durations ? a.durations[S.frameIndex(a, z.frame)] / 1000 : 1 / a.fps;
+    if (z.ft >= hold) { z.ft = 0; z.frame = a.loop ? z.frame + 1 : Math.min(z.frame + 1, a.frames - 1); }
+    if (anim === 'jump' && z.jump) z.frame = z.jump.t < 0.5 ? 0 : 1;   // going up, then coming down
     if (now > z.nextBlink) { z.blinkUntil = now + 130; z.nextBlink = now + rand(1800, 5000); }
     const blink = now < z.blinkUntil && ['idle', 'walk', 'sit', 'point', 'talk'].includes(anim);
     const s = sc(), pad = S.padOf(settings.skin); // (her drawn look has a bigger canvas)
     const cw = (S.W + pad.x * 2) * s, ch = (S.H + pad.top) * s;
     if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; lastKey = ''; }
-    const key = [anim, z.frame % a.frames, settings.skin, settings.hat, z.facing, blink].join('|');
+    const key = [anim, S.frameIndex(a, z.frame), settings.skin, settings.hat, z.facing, blink].join('|');
     if (key !== lastKey) {
       ctx.clearRect(0, 0, cv.width, cv.height);
       S.draw(ctx, { anim, frame: z.frame, skin: settings.skin, hat: settings.hat, x: pad.x * s, y: pad.top * s, scale: s, flip: z.facing < 0, overrides: blink ? { eyes: 'blink' } : null });
@@ -416,7 +429,8 @@
   function startDrag() {
     stopMoving();
     z.mode = 'drag'; z.perch = null; z.sitting = false; z.asleep = false; z.hiding = false; z.chase = null;
-    drag = { ox: press.x - z.x, oy: press.y - z.y };
+    const grip = (S.packOf('dangle', settings.skin) || {}).grip;   // (the drawn look is held by the hand in its frames)
+    drag = grip ? { ox: 0, oy: grip[1] * sc() } : { ox: press.x - z.x, oy: press.y - z.y };
     zEl.classList.add('dragging');
     sfx('pop');
     interaction();
@@ -1670,6 +1684,12 @@
     if (!z.asleep && now - lastInteraction > 180000) { z.asleep = true; z.sitting = false; return; }
     if (z.asleep || now < nextThink) return;
     nextThink = now + rand(5000, 14000);
+    const bored = S.packOf('bored', settings.skin);
+    if (bored && now - lastInteraction > 60000 && Math.random() < 0.4) {
+      play('bored', 2 * bored.durations.reduce((t, d) => t + d, 0));
+      nextThink = now + rand(20000, 40000);
+      return;
+    }
     if (!settings.wander) return;
     const ws = windowSurface();
     const r = Math.random();
@@ -1740,5 +1760,5 @@
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools
-  window.novaDebug = { z, mainMenu, command, say, play, makeWallpaper, intro };
+  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, makeWallpaper, intro };
 })();

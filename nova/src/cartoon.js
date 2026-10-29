@@ -58,13 +58,20 @@ function packFrames(anim) {
   if (!images[anim]) images[anim] = p.frames.map(f => Object.assign(new Image(), { src: f.src }));
   return images[anim].every(im => im.complete && im.naturalWidth) ? images[anim] : null;   // (the poses fill in while they load)
 }
-const packInfo = (anim) => PACKS[anim] ? { frames: PACKS[anim].frames.length, fps: PACKS[anim].fps, loop: PACKS[anim].loop, speed: PACKS[anim].speed } : null;
+function packInfo(anim) {
+  const p = PACKS[anim];
+  if (!p) return null;
+  const info = { frames: p.frames.length, loop: p.loop, fps: p.fps || 1000 / p.durations[0] };
+  for (const k of ['durations', 'loopFrom', 'speed', 'grip']) if (p[k] !== undefined) info[k] = p[k];
+  return info;
+}
+const frameAt = (p, frame) => { const n = p.frames.length, from = p.loopFrom || 0; return frame < n ? frame : p.loop ? from + (frame - from) % (n - from) : n - 1; };
 
 // draws like NovaSprites.draw: x, y is the top-left of the pixel sprite's box
 function draw(ctx, { anim = 'idle', frame = 0, x = 0, y = 0, scale = 3, flip = false } = {}) {
   const imgs = packFrames(anim);
   if (imgs) {
-    const i = ((frame % imgs.length) + imgs.length) % imgs.length, f = PACKS[anim].frames[i];
+    const i = frameAt(PACKS[anim], Math.max(0, frame)), f = PACKS[anim].frames[i];
     ctx.save();
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     if (flip) { ctx.translate(x + 48 * scale, 0); ctx.scale(-1, 1); x = 0; }
