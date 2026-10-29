@@ -1,0 +1,58 @@
+NOVA - LIVE2D ASSET VALIDATION
+
+Checklist ([x] done and checked, [~] partly, [ ] not done)
+
+[x] Nova's identity and silhouette match the supplied reference
+    Every visible part is cut from the sheet's neutral full-body drawing; stacking the cut parts rebuilds that drawing with max difference 1.0/255.
+[x] Every required movable part has its own layer
+    137 layers in 18 folders. Spec layers not produced, and why, are listed below.
+[x] Layer names are descriptive and unique
+    137 names, 0 duplicates.
+[x] All layers share the same canvas dimensions and alignment
+    PSD canvas 3000x4000; all 137 exported PNGs are 3000x4000. In the PSD each layer is stored at its own position (as Photoshop does); ImageMagick reads the same names and offsets (137 layers).
+[x] No unwanted white backgrounds or opaque checkerboards
+    0 pure-white pixels across the character layers; preview background is transparent.
+[x] Hidden overlap is sufficient at every moving joint
+    Each part carries on under the parts in front of it (1 line width by default, 55 px for hair, 40 px for the skirt, plus drawn extensions at the head, neck, torso, waist, shoulders, elbows, wrists, hips, knees, ankles and feet). Pose test turned head, arms, elbows, wrists, legs, hair and halo: no holes (Nova_Pose_Test.png). Simple underpaint shapes; see limitations.
+[x] No disconnected outlines appear when parts are separated
+    Each line belongs to the part in front at that edge; the part behind gets its own outline along its hidden edge.
+[x] Face components align correctly in the neutral state
+    Neutral face stacks exactly (see rebuild check).
+[x] Eye closure and mouth changes do not expose holes
+    Holes inside her outline per expression: Neutral 0, Happy 0, Excited 0, Smug 0, Angry 0, Confused 0, Surprised 0, Sad 0, Sleepy 0, Teasing 0, Blushing 0, Shocked 0. Blinking by lid deformation is untested (needs Cubism).
+[x] Both arms and legs have consistent proportions
+    Taken from the one neutral drawing; hidden limb pieces follow its joint positions.
+[x] Alternate hands align to the same wrist positions
+    Distance from each hand to the neutral wrist point (canvas px): Hand_R_Relaxed 0.0, Hand_R_Open 4.5, Hand_R_Fist 0.0, Hand_R_Point 0.0, Hand_R_Wave 5.0, Hand_R_Peace 17.0, Hand_R_Relaxed_Alt 2.0, Hand_L_Relaxed 0.0, Hand_L_Open 4.1, Hand_L_Fist 0.0, Hand_L_Point 0.0, Hand_L_Wave 5.0, Hand_L_Peace 17.1, Hand_L_Relaxed_Alt 1.0.
+[x] Accessories remain separate and can be toggled
+    Halo, halo shading, star clip, choker, choker pendant, belt, buckle, strap, ring and boot stars and flaps are separate layers.
+[x] Expression components are compatible with the neutral face
+    Nova_Expression_Preview.png: 12 expressions made only by showing/hiding parts (Nova_Expressions.json).
+[x] The assembled character matches the original design
+    Cut parts vs drawing: 1.0/255. Visible PSD layers vs Nova_FullBody_Preview.png: 0.5/255. The preview adds the newly drawn neutral nose and mouth, which are too faint on the sheet to trace.
+[~] The asset has been tested in a layered editor or compositing preview
+    Tested by compositing the PSD layers (psd-tools), reading the PSD with ImageMagick, and posing the layers in a compositing test. NOT yet tested in Cubism Editor.
+
+Spec layers not produced (on purpose)
+
+- Hair_Bangs_Right: her right forehead is covered by the centre bang; the design has no separate lock there.
+- Hair_Strands_Additional_01..03: the drawing has no loose strands; its strand lines are drawn inside the locks.
+- Hair_Lineart_Separate_Where_Needed, Torso_Lineart, Arm_L/R_Lineart: lines are kept with each part so they move with it (better for deformation).
+- Hair_Shading_Optional, Torso_Shading, Clothing_Shading, Boot_Shading, Arm_L/R_Sleeve_Shading, Accessory_Shading_Optional: the look is flat colour. Optional flat shadows are provided where they help: Face_Shadow, Neck_Shadow, Halo_Inner_Shading (hidden).
+- Arm_L/R_Cuff: the cuff band is drawn into the sleeve on the sheet; separating it needs redrawing.
+- Waistband: the belt covers the top of the skirt; there is no separate band.
+- Pouch: not worn in the neutral drawing (the extras panel shows one).
+- Clothing_Buckles / Clothing_Stars / Clothing_Additional_Details: covered by Belt_Buckle, Belt_Hardware, Chest_Clothing_Detail and Boot_*_Star.
+- Expression_Happy ... Expression_Shocked: built from parts (10_EXPRESSIONS layers + mouths + effects) instead of one layer each, as the spec asks.
+
+Not yet done / untested
+
+- Live2D Cubism import, meshes, deformers, parameters, physics and expressions files: needs Cubism Editor (Windows/Mac). Steps in Nova_Rig_Notes.md.
+- Blink and look-around by deformation: untested until rigged.
+- Head turns beyond a few degrees: the face is three-quarter view.
+
+Made new (not by the artist)
+
+- Hidden underpaint: head shape under hair, skin under clothes, forearms, wrists, knees, shins, ankles, feet. Simple flat shapes with outlines.
+- Mouth_* (all 17), Nose, Eye_Closed_*, Eye_Happy_*, Eyebrow_*_Angry/Sad/Raised, Pupil_Small_*, Blush_*, Ear_*, Face_Shadow, Neck_Shadow, Halo_Inner_Shading, Effect_Sweat_Drop.
+- Traced from the sheet's small panels (less detail than the main drawing): alternate hands, effects.

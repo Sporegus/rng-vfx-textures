@@ -1,0 +1,138 @@
+order_bottom_to_top,layer,group,purpose,visible_by_default,source,x,y,width,height,visible_px,hidden_overlap_px,overlap_notes
+1,Background_Transparent,12_BACKGROUND,Empty; the character has no background,yes,reference,0,0,1,1,,,
+2,Reference_Background_NonExporting,12_BACKGROUND,Reference: background colour for viewing (do not export),no,reference,0,0,3000,4000,,,
+3,Nova_Reference_Sheet,00_REFERENCE,"Reference: the sheet's neutral Nova, aligned (do not export)",no,reference,784,230,1431,3470,,,
+4,Nova_Proportion_Guides,00_REFERENCE,Reference: proportion lines (do not export),no,reference,0,247,3000,3158,,,
+5,Nova_Centerline,00_REFERENCE,Reference: body centre line (do not export),no,reference,1426,0,4,4000,,,
+6,Hair_Tip_Left_01,01_HAIR [back],Hair tip that swings from the end of a back-hair mass (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1837,1438,272,257,17546,13042,"carries on 13042 px under the layers in front of it, outlined along its own edge"
+7,Hair_Tip_Left_02,01_HAIR [back],Hair tip that swings from the end of a back-hair mass (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1742,1191,270,211,14530,11394,"carries on 11394 px under the layers in front of it, outlined along its own edge"
+8,Hair_Tip_Right_01,01_HAIR [back],Hair tip that swings from the end of a back-hair mass (her right; on the viewer's left),yes,cut from the neutral full-body drawing,822,1217,271,243,17070,12602,"carries on 12602 px under the layers in front of it, outlined along its own edge"
+9,Hair_Tip_Right_02,01_HAIR [back],Hair tip that swings from the end of a back-hair mass (her right; on the viewer's left),yes,cut from the neutral full-body drawing,934,1330,231,249,11982,14745,"carries on 14745 px under the layers in front of it, outlined along its own edge"
+10,Hair_Back_Left,01_HAIR [back],Long back-hair mass; hangs behind body and arms (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1472,1088,513,701,88727,137372,"carries on 137372 px under the layers in front of it, outlined along its own edge"
+11,Hair_Back_Right,01_HAIR [back],Long back-hair mass; hangs behind body and arms (her right; on the viewer's left),yes,cut from the neutral full-body drawing,919,863,564,830,112198,166328,"carries on 166328 px under the layers in front of it, outlined along its own edge"
+12,Hair_Back_Base,01_HAIR [back],"Back hair attached to the head (upper part, both sides)",yes,cut from the neutral full-body drawing,980,626,880,563,65087,103017,"carries on 103017 px under the layers in front of it, outlined along its own edge"
+13,Halo_Base,04_HEAD_ACCESSORIES [halo],Halo ring (separate for its own float/physics),yes,cut from the neutral full-body drawing,1041,271,430,289,57905,5413,"carries on 5413 px under the layers in front of it, outlined along its own edge"
+14,Halo_Inner_Shading,04_HEAD_ACCESSORIES [halo],Optional halo shading,no,drawn new in her line style,1055,416,320,130,,,
+15,Hand_R_Relaxed,07_HANDS,Relaxed hand (neutral pose) (her right; on the viewer's left),yes,cut from the neutral full-body drawing,855,1728,223,333,28633,9967,"carries on 9967 px under the layers in front of it, outlined along its own edge"
+16,Hand_R_Open,07_HANDS,"Alternate hand pose, same wrist point (her right; on the viewer's left)",no,traced from the sheet hand panel,888,1760,166,293,,,wrist placed on the neutral hand's wrist point
+17,Hand_R_Fist,07_HANDS,"Alternate hand pose, same wrist point (her right; on the viewer's left)",no,traced from the sheet hand panel,867,1737,185,308,,,wrist placed on the neutral hand's wrist point
+18,Hand_R_Point,07_HANDS,"Alternate hand pose, same wrist point (her right; on the viewer's left)",no,traced from the sheet hand panel,892,1745,150,311,,,wrist placed on the neutral hand's wrist point
+19,Hand_R_Wave,07_HANDS,"Alternate hand pose, same wrist point (her right; on the viewer's left)",no,traced from the sheet hand panel,961,1763,170,295,,,wrist placed on the neutral hand's wrist point
+20,Hand_R_Peace,07_HANDS,"Alternate hand pose, same wrist point (her right; on the viewer's left)",no,traced from the sheet hand panel,909,1779,145,270,,,wrist placed on the neutral hand's wrist point
+21,Hand_R_Relaxed_Alt,07_HANDS,Alternate relaxed hand (from the sheet's hand panel) (her right; on the viewer's left),no,traced from the sheet hand panel,842,1725,186,290,,,wrist placed on the neutral hand's wrist point
+22,Hand_L_Relaxed,07_HANDS,Relaxed hand (neutral pose) (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1728,1728,218,304,25423,10641,"carries on 10641 px under the layers in front of it, outlined along its own edge"
+23,Hand_L_Open,07_HANDS,"Alternate hand pose, same wrist point (her left; on the viewer's right)",no,traced from the sheet hand panel,1785,1759,169,293,,,wrist placed on the neutral hand's wrist point
+24,Hand_L_Fist,07_HANDS,"Alternate hand pose, same wrist point (her left; on the viewer's right)",no,traced from the sheet hand panel,1785,1737,190,305,,,wrist placed on the neutral hand's wrist point
+25,Hand_L_Point,07_HANDS,"Alternate hand pose, same wrist point (her left; on the viewer's right)",no,traced from the sheet hand panel,1795,1744,153,311,,,wrist placed on the neutral hand's wrist point
+26,Hand_L_Wave,07_HANDS,"Alternate hand pose, same wrist point (her left; on the viewer's right)",no,traced from the sheet hand panel,1709,1764,169,295,,,wrist placed on the neutral hand's wrist point
+27,Hand_L_Peace,07_HANDS,"Alternate hand pose, same wrist point (her left; on the viewer's right)",no,traced from the sheet hand panel,1783,1779,148,268,,,wrist placed on the neutral hand's wrist point
+28,Hand_L_Relaxed_Alt,07_HANDS,Alternate relaxed hand (from the sheet's hand panel) (her left; on the viewer's right),no,traced from the sheet hand panel,1810,1724,189,288,,,wrist placed on the neutral hand's wrist point
+29,Arm_R_Hand_Wrist,06_ARMS,Wrist stub joining forearm and hand (hidden) (her right; on the viewer's left),yes,hidden underpaint (drawn new),982,1730,79,108,0,5584,"carries on 5584 px under the layers in front of it, outlined along its own edge"
+30,Arm_L_Hand_Wrist,06_ARMS,Wrist stub joining forearm and hand (hidden) (her left; on the viewer's right),yes,hidden underpaint (drawn new),1771,1730,82,102,0,5695,"carries on 5695 px under the layers in front of it, outlined along its own edge"
+31,Arm_R_Forearm_Skin,06_ARMS,"Forearm, hidden inside the sleeve (her right; on the viewer's left)",yes,hidden underpaint (drawn new),995,1433,273,411,0,33266,"carries on 33266 px under the layers in front of it, outlined along its own edge"
+32,Arm_L_Forearm_Skin,06_ARMS,"Forearm, hidden inside the sleeve (her left; on the viewer's right)",yes,hidden underpaint (drawn new),1614,1433,229,401,0,31470,"carries on 31470 px under the layers in front of it, outlined along its own edge"
+33,Arm_R_Upper_Skin,06_ARMS,"Upper arm, shoulder to elbow; carries on under the sleeve (her right; on the viewer's left)",yes,cut from the neutral full-body drawing,1175,1041,241,512,23135,18034,"carries on 18034 px under the layers in front of it, outlined along its own edge"
+34,Arm_L_Upper_Skin,06_ARMS,"Upper arm, shoulder to elbow; carries on under the sleeve (her left; on the viewer's right)",yes,cut from the neutral full-body drawing,1512,1055,195,498,25881,21209,"carries on 21209 px under the layers in front of it, outlined along its own edge"
+35,Arm_R_Sleeve,06_ARMS,"Detached sleeve, elbow to wrist (her right; on the viewer's left)",yes,cut from the neutral full-body drawing,917,1383,375,513,76913,5474,"carries on 5474 px under the layers in front of it, outlined along its own edge"
+36,Arm_L_Sleeve,06_ARMS,"Detached sleeve, elbow to wrist (her left; on the viewer's right)",yes,cut from the neutral full-body drawing,1588,1381,329,472,61124,5414,"carries on 5414 px under the layers in front of it, outlined along its own edge"
+37,Leg_R_Knee,08_LEGS,Knee joint (hidden in the boot) (her right; on the viewer's left),yes,hidden underpaint (drawn new),1148,2412,144,181,0,21041,"carries on 21041 px under the layers in front of it, outlined along its own edge"
+38,Leg_L_Knee,08_LEGS,Knee joint (hidden in the boot) (her left; on the viewer's right),yes,hidden underpaint (drawn new),1603,2412,127,181,0,18219,"carries on 18219 px under the layers in front of it, outlined along its own edge"
+39,Leg_R_Lower,08_LEGS,Shin (hidden in the boot) (her right; on the viewer's left),yes,hidden underpaint (drawn new),1139,2412,168,793,0,106194,"carries on 106194 px under the layers in front of it, outlined along its own edge"
+40,Leg_L_Lower,08_LEGS,Shin (hidden in the boot) (her left; on the viewer's right),yes,hidden underpaint (drawn new),1576,2412,180,793,0,102535,"carries on 102535 px under the layers in front of it, outlined along its own edge"
+41,Leg_R_Ankle,08_LEGS,Ankle (hidden in the boot) (her right; on the viewer's left),yes,hidden underpaint (drawn new),1135,3101,136,118,0,12491,"carries on 12491 px under the layers in front of it, outlined along its own edge"
+42,Leg_L_Ankle,08_LEGS,Ankle (hidden in the boot) (her left; on the viewer's right),yes,hidden underpaint (drawn new),1625,3110,136,118,0,12493,"carries on 12493 px under the layers in front of it, outlined along its own edge"
+43,Leg_R_Upper,08_LEGS,Thigh; carries on up under the skirt and down into the boot (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1072,1566,347,946,101593,82984,"carries on 82984 px under the layers in front of it, outlined along its own edge"
+44,Leg_L_Upper,08_LEGS,Thigh; carries on up under the skirt and down into the boot (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1458,1566,376,946,94830,81912,"carries on 81912 px under the layers in front of it, outlined along its own edge"
+45,Boot_R_Sole,09_BOOTS_AND_CLOTHING_DETAILS,Shoe and platform sole (her right; on the viewer's left),yes,cut from the neutral full-body drawing,894,2943,494,347,74659,65553,"carries on 65553 px under the layers in front of it, outlined along its own edge"
+46,Boot_L_Sole,09_BOOTS_AND_CLOTHING_DETAILS,Shoe and platform sole (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1440,2961,599,407,109766,89303,"carries on 89303 px under the layers in front of it, outlined along its own edge"
+47,Boot_R_Base,09_BOOTS_AND_CLOTHING_DETAILS,Boot shaft (leg warmer) (her right; on the viewer's left),yes,cut from the neutral full-body drawing,871,2306,514,867,251838,7881,"carries on 7881 px under the layers in front of it, outlined along its own edge"
+48,Boot_L_Base,09_BOOTS_AND_CLOTHING_DETAILS,Boot shaft (leg warmer) (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1460,2305,562,901,276438,10840,"carries on 10840 px under the layers in front of it, outlined along its own edge"
+49,Boot_R_Upper_Detail,09_BOOTS_AND_CLOTHING_DETAILS,Thigh; carries on up under the skirt and down into the boot (her right; on the viewer's left),yes,cut from the neutral full-body drawing,969,2366,140,233,17088,0,
+50,Boot_L_Upper_Detail,09_BOOTS_AND_CLOTHING_DETAILS,Thigh; carries on up under the skirt and down into the boot (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1743,2372,188,261,28080,0,
+51,Boot_R_Star,09_BOOTS_AND_CLOTHING_DETAILS,Star on the boot (her right; on the viewer's left),yes,cut from the neutral full-body drawing,964,2915,78,101,2997,0,
+52,Boot_L_Star,09_BOOTS_AND_CLOTHING_DETAILS,Star on the boot (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1817,2835,91,129,4078,0,
+53,Neck,05_NECK_AND_BODY,Neck; carries on up under the chin,yes,cut from the neutral full-body drawing,1387,912,229,205,9540,28895,"carries on 28895 px under the layers in front of it, outlined along its own edge"
+54,Neck_Shadow,05_NECK_AND_BODY,Optional chin shadow on the neck,no,drawn new in her line style,1394,919,202,139,,,
+55,Torso_Skin,05_NECK_AND_BODY,Chest and shoulders; carries on under the top,yes,cut from the neutral full-body drawing,1298,1038,299,331,9829,63373,"carries on 63373 px under the layers in front of it, outlined along its own edge"
+56,Waist_Skin,05_NECK_AND_BODY,Belly and waist; carries on under belt and skirt,yes,cut from the neutral full-body drawing,1270,1256,356,374,45373,60458,"carries on 60458 px under the layers in front of it, outlined along its own edge"
+57,Torso_Clothing,05_NECK_AND_BODY,Crop top,yes,cut from the neutral full-body drawing,1291,1115,284,252,40669,7144,"carries on 7144 px under the layers in front of it, outlined along its own edge"
+58,Chest_Clothing_Detail,05_NECK_AND_BODY,Star on the crop top,yes,cut from the neutral full-body drawing,1372,1147,117,155,6689,0,
+59,Skirt_Base,05_NECK_AND_BODY,Back/underside of the skirt,yes,cut from the neutral full-body drawing,1144,1487,617,378,5349,149951,"carries on 149951 px under the layers in front of it, outlined along its own edge"
+60,Skirt_Left_Panel,05_NECK_AND_BODY,Skirt panel (overlaps its neighbours for sway) (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1117,1449,389,385,44558,21856,"carries on 21856 px under the layers in front of it, outlined along its own edge"
+61,Skirt_Right_Panel,05_NECK_AND_BODY,Skirt panel (overlaps its neighbours for sway) (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1509,1473,252,306,31648,13560,"carries on 13560 px under the layers in front of it, outlined along its own edge"
+62,Skirt_Front_Panel,05_NECK_AND_BODY,Skirt panel (overlaps its neighbours for sway),yes,cut from the neutral full-body drawing,1301,1504,286,313,39165,18546,"carries on 18546 px under the layers in front of it, outlined along its own edge"
+63,Belt,05_NECK_AND_BODY,Belt,yes,cut from the neutral full-body drawing,1219,1433,400,178,16261,3023,"carries on 3023 px under the layers in front of it, outlined along its own edge"
+64,Belt_Buckle,05_NECK_AND_BODY,Belt buckle,yes,cut from the neutral full-body drawing,1321,1496,202,129,13921,0,
+65,Belt_Straps,05_NECK_AND_BODY,Hanging belt strap,yes,cut from the neutral full-body drawing,1520,1645,90,330,18958,882,"carries on 882 px under the layers in front of it, outlined along its own edge"
+66,Belt_Hardware,05_NECK_AND_BODY,Belt ring,yes,cut from the neutral full-body drawing,1510,1591,81,83,5030,0,
+67,Choker,04_HEAD_ACCESSORIES [choker],Choker,yes,cut from the neutral full-body drawing,1353,979,191,186,9581,1255,"carries on 1255 px under the layers in front of it, outlined along its own edge"
+68,Choker_Star,04_HEAD_ACCESSORIES [choker],Choker pendant,yes,cut from the neutral full-body drawing,1418,1051,51,28,684,0,
+69,Ear_Left,02_FACE [base],Ear (hidden under her hair in this design) (her left; on the viewer's right),no,drawn new in her line style,1583,802,53,98,,,
+70,Ear_Right,02_FACE [base],Ear (hidden under her hair in this design) (her right; on the viewer's left),no,drawn new in her line style,1171,834,54,97,,,
+71,Face_Base,02_FACE [base],"Face skin; carries on under hair, bangs and eyes as a full head shape",yes,cut from the neutral full-body drawing,1162,527,505,486,61884,119197,"carries on 119197 px under the layers in front of it, outlined along its own edge"
+72,Face_Shadow,02_FACE [base],Optional flat shadow cast by the bangs,no,drawn new in her line style,1162,578,455,395,,,
+73,Blush_Left,02_FACE [base],Blush (Blushing expression) (her left; on the viewer's right),no,drawn new in her line style,1533,897,68,38,,,
+74,Blush_Right,02_FACE [base],Blush (Blushing expression) (her right; on the viewer's left),no,drawn new in her line style,1227,954,68,37,,,
+75,Nose,02_FACE [base],Nose,yes,drawn new in her line style,1366,919,17,17,,,
+76,Eye_White_Left,02_FACE [base],Eye white (use as the clipping mask for iris/pupil) (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1424,762,205,116,4887,11848,"carries on 11848 px under the layers in front of it, outlined along its own edge; no outline on the hidden part (meant to be a clipping mask)"
+77,Eye_White_Right,02_FACE [base],Eye white (use as the clipping mask for iris/pupil) (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1225,886,118,70,1348,3673,"carries on 3673 px under the layers in front of it, outlined along its own edge; no outline on the hidden part (meant to be a clipping mask)"
+78,Iris_Left,02_FACE [base],"Iris, drawn whole under the lids so it can look around (her left; on the viewer's right)",yes,cut from the neutral full-body drawing,1455,762,120,113,6406,3032,"carries on 3032 px under the layers in front of it, outlined along its own edge"
+79,Iris_Right,02_FACE [base],"Iris, drawn whole under the lids so it can look around (her right; on the viewer's left)",yes,cut from the neutral full-body drawing,1273,877,70,76,2486,1335,"carries on 1335 px under the layers in front of it, outlined along its own edge"
+80,Pupil_Left,02_FACE [base],Pupil (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1488,759,50,78,1193,1007,"carries on 1007 px under the layers in front of it, outlined along its own edge"
+81,Pupil_Right,02_FACE [base],Pupil (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1284,873,53,53,582,1105,"carries on 1105 px under the layers in front of it, outlined along its own edge"
+82,Eye_Highlight_Left,02_FACE [base],Eye highlight (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1512,788,19,41,,,
+83,Eye_Highlight_Right,02_FACE [base],Eye highlight (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1297,888,33,38,,,
+84,Pupil_Small_Left,02_FACE [base],Small pupil for Shocked (swap for Iris+Pupil) (her left; on the viewer's right),no,drawn new in her line style,1492,796,47,56,,,alternate state: show one at a time
+85,Pupil_Small_Right,02_FACE [base],Small pupil for Shocked (swap for Iris+Pupil) (her right; on the viewer's left),no,drawn new in her line style,1293,900,37,42,,,alternate state: show one at a time
+86,Lower_Eyelid_Left,02_FACE [base],Lower lid line (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1464,866,38,7,132,0,
+87,Lower_Eyelid_Right,02_FACE [base],Lower lid line (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1240,921,63,39,468,46,"carries on 46 px under the layers in front of it, outlined along its own edge"
+88,Mouth_Interior,03_MOUTH,Mouth interior (clipping mask for teeth/tongue),no,drawn new in her line style,1390,950,52,36,,,alternate state: show one at a time
+89,Mouth_Teeth,03_MOUTH,Teeth (clip to Mouth_Interior),no,drawn new in her line style,1391,947,51,16,,,alternate state: show one at a time
+90,Mouth_Tongue,03_MOUTH,Tongue (clip to Mouth_Interior),no,drawn new in her line style,1401,970,38,24,,,alternate state: show one at a time
+91,Mouth_Neutral,03_MOUTH,Mouth shape (one at a time),yes,drawn new in her line style,1394,946,43,23,,,alternate state: show one at a time
+92,Mouth_Smile,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1390,949,52,22,,,alternate state: show one at a time
+93,Mouth_Open_Small,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1399,951,35,26,,,alternate state: show one at a time
+94,Mouth_Open_Medium,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1393,948,47,33,,,alternate state: show one at a time
+95,Mouth_Open_Large,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1387,947,58,42,,,alternate state: show one at a time
+96,Mouth_Talking_A,03_MOUTH,Lip-sync shape,no,drawn new in her line style,1394,950,44,39,,,alternate state: show one at a time
+97,Mouth_Talking_I,03_MOUTH,Lip-sync shape,no,drawn new in her line style,1388,951,56,23,,,alternate state: show one at a time
+98,Mouth_Talking_U,03_MOUTH,Lip-sync shape,no,drawn new in her line style,1403,949,27,31,,,alternate state: show one at a time
+99,Mouth_Talking_E,03_MOUTH,Lip-sync shape,no,drawn new in her line style,1390,950,53,29,,,alternate state: show one at a time
+100,Mouth_Talking_O,03_MOUTH,Lip-sync shape,no,drawn new in her line style,1397,948,38,41,,,alternate state: show one at a time
+101,Mouth_Frown,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1393,950,47,19,,,alternate state: show one at a time
+102,Mouth_Pout,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1402,951,28,14,,,alternate state: show one at a time
+103,Mouth_Smirk,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1396,943,45,26,,,alternate state: show one at a time
+104,Mouth_Laugh,03_MOUTH,Mouth shape (one at a time),no,drawn new in her line style,1385,942,63,45,,,alternate state: show one at a time
+105,Hair_Side_Left_Lower,01_HAIR [side locks],Side lock framing the face (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1547,905,187,230,13136,9482,"carries on 9482 px under the layers in front of it, outlined along its own edge"
+106,Hair_Side_Right_Lower,01_HAIR [side locks],Side lock framing the face (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1113,896,132,272,17493,3534,"carries on 3534 px under the layers in front of it, outlined along its own edge"
+107,Hair_Side_Left_Upper,01_HAIR [side locks],Side lock framing the face (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1541,412,383,604,86745,20728,"carries on 20728 px under the layers in front of it, outlined along its own edge"
+108,Hair_Side_Right_Upper,01_HAIR [side locks],Side lock framing the face (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1102,628,182,339,15434,13229,"carries on 13229 px under the layers in front of it, outlined along its own edge"
+109,Upper_Eyelid_Left,02_FACE [lids & brows],Upper lid / lash line (deform down to blink) (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1414,706,218,142,6901,2055,"carries on 2055 px under the layers in front of it, outlined along its own edge"
+110,Upper_Eyelid_Right,02_FACE [lids & brows],Upper lid / lash line (deform down to blink) (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1190,860,152,71,4292,296,"carries on 296 px under the layers in front of it, outlined along its own edge"
+111,Eyelashes_Left,02_FACE [lids & brows],Lash flicks at the outer corner (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1543,706,89,157,864,551,"carries on 551 px under the layers in front of it, outlined along its own edge"
+112,Eyelashes_Right,02_FACE [lids & brows],Lash flicks at the outer corner (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1162,882,46,27,537,0,
+113,Eyebrow_Left,02_FACE [lids & brows],Eyebrow (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1403,683,89,82,574,517,"carries on 517 px under the layers in front of it, outlined along its own edge"
+114,Eyebrow_Right,02_FACE [lids & brows],Eyebrow (her right; on the viewer's left),yes,cut from the neutral full-body drawing,1225,796,58,29,158,388,"carries on 388 px under the layers in front of it, outlined along its own edge"
+115,Eye_Closed_Left,10_EXPRESSIONS,"Closed eye line (blink end state, Sleepy, Smug wink) (her left; on the viewer's right)",no,drawn new in her line style,1419,794,230,87,,,alternate state: show one at a time
+116,Eye_Closed_Right,10_EXPRESSIONS,"Closed eye line (blink end state, Sleepy, Smug wink) (her right; on the viewer's left)",no,drawn new in her line style,1170,899,183,48,,,alternate state: show one at a time
+117,Eye_Happy_Left,10_EXPRESSIONS,Happy closed eye ^ (her left; on the viewer's right),no,drawn new in her line style,1424,793,194,71,,,alternate state: show one at a time
+118,Eye_Happy_Right,10_EXPRESSIONS,Happy closed eye ^ (her right; on the viewer's left),no,drawn new in her line style,1201,886,152,50,,,alternate state: show one at a time
+119,Eyebrow_Left_Angry,10_EXPRESSIONS,Brow variant (her left; on the viewer's right),no,drawn new in her line style,1397,703,86,89,,,alternate state: show one at a time
+120,Eyebrow_Left_Sad,10_EXPRESSIONS,Brow variant (her left; on the viewer's right),no,drawn new in her line style,1401,718,84,24,,,alternate state: show one at a time
+121,Eyebrow_Left_Raised,10_EXPRESSIONS,Brow variant (her left; on the viewer's right),no,drawn new in her line style,1406,674,68,70,,,alternate state: show one at a time
+122,Eyebrow_Right_Angry,10_EXPRESSIONS,Brow variant (her right; on the viewer's left),no,drawn new in her line style,1219,795,66,39,,,alternate state: show one at a time
+123,Eyebrow_Right_Sad,10_EXPRESSIONS,Brow variant (her right; on the viewer's left),no,drawn new in her line style,1219,800,66,35,,,alternate state: show one at a time
+124,Eyebrow_Right_Raised,10_EXPRESSIONS,Brow variant (her right; on the viewer's left),no,drawn new in her line style,1219,784,59,15,,,alternate state: show one at a time
+125,Hair_Bangs_Center,01_HAIR [front],"Centre bang, tip between the eyes",yes,cut from the neutral full-body drawing,1163,486,242,396,30760,17372,"carries on 17372 px under the layers in front of it, outlined along its own edge"
+126,Hair_Bangs_Left,01_HAIR [front],Bang over her left forehead (under the star clip) (her left; on the viewer's right),yes,cut from the neutral full-body drawing,1288,419,378,342,49594,28708,"carries on 28708 px under the layers in front of it, outlined along its own edge"
+127,Hair_Top_Base,01_HAIR [front],Crown hair (moves with the head),yes,cut from the neutral full-body drawing,963,316,691,423,79633,320,"carries on 320 px under the layers in front of it, outlined along its own edge"
+128,Star_Hair_Clip,04_HEAD_ACCESSORIES [clip],Star hair clip,yes,cut from the neutral full-body drawing,1549,514,117,165,9271,0,
+129,Effect_Sparkles,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1768,360,185,202,,,
+130,Effect_Hearts,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1804,634,134,164,,,
+131,Effect_Sweat_Drop,11_EFFECTS,Optional effect,no,drawn new,1693,796,72,61,,,
+132,Effect_Angry_Mark,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1711,368,80,119,,,
+133,Effect_Question_Mark,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1769,297,61,113,,,
+134,Effect_Exclamation_Mark,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1779,297,45,155,,,
+135,Effect_Speech_Bubble,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1790,201,242,191,,,
+136,Effect_Sleep_Z,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1730,301,151,136,,,
+137,Effect_Music_Notes,11_EFFECTS,Optional effect,no,traced from the sheet extras panel,1787,538,82,110,,,

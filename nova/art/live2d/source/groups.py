@@ -1,0 +1,30 @@
+# the PSD's folders, bottom to top. A few spec folders appear twice ([back]/[front] etc.)
+# because Photoshop folders must be contiguous and Nova's real overlaps interleave.
+GROUPS = [
+ ('12_BACKGROUND', ['Background_Transparent', 'Reference_Background_NonExporting']),
+ ('00_REFERENCE', ['Nova_Reference_Sheet', 'Nova_Proportion_Guides', 'Nova_Centerline']),
+ ('01_HAIR [back]', ['Hair_Tip_Left_01', 'Hair_Tip_Left_02', 'Hair_Tip_Right_01', 'Hair_Tip_Right_02', 'Hair_Back_Left', 'Hair_Back_Right', 'Hair_Back_Base']),
+ ('04_HEAD_ACCESSORIES [halo]', ['Halo_Base', 'Halo_Inner_Shading']),
+ ('07_HANDS', ['Hand_R_Relaxed', 'Hand_R_Open', 'Hand_R_Fist', 'Hand_R_Point', 'Hand_R_Wave', 'Hand_R_Peace', 'Hand_R_Relaxed_Alt',
+               'Hand_L_Relaxed', 'Hand_L_Open', 'Hand_L_Fist', 'Hand_L_Point', 'Hand_L_Wave', 'Hand_L_Peace', 'Hand_L_Relaxed_Alt']),
+ ('06_ARMS', ['Arm_R_Hand_Wrist', 'Arm_L_Hand_Wrist', 'Arm_R_Forearm_Skin', 'Arm_L_Forearm_Skin', 'Arm_R_Upper_Skin', 'Arm_L_Upper_Skin', 'Arm_R_Sleeve', 'Arm_L_Sleeve']),
+ ('08_LEGS', ['Leg_R_Knee', 'Leg_L_Knee', 'Leg_R_Lower', 'Leg_L_Lower', 'Leg_R_Ankle', 'Leg_L_Ankle', 'Leg_R_Upper', 'Leg_L_Upper']),
+ ('09_BOOTS_AND_CLOTHING_DETAILS', ['Boot_R_Sole', 'Boot_L_Sole', 'Boot_R_Base', 'Boot_L_Base', 'Boot_R_Upper_Detail', 'Boot_L_Upper_Detail', 'Boot_R_Star', 'Boot_L_Star']),
+ ('05_NECK_AND_BODY', ['Neck', 'Neck_Shadow', 'Torso_Skin', 'Waist_Skin', 'Torso_Clothing', 'Chest_Clothing_Detail',
+                       'Skirt_Base', 'Skirt_Left_Panel', 'Skirt_Right_Panel', 'Skirt_Front_Panel', 'Belt', 'Belt_Buckle', 'Belt_Straps', 'Belt_Hardware']),
+ ('04_HEAD_ACCESSORIES [choker]', ['Choker', 'Choker_Star']),
+ ('02_FACE [base]', ['Ear_Left', 'Ear_Right', 'Face_Base', 'Face_Shadow', 'Blush_Left', 'Blush_Right', 'Nose',
+                     'Eye_White_Left', 'Eye_White_Right', 'Iris_Left', 'Iris_Right', 'Pupil_Left', 'Pupil_Right', 'Eye_Highlight_Left', 'Eye_Highlight_Right',
+                     'Pupil_Small_Left', 'Pupil_Small_Right', 'Lower_Eyelid_Left', 'Lower_Eyelid_Right']),
+ ('03_MOUTH', ['Mouth_Interior', 'Mouth_Teeth', 'Mouth_Tongue', 'Mouth_Neutral', 'Mouth_Smile', 'Mouth_Open_Small', 'Mouth_Open_Medium', 'Mouth_Open_Large',
+               'Mouth_Talking_A', 'Mouth_Talking_I', 'Mouth_Talking_U', 'Mouth_Talking_E', 'Mouth_Talking_O', 'Mouth_Frown', 'Mouth_Pout', 'Mouth_Smirk', 'Mouth_Laugh']),
+ ('01_HAIR [side locks]', ['Hair_Side_Left_Lower', 'Hair_Side_Right_Lower', 'Hair_Side_Left_Upper', 'Hair_Side_Right_Upper']),
+ ('02_FACE [lids & brows]', ['Upper_Eyelid_Left', 'Upper_Eyelid_Right', 'Eyelashes_Left', 'Eyelashes_Right', 'Eyebrow_Left', 'Eyebrow_Right']),
+ ('10_EXPRESSIONS', ['Eye_Closed_Left', 'Eye_Closed_Right', 'Eye_Happy_Left', 'Eye_Happy_Right',
+                     'Eyebrow_Left_Angry', 'Eyebrow_Left_Sad', 'Eyebrow_Left_Raised', 'Eyebrow_Right_Angry', 'Eyebrow_Right_Sad', 'Eyebrow_Right_Raised']),
+ ('01_HAIR [front]', ['Hair_Bangs_Center', 'Hair_Bangs_Left', 'Hair_Top_Base']),
+ ('04_HEAD_ACCESSORIES [clip]', ['Star_Hair_Clip']),
+ ('11_EFFECTS', ['Effect_Sparkles', 'Effect_Hearts', 'Effect_Sweat_Drop', 'Effect_Angry_Mark', 'Effect_Question_Mark', 'Effect_Exclamation_Mark',
+                 'Effect_Speech_Bubble', 'Effect_Sleep_Z', 'Effect_Music_Notes']),
+]
+STACK = [k for _, ks in GROUPS for k in ks]

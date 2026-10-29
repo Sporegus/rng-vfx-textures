@@ -1,0 +1,174 @@
+{
+ "Neutral": {
+  "hide": [],
+  "show": []
+ },
+ "Happy": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Open_Medium",
+   "Eyebrow_Left_Raised",
+   "Eyebrow_Right_Raised"
+  ]
+ },
+ "Excited": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Laugh",
+   "Eyebrow_Left_Raised",
+   "Eyebrow_Right_Raised",
+   "Effect_Sparkles"
+  ]
+ },
+ "Smug": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eye_White_Left",
+   "Iris_Left",
+   "Pupil_Left",
+   "Eye_Highlight_Left",
+   "Upper_Eyelid_Left",
+   "Lower_Eyelid_Left",
+   "Eyelashes_Left"
+  ],
+  "show": [
+   "Mouth_Smirk",
+   "Eye_Closed_Left"
+  ]
+ },
+ "Angry": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Frown",
+   "Eyebrow_Left_Angry",
+   "Eyebrow_Right_Angry",
+   "Effect_Angry_Mark"
+  ]
+ },
+ "Confused": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Pout",
+   "Eyebrow_Left_Sad",
+   "Eyebrow_Right_Raised",
+   "Effect_Question_Mark"
+  ]
+ },
+ "Surprised": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Talking_O",
+   "Eyebrow_Left_Raised",
+   "Eyebrow_Right_Raised",
+   "Effect_Exclamation_Mark"
+  ]
+ },
+ "Sad": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Frown",
+   "Eyebrow_Left_Sad",
+   "Eyebrow_Right_Sad"
+  ]
+ },
+ "Sleepy": {
+  "hide": [
+   "Eye_White_Left",
+   "Iris_Left",
+   "Pupil_Left",
+   "Eye_Highlight_Left",
+   "Upper_Eyelid_Left",
+   "Lower_Eyelid_Left",
+   "Eyelashes_Left",
+   "Eye_White_Right",
+   "Iris_Right",
+   "Pupil_Right",
+   "Eye_Highlight_Right",
+   "Upper_Eyelid_Right",
+   "Lower_Eyelid_Right",
+   "Eyelashes_Right"
+  ],
+  "show": [
+   "Eye_Closed_Left",
+   "Eye_Closed_Right",
+   "Effect_Sleep_Z"
+  ]
+ },
+ "Teasing": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eye_White_Left",
+   "Iris_Left",
+   "Pupil_Left",
+   "Eye_Highlight_Left",
+   "Upper_Eyelid_Left",
+   "Lower_Eyelid_Left",
+   "Eyelashes_Left"
+  ],
+  "show": [
+   "Mouth_Open_Small",
+   "Eye_Happy_Left",
+   "Eyebrow_Right_Raised"
+  ]
+ },
+ "Blushing": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right"
+  ],
+  "show": [
+   "Mouth_Smile",
+   "Eyebrow_Left_Sad",
+   "Eyebrow_Right_Sad",
+   "Blush_Left",
+   "Blush_Right",
+   "Effect_Hearts"
+  ]
+ },
+ "Shocked": {
+  "hide": [
+   "Mouth_Neutral",
+   "Eyebrow_Left",
+   "Eyebrow_Right",
+   "Iris_Left",
+   "Iris_Right",
+   "Pupil_Left",
+   "Pupil_Right",
+   "Eye_Highlight_Left",
+   "Eye_Highlight_Right"
+  ],
+  "show": [
+   "Mouth_Open_Large",
+   "Pupil_Small_Left",
+   "Pupil_Small_Right",
+   "Eyebrow_Left_Raised",
+   "Eyebrow_Right_Raised",
+   "Effect_Sweat_Drop"
+  ]
+ }
+}
