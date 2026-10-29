@@ -23,7 +23,7 @@ SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'slee
         'paint': ('like', 'idle'), 'clean': ('like', 'idle'), 'carry': 'stand', 'search': ('like', 'idle'),
         'delete0': ('stand', [0]), 'delete1': ('stand', [1, 2, 3]), 'delete2': ('stand', [2, 3]),   # (by her standing frames)
         'shrug': 'stand', 'angry': 'stand', 'shy': 'stand', 'dance': 'stand', 'dizzy': ('like', 'idle'), 'cheer': ('like', 'idle')}
-ERASE = {'delete0': [[(598, 0), (1536, 0), (1536, 1024), (598, 1024)]],
+ERASE = {'delete0': [[(0, 0), (874, 0), (874, 1024), (0, 1024)], [(1178, 0), (1536, 0), (1536, 1024), (1178, 1024)]],   # (the corrected frame 1 only)
          'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]],   # (its title badge touches a frame)
          # (badges close to her halo, painted out along their bottom edge)
          'delete1': [[(0, 0), (400, 0), (400, 132), (0, 160)], [(28, 158), (112, 158), (112, 242), (28, 242)],
@@ -47,8 +47,9 @@ CUT = {
   'search': dict(band=(310, 930), ground='feet', parts_above=0.55, logo=(0, 0, 1160, 305), drop=[(1235, 35, 1448, 235), (43, 318, 107, 382), (278, 323, 342, 387), (523, 313, 587, 377), (728, 313, 792, 377), (973, 308, 1037, 372), (1198, 303, 1262, 367)]),
   # delete: two rows drawn at different sizes, cut as two sheets; frame 7 is only the burst, so it's laid over the punt
   # delete: two rows, each its own cut. Frame 7's burst is drawn apart from her, so it's cut alone and laid over her
-  # frame 1, redrawn at full size (its comparison panel on the right is painted out)
-  'delete0': dict(band=(0, 926), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0), drop=[(150, 0, 512, 114), (10, 12, 157, 179)]),
+  # frame 1, redrawn: the 'corrected frame 1' beside frame 2 on its sheet
+  'delete0': dict(band=(282, 856), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),   # (its measuring arrow and dashed lines, around her)
+                  whiteout=[(884, 286, 902, 438), (884, 532, 902, 858), (872, 284, 932, 312), (958, 295, 993, 305), (1010, 284, 1180, 312), (872, 849, 1180, 860)]),
   'delete1': dict(band=(0, 548), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),
                   drop=[(402, 55, 474, 142), (473, 49, 640, 116), (803, 51, 873, 139), (873, 43, 1014, 111), (1209, 45, 1279, 133), (1277, 25, 1484, 104)]),
   'delete2': dict(band=(552, 1000), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),

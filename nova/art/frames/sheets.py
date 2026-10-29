@@ -33,13 +33,14 @@ def remove_ledge(A, bg, rows):
     lonely = band & (A.sum(-1) < 300) & ~ndi.binary_dilation(hers, iterations=5)
     A[ndi.binary_dilation(lonely, iterations=1) & band] = bg
 
-def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None, drop=(), keep=()):
+def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None, drop=(), keep=(), whiteout=()):
     """erase: polygons (sheet px) painted over with the background first, for a title touching a frame.
     band: (top, bottom) rows holding the frames (between the header and the captions).
     ground: 'line' (a drawn ground line under each frame) or 'feet' (none: her lowest point is the ground).
     parts: keep small separate bits (motion lines, sparkles) with the nearest frame.
     ledge: rows of a drawn ledge to remove (she sits on it); each frame's 'seat' is its top.
     drop: more boxes (x0, y0, x1, y1) whose contents are left out: titles, notes, number circles
+    whiteout: boxes where only white pixels are painted out (a white guide line running through her)
     keep: boxes whose contents are never dropped (something of hers inside a drop box)
     parts_above: only keep small bits higher than this share of the frame (the artist's notes sit low)
     nframes: frames per row; frames drawn touching are split where they're thinnest
@@ -50,6 +51,9 @@ def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', p
         from PIL import ImageDraw
         m = Image.new('1', (W, H)); [ImageDraw.Draw(m).polygon(p, fill=1) for p in erase]
         A[ndi.binary_dilation(np.asarray(m), iterations=4)] = bg   # (a little past the edge, so no outline is left)
+    for x0, y0, x1, y1 in whiteout:
+        sub = A[y0:y1, x0:x1]; white = (sub.min(-1) > 200) & (np.ptp(sub, axis=-1) < 40)
+        sub[ndi.binary_dilation(white, iterations=2) & (sub.sum(-1) > 450)] = bg
     if ledge: remove_ledge(A, bg, ledge)
     top0, bottom = band or (0, H)
     dist = np.sqrt(((A - bg) ** 2).sum(-1)); dark = A.sum(-1) < 150
@@ -109,6 +113,7 @@ def clean(A, dist, keep, gy, ground_y):
     y0, y1, cx0, cx1 = ys.min(), min(gy - 3, ys.max() + 3), max(xs.min() - 6, 0), min(xs.max() + 7, W)
     d = dist[y0:y1, cx0:cx1]; rgb = A[y0:y1, cx0:cx1].copy(); k = keep[y0:y1, cx0:cx1]
     alpha = np.clip((d - 25) / 50, 0, 1) * ndi.binary_dilation(k, iterations=2)
+    # (holes she encloses that show the background, like the middle of a thin halo, stay see-through)
     # the sheets draw a thin light rim outside her black outline: take it off where a line is just inside
     darkpx = (rgb.sum(-1) < 200) & (alpha > 0.5)
     rim = (rgb.sum(-1) > 450) & ndi.binary_dilation(alpha < 0.5, iterations=2) & ndi.binary_dilation(darkpx, iterations=3)
@@ -118,6 +123,7 @@ def clean(A, dist, keep, gy, ground_y):
     pinkish = (rgb[..., 0] - rgb[..., 2] > 15) & (rgb[..., 0] - rgb[..., 1] > 30)
     rgb[(alpha > 0) & (alpha <= 0.98)] = INK
     rgb[near & pinkish & (alpha > 0)] = INK
+    rgb[(d < 60) & (alpha > 0)] = INK   # (specks of background left inside her, like in a halo's hole)
     # and a clean black outline all the way round
     body = np.pad(alpha > 0.5, 4); rgb = np.pad(rgb, ((4, 4), (4, 4), (0, 0))); alpha = np.pad(alpha, 4)
     dout = ndi.distance_transform_edt(~body)
