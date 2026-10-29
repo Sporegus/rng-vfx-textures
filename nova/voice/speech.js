@@ -205,7 +205,8 @@ class Mouth {
   // a clone's clip for this mood (and the words said in it)
   cloneClip(mood) {
     const m = this.lines[mood] ? mood : 'cute';
-    if (!this.clips[m]) this.clips[m] = { wave: so.readWave(path.join(this.cloneDir, m + '.wav'), false), text: this.lines[m] };
+    // (its words are read the same way as what she says, so they match how the voice hears them)
+    if (!this.clips[m]) this.clips[m] = { wave: so.readWave(path.join(this.cloneDir, m + '.wav'), false), text: cloneText(speakable(this.lines[m])) };
     return this.clips[m];
   }
 
