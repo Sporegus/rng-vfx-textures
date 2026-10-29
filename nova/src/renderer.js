@@ -1384,7 +1384,9 @@
     if (!voice.service || !settings.voice || !voice.ready || !text) return;
     VIO.stop();
     api.voice.send({ type: 'hush' });
-    api.voice.send({ type: 'say', id: ++voice.id, text, opts: voiceOpts(mood || moodOf(text)) });
+    // a recorded phrase plays when one fits (the bubble still shows the whole line)
+    const cue = window.NovaCues ? NovaCues.cueFor(text) : null;
+    api.voice.send({ type: 'say', id: ++voice.id, text, opts: { ...voiceOpts(mood || moodOf(text)), cue } });
   }
 
   // the mic is on while she's listening for her name, or for a few seconds after push-to-talk

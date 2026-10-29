@@ -2,6 +2,7 @@
 // AI work never freezes Nova. Talks to the main process with small messages:
 //   in:  setup, audio, listen, say, hush, chat, fix, get, rpc-reply
 //   out: status, progress, speaking, heard, audio, said, sentence, replied, rpc, error
+const fs = require('fs');
 const path = require('path');
 const models = require('./models');
 const { Ears, Mouth, EMOTIONAL } = require('./speech');
@@ -112,8 +113,32 @@ async function setupMind() {
   return busy.mind;
 }
 
+// ---------------------------------------------------------------- her recorded phrases
+// voice/nova/phrases: short lines made once in her ElevenLabs voice, played for everyday
+// moments ("On it!", "All done!"); phrases.json lists them by cue (see cues.js)
+const PHRASES = unpacked(path.join('nova', 'phrases'));
+let phrases = null; const heard = {}, lastTake = {};
+function phraseFor(cue, mood) {
+  if (phrases === null) { try { phrases = JSON.parse(fs.readFileSync(path.join(PHRASES, 'phrases.json'), 'utf8')); } catch { phrases = {}; } }
+  const takes = phrases[cue];
+  if (!takes || !takes.length) return null;
+  // the take in her mood if there is one, and not the same one twice in a row
+  const fits = takes.filter(t => t.mood === mood);
+  let pool = (fits.length ? fits : takes).filter(t => t.file !== lastTake[cue]);
+  if (!pool.length) pool = fits.length ? fits : takes;
+  const t = pool[Math.floor(Math.random() * pool.length)];
+  lastTake[cue] = t.file;
+  if (!heard[t.file]) { try { heard[t.file] = require('sherpa-onnx-node').readWave(path.join(PHRASES, t.file), false); } catch { return null; } }
+  return heard[t.file];
+}
+
 // ---------------------------------------------------------------- talking
 async function say(id, text, opts) {
+  // her own voice (or her ElevenLabs one) plays a recorded phrase when one fits
+  if (opts.cue && ears && (kindOf(opts.voice) === 'clone' || kindOf(opts.voice) === 'eleven')) {
+    const w = phraseFor(opts.cue, opts.mood);
+    if (w) { send({ type: 'audio', id, samples: w.samples, sampleRate: w.sampleRate, pitch: 1, gain: 1 }); return send({ type: 'said', id }); }
+  }
   const mouth = ears && await mouthFor(opts.voice);
   if (!mouth) return send({ type: 'said', id });
   await mouth.say(text, { ...opts, cache: true }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how }))
