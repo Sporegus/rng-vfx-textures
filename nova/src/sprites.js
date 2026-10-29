@@ -560,7 +560,7 @@
     ctx.restore();
   }
 
-  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, handOf, frameRGBA, draw, drawNova };
+  const api = { W, H, GROUND, HEAD_TOP, SKINS, HATS, ANIMS, skinOf, handOf, skeleton, frameRGBA, draw, drawNova };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NovaSprites = api;
 })(typeof window !== 'undefined' ? window : globalThis);
