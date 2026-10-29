@@ -19,7 +19,8 @@ SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'slee
         # standing sheets: sized so her body (halo to soles, not the marks around her) is as tall as in her walk
         'idle': 'stand', 'talk': 'stand', 'wave': 'stand', 'think': 'stand', 'point': 'stand', 'typing': 'stand',
         # sitting: as big as in her idle sheet, by the size of her crop top
-        'sit': ('like', 'idle')}
+        'sit': ('like', 'idle'),
+        'shrug': 'stand', 'angry': 'stand', 'shy': 'stand', 'dance': 'stand', 'dizzy': ('like', 'idle'), 'cheer': ('like', 'idle')}
 ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]]}   # its title badge touches a frame
 # how to cut each sheet (see sheets.cut_sheet): the rows between header and captions, how she stands
 CUT = {
@@ -30,6 +31,13 @@ CUT = {
   'point':  dict(band=(205, 941), nrows=1, parts_above=0.55),
   'typing': dict(band=(150, 916), ground='feet', parts_above=0.55),
   'sit':    dict(band=(250, 890), ground='feet', ledge=(590, 730), parts_above=0.55),
+  # reactions: their titles, notes, number circles and loop arrows are left out with drop boxes
+  'shrug': {'band': (270, 925), 'ground': 'feet', 'parts_above': 0.55, 'logo': (0, 0, 820, 275), 'drop': [(800, 20, 1110, 255), (1170, 40, 1448, 235), (48, 273, 116, 341), (401, 266, 469, 334), (761, 266, 829, 334), (1106, 266, 1174, 334)]},
+  'angry': {'band': (195, 897), 'ground': 'feet', 'logo': (0, 0, 640, 235), 'drop': [(600, 40, 1448, 205)]},
+  'cheer': {'band': (0, 908), 'ground': 'feet', 'parts_above': 0.5, 'logo': (0, 0, 645, 345), 'drop': [(1040, 0, 1448, 225), (205, 360, 295, 470)]},
+  'dance': {'band': (0, 885), 'ground': 'feet', 'parts_above': 0.55, 'nframes': 8, 'logo': (0, 0, 1672, 218), 'drop': [(0, 222, 1672, 296)]},
+  'dizzy': {'band': (235, 935), 'ground': 'feet', 'parts_above': 0.55, 'logo': (280, 0, 1180, 232), 'drop': [(48, 243, 116, 311), (463, 246, 531, 314), (823, 246, 891, 314), (1143, 246, 1211, 314)]},
+  'shy': {'band': (205, 938), 'ground': 'feet', 'parts_above': 0.55, 'logo': (200, 0, 1250, 218), 'drop': [(35, 205, 106, 286), (383, 226, 451, 294), (738, 224, 806, 292), (1098, 226, 1166, 294)]},
 }
 SEAT = 46   # where the ledge she sits on is in the sprite box (the window's top edge)
 
@@ -54,6 +62,12 @@ PACKS = {
   'think':     dict(sheet='think', frames=range(4), durations=[700, 800, 800, 600], loop=True),
   'point':     dict(sheet='point', frames=range(3), durations=[160, 1100, 700], loop=True, loopFrom=1, tip=1),
   'work':      dict(sheet='typing', frames=range(4), fps=8, loop=True),
+  'shrug':     dict(sheet='shrug', frames=range(4), durations=[600, 500, 700, 800], loop=True),
+  'angry':     dict(sheet='angry', frames=range(4), durations=[500, 200, 450, 600], loop=True),
+  'cheer':     dict(sheet='cheer', frames=range(4), durations=[180, 320, 320, 900], loop=False),
+  'dance':     dict(sheet='dance', frames=range(8), fps=6, loop=True),
+  'dizzy':     dict(sheet='dizzy', frames=range(4), fps=6, loop=True),
+  'love':      dict(sheet='shy', frames=range(4), durations=[600, 600, 600, 800], loop=True),
   'sit':       dict(sheet='sit', frames=range(4), durations=[1500, 450, 650, 900], loop=True, anchor='seat'),
 }
 

@@ -33,12 +33,13 @@ def remove_ledge(A, bg, rows):
     lonely = band & (A.sum(-1) < 300) & ~ndi.binary_dilation(hers, iterations=5)
     A[ndi.binary_dilation(lonely, iterations=1) & band] = bg
 
-def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None):
+def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', parts=True, ledge=None, nrows=None, nframes=None, parts_above=None, drop=()):
     """erase: polygons (sheet px) painted over with the background first, for a title touching a frame.
     band: (top, bottom) rows holding the frames (between the header and the captions).
     ground: 'line' (a drawn ground line under each frame) or 'feet' (none: her lowest point is the ground).
     parts: keep small separate bits (motion lines, sparkles) with the nearest frame.
     ledge: rows of a drawn ledge to remove (she sits on it); each frame's 'seat' is its top.
+    drop: more boxes (x0, y0, x1, y1) whose contents are left out: titles, notes, number circles
     parts_above: only keep small bits higher than this share of the frame (the artist's notes sit low)
     nframes: frames per row; frames drawn touching are split where they're thinnest
     nrows: how many rows of frames (the lowest lines found; a row of black clothes can look like one too)"""
@@ -67,6 +68,7 @@ def cut_sheet(path, logo=(0, 0, 530, 220), erase=(), band=None, ground='line', p
         for i, (ys, xs) in enumerate(objs):
             if sizes[i] < 30: continue
             if xs.stop <= logo[2] and ys.stop <= logo[3]: continue                  # the NOVA logo and title badge
+            if any(xs.start >= b[0] and ys.start >= b[1] and xs.stop <= b[2] and ys.stop <= b[3] for b in drop): continue
             if r and ys.stop <= top + 45: continue                                   # labels under the row above
             ok.append(i)
         big = max(sizes[i] for i in ok)
