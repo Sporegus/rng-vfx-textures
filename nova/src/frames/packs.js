@@ -1049,10 +1049,10 @@ window.NovaFramePacks = {
   "frames": [
    {
     "src": "frames/delete/01.png",
-    "x": -2.711,
+    "x": 1.703,
     "y": 4.0,
-    "w": 54.016,
-    "h": 74.594
+    "w": 43.715,
+    "h": 74.263
    },
    {
     "src": "frames/delete/02.png",

@@ -21,15 +21,16 @@ SIZE = {'walk': 1.0, 'run': 1.0, 'jump': 1.05, 'bored': 1.4, 'drag': 1.45, 'slee
         # sitting: as big as in her idle sheet, by the size of her crop top
         'sit': ('like', 'idle'),
         'paint': ('like', 'idle'), 'clean': ('like', 'idle'), 'carry': 'stand', 'search': ('like', 'idle'),
-        'delete1': ('stand', [1, 2, 3]), 'delete2': ('stand', [2, 3]),   # (by her standing frames)
+        'delete0': ('stand', [0]), 'delete1': ('stand', [1, 2, 3]), 'delete2': ('stand', [2, 3]),   # (by her standing frames)
         'shrug': 'stand', 'angry': 'stand', 'shy': 'stand', 'dance': 'stand', 'dizzy': ('like', 'idle'), 'cheer': ('like', 'idle')}
-ERASE = {'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]],   # (its title badge touches a frame)
+ERASE = {'delete0': [[(598, 0), (1536, 0), (1536, 1024), (598, 1024)]],
+         'drag': [[(20, 149), (480, 77), (480, 122), (20, 194)]],   # (its title badge touches a frame)
          # (badges close to her halo, painted out along their bottom edge)
          'delete1': [[(0, 0), (400, 0), (400, 132), (0, 160)], [(28, 158), (112, 158), (112, 242), (28, 242)],
                      [(100, 165), (322, 128), (322, 165), (217, 177), (110, 207)]],
          'delete2': [[(798, 546), (886, 546), (886, 632), (798, 632)], [(878, 560), (1068, 543), (1068, 576), (927, 601), (878, 611)],
                      [(1250, 548), (1326, 548), (1326, 633), (1250, 633)], [(1324, 567), (1470, 546), (1462, 591), (1377, 604), (1324, 613)]]}
-FILE = {'delete1': 'delete', 'delete2': 'delete'}   # sheets cut from the same picture
+FILE = {'delete0': 'crack', 'delete1': 'delete', 'delete2': 'delete'}   # sheets cut from the same picture
 BURST = dict(sheet='delete2', over=2, boxes=[(1085, 588, 1262, 1000)], keep=[])
 # how to cut each sheet (see sheets.cut_sheet): the rows between header and captions, how she stands
 CUT = {
@@ -46,6 +47,8 @@ CUT = {
   'search': dict(band=(310, 930), ground='feet', parts_above=0.55, logo=(0, 0, 1160, 305), drop=[(1235, 35, 1448, 235), (43, 318, 107, 382), (278, 323, 342, 387), (523, 313, 587, 377), (728, 313, 792, 377), (973, 308, 1037, 372), (1198, 303, 1262, 367)]),
   # delete: two rows drawn at different sizes, cut as two sheets; frame 7 is only the burst, so it's laid over the punt
   # delete: two rows, each its own cut. Frame 7's burst is drawn apart from her, so it's cut alone and laid over her
+  # frame 1, redrawn at full size (its comparison panel on the right is painted out)
+  'delete0': dict(band=(0, 926), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0), drop=[(150, 0, 512, 114), (10, 12, 157, 179)]),
   'delete1': dict(band=(0, 548), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),
                   drop=[(402, 55, 474, 142), (473, 49, 640, 116), (803, 51, 873, 139), (873, 43, 1014, 111), (1209, 45, 1279, 133), (1277, 25, 1484, 104)]),
   'delete2': dict(band=(552, 1000), ground='feet', parts_above=0.75, logo=(0, 0, 0, 0),
@@ -93,8 +96,8 @@ PACKS = {
   'folder':    dict(sheet='carry', frames=range(4), fps=6, loop=True),
   'search':    dict(sheet='search', frames=range(5), durations=[300, 300, 500, 500, 400], loop=True),
   'found':     dict(sheet='search', frames=[5], fps=1, loop=True),
-  'delete':    dict(sheet='delete1', frames=[('delete1', 0), ('delete1', 1), ('delete1', 2), ('delete1', 3), ('delete2', 0), ('delete2', 1), ('delete2', 'burst'), ('delete2', 3)],
-                    durations=[420, 380, 330, 330, 260, 260, 650, 900], loop=False, match=[0]),   # (frame 1 is drawn shorter: matched to 2-4)
+  'delete':    dict(sheet='delete1', frames=[('delete0', 0), ('delete1', 1), ('delete1', 2), ('delete1', 3), ('delete2', 0), ('delete2', 1), ('delete2', 'burst'), ('delete2', 3)],
+                    durations=[420, 380, 330, 330, 260, 260, 650, 900], loop=False),
   'sit':       dict(sheet='sit', frames=range(4), durations=[1500, 450, 650, 900], loop=True, anchor='seat'),
 }
 
