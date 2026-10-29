@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const so = require('sherpa-onnx-node');
+const { speakable, cloneText } = require('../speech');
 
 const dir = process.argv[2] || path.join(os.homedir(), 'Documents', 'Nova voice training');
 const appData = process.platform === 'win32' ? path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Nova') : path.join(os.homedir(), '.config', 'Nova');
@@ -61,10 +62,14 @@ items.forEach((it, n) => {
   }
   process.stdout.write(`\r  ${n + 1} of ${items.length} checked, ${bad.length} not usable   `);
 });
-// one in 25 is kept aside to check training on sentences it didn't learn from
-const line = (it) => `${it.id}\t${it.text}\tclean/${it.id}.wav`;
-fs.writeFileSync(path.join(dir, 'train.tsv'), good.filter((_, i) => i % 25 !== 12).map(line).join('\n') + '\n');
-fs.writeFileSync(path.join(dir, 'dev.tsv'), good.filter((_, i) => i % 25 === 12).map(line).join('\n') + '\n');
+// some are kept aside to check training on sentences it didn't learn from
+// The words are written the way Nova's voice is given them when she talks (with her
+// respellings, like "rezzoomay"), so what it learns matches how it'll be used.
+const line = (it) => `${it.id}\t${cloneText(speakable(it.text))}\tclean/${it.id}.wav`;
+// (at least 12 of them: training sorts them into 10 groups by length)
+const every = Math.max(2, Math.floor(good.length / 12)), isDev = (i) => i % every === Math.floor(every / 2);
+fs.writeFileSync(path.join(dir, 'train.tsv'), good.filter((_, i) => !isDev(i)).map(line).join('\n') + '\n');
+fs.writeFileSync(path.join(dir, 'dev.tsv'), good.filter((_, i) => isDev(i)).map(line).join('\n') + '\n');
 console.log(`\n\n${good.length} recordings are good: ${(seconds / 60).toFixed(1)} minutes of her voice.`);
 const byMood = {}; for (const it of good) byMood[it.mood] = (byMood[it.mood] || 0) + 1;
 console.log('  by mood: ' + Object.entries(byMood).map(([m, c]) => `${m} ${c}`).join(', '));

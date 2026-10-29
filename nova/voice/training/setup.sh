@@ -36,7 +36,14 @@ echo "3/5 Installing PyTorch with graphics card support (about 3 GB, takes a whi
 pip install -q torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
 echo "4/5 Installing ZipVoice's requirements..."
-pip install -q -r ZipVoice/requirements.txt onnx onnxruntime
+pip install -q -r ZipVoice/requirements.txt onnx onnxruntime urllib3 lilcom
+# some builds of the phonemizer look for their sound data in /usr/share/espeak-ng-data
+# instead of the copy they come with; point that folder at it
+ok() { python -c "from piper_phonemize import phonemize_espeak; assert phonemize_espeak('hello there', 'en-us')[0]" >/dev/null 2>&1; }
+if ! ok && [ ! -e /usr/share/espeak-ng-data ]; then
+  sudo ln -s "$(python -c 'import piper_phonemize, os; print(os.path.dirname(piper_phonemize.__file__))')/espeak-ng-data" /usr/share/espeak-ng-data
+fi
+ok || { echo "  The phonemizer (piper_phonemize) isn't working."; exit 1; }
 python - <<'EOF'
 import torch
 assert torch.cuda.is_available(), "PyTorch can't use the graphics card"

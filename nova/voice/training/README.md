@@ -111,7 +111,7 @@ steps. If you need to stop it, press Ctrl+C and run `bash train.sh` again later:
 finished steps are skipped. When it's done, it puts her new voice in Nova
 (`%APPDATA%\Nova\models\nova-own-voice`).
 
-If it says the graphics card is out of memory, run `MAXDUR=40 bash train.sh`.
+If it says the graphics card is out of memory ("CUDA out of memory"), run `MAXDUR=25 bash train.sh` (finished steps are skipped).
 
 ## 8. Listen
 
