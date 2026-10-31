@@ -1,0 +1,19 @@
+{
+  "frames": 480,
+  "fps": 60,
+  "duration": 8,
+  "canvas": [
+    600,
+    800
+  ],
+  "maximumDisplacementPixels": 7.975897158544371,
+  "loopEndpointDisplacementError": 3.1870604836899916e-15,
+  "method": "Continuous local image deformation, fixed feet, two blink pose swaps. Not a native Cubism rig.",
+  "webmAlphaDecoded": true,
+  "inspectedFrames": [
+    0,
+    120,
+    144,
+    300
+  ]
+}

@@ -330,14 +330,17 @@
     if (z.ft >= hold) { z.ft = 0; z.frame = a.loop ? z.frame + 1 : Math.min(z.frame + 1, a.frames - 1); }
     if (anim === 'jump' && z.jump) z.frame = z.jump.t < 0.5 ? 0 : 1;   // going up, then coming down
     if (now > z.nextBlink) { z.blinkUntil = now + 130; z.nextBlink = now + rand(1800, 5000); }
-    const blink = now < z.blinkUntil && ['idle', 'walk', 'sit', 'point', 'talk'].includes(anim);
+    const blink = now < z.blinkUntil && (S.skinOf(settings.skin).live || ['idle', 'walk', 'sit', 'point', 'talk'].includes(anim));
     const s = sc(), pad = S.padOf(settings.skin); // (her drawn look has a bigger canvas)
     const cw = (S.W + pad.x * 2) * s, ch = (S.H + pad.top) * s;
     if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; lastKey = ''; }
+    const live = S.skinOf(settings.skin).live;   // (the new Nova moves every frame)
     const key = [anim, S.frameIndex(a, z.frame), settings.skin, settings.hat, z.facing, blink].join('|');
-    if (key !== lastKey) {
+    if (live || key !== lastKey) {
       ctx.clearRect(0, 0, cv.width, cv.height);
-      S.draw(ctx, { anim, frame: z.frame, skin: settings.skin, hat: settings.hat, x: pad.x * s, y: pad.top * s, scale: s, flip: z.facing < 0, overrides: blink ? { eyes: 'blink' } : null });
+      const voiceLevel = window.NovaVoiceIO && NovaVoiceIO.talking ? NovaVoiceIO.loudness() : z.talking ? 0.12 + 0.5 * Math.abs(Math.sin(now / 90)) : 0;
+      const mouth = live && window.Nova2 ? (Nova2.mouthFor(voiceLevel, now) || (['cheer', 'love', 'wave', 'dance'].includes(anim) ? 'smile' : null)) : null;
+      S.draw(ctx, { anim, frame: z.frame, skin: settings.skin, hat: settings.hat, x: pad.x * s, y: pad.top * s, scale: s, flip: z.facing < 0, overrides: blink ? { eyes: 'blink' } : null, t: now / 1000, mouth });
       lastKey = key;
     }
     const left = Math.round(z.x - (S.W / 2 + pad.x) * s), top = Math.round(z.y - (a.footY + pad.top) * s);

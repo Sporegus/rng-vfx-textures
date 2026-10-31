@@ -1,0 +1,253 @@
+{
+  "Neutral": {
+    "show": [],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Talking_skin_patch",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Blink": {
+    "show": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R"
+    ],
+    "hide": [
+      "Smile_mouth",
+      "Talking_skin_patch",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Smile": {
+    "show": [
+      "Smile_mouth"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Talking_skin_patch",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Blink_Smile": {
+    "show": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth"
+    ],
+    "hide": [
+      "Talking_skin_patch",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Wink_viewer_L": {
+    "show": [
+      "Blink_eye_viewer_L"
+    ],
+    "hide": [
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Talking_skin_patch",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Wink_viewer_R": {
+    "show": [
+      "Blink_eye_viewer_R"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Smile_mouth",
+      "Talking_skin_patch",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_Open_small": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_Open_small"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_Open_medium": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_Open_medium"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_Open_large": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_Open_large"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_A": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_A"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_I": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_I"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_U",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_U": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_U"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_E",
+      "Mouth_O"
+    ]
+  },
+  "Talking_E": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_E"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_O"
+    ]
+  },
+  "Talking_O": {
+    "show": [
+      "Talking_skin_patch",
+      "Mouth_O"
+    ],
+    "hide": [
+      "Blink_eye_viewer_L",
+      "Blink_eye_viewer_R",
+      "Smile_mouth",
+      "Mouth_Open_small",
+      "Mouth_Open_medium",
+      "Mouth_Open_large",
+      "Mouth_A",
+      "Mouth_I",
+      "Mouth_U",
+      "Mouth_E"
+    ]
+  }
+}

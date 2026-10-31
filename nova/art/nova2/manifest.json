@@ -1,0 +1,979 @@
+{
+  "version": 4,
+  "canvas": [
+    3000,
+    4000
+  ],
+  "characterHeight": 3400,
+  "top": 400,
+  "soles": 3800,
+  "centerX": 1500,
+  "coordinates": "viewer left/right; pixels from upper left; bounds right/bottom exclusive",
+  "sourceToCanvas": {
+    "sx": 2.449324324324324,
+    "sy": 2.4495677233429394,
+    "tx": 157.77027027027032,
+    "ty": 368.1556195965418
+  },
+  "layers": [
+    {
+      "name": "Back_hair",
+      "group": "Head",
+      "file": "layers/01_Back_hair.png",
+      "visible": true,
+      "bounds": [
+        934,
+        408,
+        2013,
+        1411
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 158633,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Torso",
+      "group": "Body",
+      "file": "layers/02_Torso.png",
+      "visible": true,
+      "bounds": [
+        1256,
+        1297,
+        1748,
+        1865
+      ],
+      "pivot": [
+        1463.260135135135,
+        1852.593659942363
+      ],
+      "pixels": 61233,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Upper_arm_viewer_L",
+      "group": "Arm_L",
+      "file": "layers/03_Upper_arm_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1106,
+        1346,
+        1327,
+        1772
+      ],
+      "pivot": [
+        1247.7195945945946,
+        1394.5244956772333
+      ],
+      "pixels": 43003,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Upper_arm_viewer_R",
+      "group": "Arm_R",
+      "file": "layers/04_Upper_arm_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1670,
+        1322,
+        1908,
+        1765
+      ],
+      "pivot": [
+        1747.3817567567567,
+        1387.1757925072045
+      ],
+      "pixels": 63557,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Boot_viewer_L",
+      "group": "Leg_L",
+      "file": "layers/07_Boot_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        813,
+        2869,
+        1467,
+        3797
+      ],
+      "pivot": [
+        1316.3006756756758,
+        2205.3314121037465
+      ],
+      "pixels": 424095,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Boot_viewer_R",
+      "group": "Leg_R",
+      "file": "layers/08_Boot_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1548,
+        2846,
+        2178,
+        3800
+      ],
+      "pivot": [
+        1629.8141891891892,
+        2205.3314121037465
+      ],
+      "pixels": 419421,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Hand_viewer_L",
+      "group": "Arm_L",
+      "file": "layers/09_Hand_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        845,
+        2304,
+        1094,
+        2653
+      ],
+      "pivot": [
+        1247.7195945945946,
+        1394.5244956772333
+      ],
+      "pixels": 46771,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Hand_viewer_R",
+      "group": "Arm_R",
+      "file": "layers/10_Hand_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1870,
+        2326,
+        2136,
+        2671
+      ],
+      "pivot": [
+        1747.3817567567567,
+        1387.1757925072045
+      ],
+      "pixels": 50570,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Sleeve_viewer_L",
+      "group": "Arm_L",
+      "file": "layers/11_Sleeve_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        775,
+        1677,
+        1279,
+        2379
+      ],
+      "pivot": [
+        1247.7195945945946,
+        1394.5244956772333
+      ],
+      "pixels": 166618,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Sleeve_viewer_R",
+      "group": "Arm_R",
+      "file": "layers/12_Sleeve_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1732,
+        1685,
+        2225,
+        2405
+      ],
+      "pivot": [
+        1747.3817567567567,
+        1387.1757925072045
+      ],
+      "pixels": 196427,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Skirt_side_viewer_L",
+      "group": "Skirt",
+      "file": "layers/13_Skirt_side_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1045,
+        1924,
+        1341,
+        2221
+      ],
+      "pivot": [
+        1453.462837837838,
+        1933.4293948126801
+      ],
+      "pixels": 48300,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Skirt_side_viewer_R",
+      "group": "Skirt",
+      "file": "layers/14_Skirt_side_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1660,
+        1929,
+        1910,
+        2221
+      ],
+      "pivot": [
+        1453.462837837838,
+        1933.4293948126801
+      ],
+      "pixels": 40943,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Skirt_front",
+      "group": "Skirt",
+      "file": "layers/15_Skirt_front.png",
+      "visible": true,
+      "bounds": [
+        1248,
+        1971,
+        1741,
+        2279
+      ],
+      "pivot": [
+        1453.462837837838,
+        1933.4293948126801
+      ],
+      "pixels": 68871,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Belt",
+      "group": "Belt",
+      "file": "layers/16_Belt.png",
+      "visible": true,
+      "bounds": [
+        1202,
+        1804,
+        1755,
+        1985
+      ],
+      "pivot": [
+        1453.462837837838,
+        1933.4293948126801
+      ],
+      "pixels": 48245,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Belt_hanging_strap",
+      "group": "Belt",
+      "file": "layers/17_Belt_hanging_strap.png",
+      "visible": true,
+      "bounds": [
+        1549,
+        1939,
+        1785,
+        2532
+      ],
+      "pivot": [
+        1453.462837837838,
+        1933.4293948126801
+      ],
+      "pixels": 73818,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Buckle",
+      "group": "Belt",
+      "file": "layers/18_Buckle.png",
+      "visible": true,
+      "bounds": [
+        1295,
+        1853,
+        1569,
+        2042
+      ],
+      "pivot": [
+        1453.462837837838,
+        1933.4293948126801
+      ],
+      "pixels": 26404,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Thigh_strap",
+      "group": "Leg_L",
+      "file": "layers/19_Thigh_strap.png",
+      "visible": true,
+      "bounds": [
+        1120,
+        2336,
+        1429,
+        2453
+      ],
+      "pivot": [
+        1316.3006756756758,
+        2205.3314121037465
+      ],
+      "pixels": 25619,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Crop_top",
+      "group": "Body",
+      "file": "layers/20_Crop_top.png",
+      "visible": true,
+      "bounds": [
+        1243,
+        1299,
+        1709,
+        1684
+      ],
+      "pivot": [
+        1463.260135135135,
+        1852.593659942363
+      ],
+      "pixels": 113531,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Neck",
+      "group": "Head",
+      "file": "layers/21_Neck.png",
+      "visible": true,
+      "bounds": [
+        1429,
+        1170,
+        1623,
+        1405
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 18369,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Collar",
+      "group": "Head",
+      "file": "layers/22_Collar.png",
+      "visible": true,
+      "bounds": [
+        1478,
+        1241,
+        1611,
+        1317
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 8417,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Face",
+      "group": "Head",
+      "file": "layers/23_Face.png",
+      "visible": true,
+      "bounds": [
+        1243,
+        819,
+        1637,
+        1238
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 67442,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Side_hair_viewer_L",
+      "group": "Head",
+      "file": "layers/24_Side_hair_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1001,
+        881,
+        1334,
+        1424
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 81262,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Side_hair_viewer_R",
+      "group": "Head",
+      "file": "layers/25_Side_hair_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1601,
+        861,
+        1809,
+        1373
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 63140,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Front_bangs",
+      "group": "Head",
+      "file": "layers/26_Front_bangs.png",
+      "visible": true,
+      "bounds": [
+        1101,
+        601,
+        1738,
+        1086
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 162368,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Antenna_strand",
+      "group": "Head",
+      "file": "layers/27_Antenna_strand.png",
+      "visible": true,
+      "bounds": [
+        1029,
+        400,
+        1679,
+        670
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 53497,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Star_clip",
+      "group": "Head",
+      "file": "layers/28_Star_clip.png",
+      "visible": true,
+      "bounds": [
+        1535,
+        668,
+        1741,
+        873
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 17273,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Eye_white_viewer_L",
+      "group": "Face",
+      "file": "layers/29_Eye_white_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1183,
+        1047,
+        1402,
+        1171
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 3513,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Eye_white_viewer_R",
+      "group": "Face",
+      "file": "layers/30_Eye_white_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1445,
+        874,
+        1696,
+        1074
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 6621,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Iris_viewer_L",
+      "group": "Face",
+      "file": "layers/31_Iris_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1290,
+        1084,
+        1371,
+        1150
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 3367,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Iris_viewer_R",
+      "group": "Face",
+      "file": "layers/32_Iris_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1520,
+        964,
+        1608,
+        1052
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 4576,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Pupil_viewer_L",
+      "group": "Face",
+      "file": "layers/33_Pupil_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1317,
+        1089,
+        1349,
+        1104
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 46,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Pupil_viewer_R",
+      "group": "Face",
+      "file": "layers/34_Pupil_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1552,
+        974,
+        1576,
+        1015
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 645,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Upper_eyelid_viewer_L",
+      "group": "Face",
+      "file": "layers/35_Upper_eyelid_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1197,
+        1064,
+        1383,
+        1126
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 4832,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Upper_eyelid_viewer_R",
+      "group": "Face",
+      "file": "layers/36_Upper_eyelid_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1452,
+        900,
+        1660,
+        1035
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 7221,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Lower_eyelid_viewer_L",
+      "group": "Face",
+      "file": "layers/37_Lower_eyelid_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1260,
+        1128,
+        1373,
+        1165
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 348,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Lower_eyelid_viewer_R",
+      "group": "Face",
+      "file": "layers/38_Lower_eyelid_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1535,
+        1023,
+        1628,
+        1062
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 69,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Eyebrow_viewer_L",
+      "group": "Face",
+      "file": "layers/39_Eyebrow_viewer_L.png",
+      "visible": true,
+      "bounds": [
+        1238,
+        998,
+        1329,
+        1032
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 374,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Eyebrow_viewer_R",
+      "group": "Face",
+      "file": "layers/40_Eyebrow_viewer_R.png",
+      "visible": true,
+      "bounds": [
+        1459,
+        890,
+        1488,
+        912
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 243,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Mouth_neutral",
+      "group": "Face",
+      "file": "layers/41_Mouth_neutral.png",
+      "visible": true,
+      "bounds": [
+        1439,
+        1135,
+        1498,
+        1177
+      ],
+      "pivot": [
+        1507.347972972973,
+        1281.8443804034582
+      ],
+      "pixels": 2183,
+      "kind": "original_visible_art"
+    },
+    {
+      "name": "Thigh_viewer_L",
+      "group": "Leg_L",
+      "file": "layers/Thigh_viewer_L.png",
+      "visible": true,
+      "kind": "original_visible_art",
+      "pivot": [
+        1316.3006756756758,
+        2205.3314121037465
+      ],
+      "bounds": [
+        1148,
+        2201,
+        1483,
+        2661
+      ]
+    },
+    {
+      "name": "Shin_viewer_L",
+      "group": "Leg_L",
+      "file": "layers/Shin_viewer_L.png",
+      "visible": true,
+      "kind": "original_visible_art",
+      "pivot": [
+        1316.3006756756758,
+        2205.3314121037465
+      ],
+      "bounds": [
+        1075,
+        2661,
+        1350,
+        2948
+      ]
+    },
+    {
+      "name": "Thigh_viewer_R",
+      "group": "Leg_R",
+      "file": "layers/Thigh_viewer_R.png",
+      "visible": true,
+      "kind": "original_visible_art",
+      "pivot": [
+        1629.8141891891892,
+        2205.3314121037465
+      ],
+      "bounds": [
+        1483,
+        2208,
+        1828,
+        2661
+      ]
+    },
+    {
+      "name": "Shin_viewer_R",
+      "group": "Leg_R",
+      "file": "layers/Shin_viewer_R.png",
+      "visible": true,
+      "kind": "original_visible_art",
+      "pivot": [
+        1629.8141891891892,
+        2205.3314121037465
+      ],
+      "bounds": [
+        1622,
+        2661,
+        1912,
+        2933
+      ]
+    },
+    {
+      "name": "Blink_eye_viewer_L",
+      "file": "layers/Blink_eye_viewer_L.png",
+      "visible": false,
+      "group": "Expressions",
+      "kind": "expression_overlay",
+      "bounds": [
+        1160,
+        1033,
+        1417,
+        1189
+      ]
+    },
+    {
+      "name": "Blink_eye_viewer_R",
+      "file": "layers/Blink_eye_viewer_R.png",
+      "visible": false,
+      "group": "Expressions",
+      "kind": "expression_overlay",
+      "bounds": [
+        1422,
+        861,
+        1709,
+        1098
+      ]
+    },
+    {
+      "name": "Smile_mouth",
+      "file": "layers/Smile_mouth.png",
+      "visible": false,
+      "group": "Expressions",
+      "kind": "expression_overlay",
+      "bounds": [
+        1430,
+        1121,
+        1520,
+        1194
+      ]
+    },
+    {
+      "name": "Talking_skin_patch",
+      "file": "layers/Talking_skin_patch.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "skin_overlay",
+      "bounds": [
+        1440,
+        1136,
+        1497,
+        1176
+      ]
+    },
+    {
+      "name": "Mouth_Open_small",
+      "file": "layers/Mouth_Open_small.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1424,
+        1116,
+        1515,
+        1196
+      ]
+    },
+    {
+      "name": "Mouth_Open_medium",
+      "file": "layers/Mouth_Open_medium.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1415,
+        1107,
+        1524,
+        1199
+      ]
+    },
+    {
+      "name": "Mouth_Open_large",
+      "file": "layers/Mouth_Open_large.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1407,
+        1079,
+        1552,
+        1213
+      ]
+    },
+    {
+      "name": "Mouth_A",
+      "file": "layers/Mouth_A.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1413,
+        1104,
+        1527,
+        1213
+      ]
+    },
+    {
+      "name": "Mouth_I",
+      "file": "layers/Mouth_I.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1415,
+        1090,
+        1552,
+        1190
+      ]
+    },
+    {
+      "name": "Mouth_U",
+      "file": "layers/Mouth_U.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1444,
+        1135,
+        1493,
+        1187
+      ]
+    },
+    {
+      "name": "Mouth_E",
+      "file": "layers/Mouth_E.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1413,
+        1096,
+        1527,
+        1187
+      ]
+    },
+    {
+      "name": "Mouth_O",
+      "file": "layers/Mouth_O.png",
+      "visible": false,
+      "group": "Talking",
+      "kind": "mouth_sprite",
+      "pivot": [
+        1469,
+        1155
+      ],
+      "bounds": [
+        1415,
+        1104,
+        1512,
+        1210
+      ]
+    }
+  ],
+  "status": "Updated mouth sprites extracted from accepted nine-panel reference. Discrete states, not a smooth deformation rig."
+}
