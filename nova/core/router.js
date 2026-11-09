@@ -1,0 +1,114 @@
+// The quick, deterministic part of Nova's understanding. It runs before
+// anything slow, on every final transcript or typed line, and catches:
+//   stop / cancel            -> handled at once, never queued behind a model
+//   corrections              -> "no, Spotify", "open Discord, actually Spotify", "I meant the other window"
+//   status and job control   -> "what are you doing?", "pause everything", "resume that task"
+//   core abilities the older command brain doesn't know (windows, screen, Discord,
+//   research, coordination jobs, games, memory)
+//   questions                -> answered by the language model (or research), not by opening Google
+// Everything else goes to the existing command brain (brain/brain.js).
+'use strict';
+
+const clean = (t) => String(t || '').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').trim().replace(/^(hey |ok |okay )?nova[,!.: ]*/i, '').replace(/\s+/g, ' ').replace(/[.!]+$/, '').trim();
+
+const STOP = /^(stop|stop it|stop that|stop everything|cancel|cancel (that|it|everything)|abort|halt|never ?mind|forget it|quit it|freeze|hold on|wait stop|nova stop)$/i;
+// "X, actually Y" / "X no wait Y" / "X I mean Y" inside one utterance
+const MID_CORRECTION = /^(.+?)[,;.]?\s+(?:actually|no wait|wait no|i mean|i meant|or rather|scratch that|no make (?:it|that))[,]?\s+(.+)$/i;
+// a whole utterance that corrects the last one
+const CORRECTION = /^(?:no|nope|nah|not that|wrong|actually|i meant|i mean|wait|no wait|sorry)[,!.]?\s+(?:i meant |i mean |make it |use )?(.+)$/i;
+const QUESTION = /^(what|whats|what's|why|how|who|whos|who's|when|where|which|explain|tell me about|define|describe)\b/i;
+// "do/is/can..." starts a question only with a subject after it ("do you know", "is it raining") or a question mark
+const AUX_QUESTION = /^(is|are|was|were|can|could|does|do|did|should|would|will|has|have)\s+(you|i|we|they|it|he|she|there|this|that|these|those)\b/i;
+const CURRENT = /\b(today|tonight|now|current|currently|latest|newest|recent|this week|this year|news|price|prices|cost|score|scores|weather|stock|release date|patch|update|version|202\d)\b/i;
+
+function route(raw, ctx = {}) {
+  const text = clean(raw);
+  const low = text.toLowerCase();
+  if (!text) return { kind: 'empty' };
+  if (STOP.test(low)) return { kind: 'stop' };
+
+  // ---- corrections
+  const mid = text.match(MID_CORRECTION);
+  if (mid && mid[2].split(' ').length <= 8) return { kind: 'correction', replaces: mid[1], text: rebuild(mid[1], mid[2], ctx), raw: text };
+  const corr = text.match(CORRECTION);
+  if (corr && ctx.last && Date.now() - (ctx.last.at || 0) < 120000 && corr[1].split(' ').length <= 6) {
+    return { kind: 'correction', text: rebuild(ctx.last.text || '', corr[1], ctx), raw: text };
+  }
+
+  // ---- status and job control
+  if (/^(what are you doing|what're you doing|what are you working on|status|what's going on|whats going on|are you busy)\b/i.test(low)) return { kind: 'status', what: 'doing' };
+  if (/^(what have you (finished|done|completed)|what did you (finish|do|get done)|morning (digest|report)|any updates)\b/i.test(low)) return { kind: 'status', what: 'finished' };
+  if (/^(pause|pause everything|pause all|pause all tasks|pause the task|hold everything)$/i.test(low)) return { kind: 'jobs', op: 'pause_all' };
+  if (/^(resume|resume (that|the|it|my|this) ?(task|job)?|continue (that|the) (task|job)|keep going)$/i.test(low)) return { kind: 'jobs', op: 'resume_last' };
+  if (/^(finish (the|this) (current )?(safe )?step( and stop)?|wrap up)$/i.test(low)) return { kind: 'jobs', op: 'finish_step' };
+  if (/^(show|open) (the )?(tasks?|task panel|dashboard|jobs?)( panel)?$/i.test(low)) return { kind: 'panel', tab: 'tasks' };
+  if (/^(show|open) (the )?(diagnostics|settings|capabilities)$/i.test(low)) return { kind: 'panel', tab: /settings|capab/i.test(low) ? 'settings' : 'diagnostics' };
+  if (/^(what do you (remember|know) about me|show (my )?memory)$/i.test(low)) return { kind: 'panel', tab: 'memory' };
+
+  // ---- coordination jobs
+  if (/\bcoordinate\b.*\b(chatgpt|claude|gpt|assistants?)\b/i.test(low) || /\b(relay|hand off|handoff)\b.*\b(chatgpt|claude)\b/i.test(low)) return { kind: 'job', template: 'coordination', text };
+
+  // ---- Discord
+  if (/\bdiscord\b/i.test(low) && /\b(join|call|voice|channel|ask|tell|message|post|say)\b/i.test(low) && !/^open discord$/i.test(low)) {
+    return { kind: 'discord', text, ...parseDiscord(text) };
+  }
+
+  // ---- windows
+  const mv = low.match(/\b(?:put|move|send|throw|drag)\b\s+(?:(that|this|the|my) )?(?:(.+?) )?window\b.*\b(other|second|2nd|left|right|main|primary|next|first|1st|third|3rd) (monitor|screen|display)\b/);
+  if (mv) return { kind: 'tool', calls: [{ tool: 'window.move', args: { which: mv[2] && !/^(that|this|the|my)$/.test(mv[2]) ? mv[2] : 'that', to: mv[3] } }] };
+  if (/\b(minimi[sz]e|maximi[sz]e|snap)\b.*\bwindow\b/.test(low)) {
+    const op = /minim/.test(low) ? 'minimize' : /maxim/.test(low) ? 'maximize' : /left/.test(low) ? 'snap_left' : 'snap_right';
+    return { kind: 'tool', calls: [{ tool: 'window.arrange', args: { which: 'that', op } }] };
+  }
+
+  // ---- the screen (needs your screen permission)
+  if (/^(what am i looking at|what'?s on (my|the) screen|what is on (my|the) screen|describe (my|the|this) screen|what is this( window)?|what'?s this)$/i.test(low)) return { kind: 'screen', ask: 'describe', text };
+  if (/\b(explain|what does|what's|what is)\b.*\b(error|warning|exception|message|popup|pop-up|dialog)\b/i.test(low)) return { kind: 'screen', ask: 'explain', text };
+  if (/^(read|read me|read out) (the |this |my )?(selected|selection|highlighted)( text)?$/i.test(low)) return { kind: 'screen', ask: 'selection', text };
+  const find = low.match(/^(?:help me )?(?:find|where is|where's|show me) (?:the )?(.+?) (button|menu|tab|option|setting|icon|link)$/);
+  if (find) return { kind: 'screen', ask: 'find', target: `${find[1]} ${find[2]}`, text };
+
+  // ---- games
+  if (/\broblox\b/i.test(low) && /\b(join|experience|game|play)\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
+  if (/\b(play|beat|grind|farm|repeat)\b.*\b(game|level|objective|until|counter|times)\b/i.test(low)) return { kind: 'game', text };
+
+  // ---- research
+  if (/^(research|investigate|look into|find out|compare)\b/i.test(low)) return { kind: 'research', question: text.replace(/^(research|investigate|look into|find out|compare)\s+/i, ''), text };
+
+  // ---- questions: answered, not googled
+  if ((QUESTION.test(low) || AUX_QUESTION.test(low) || /\?$/.test(text)) && !/^(can you|could you|would you|will you) (open|launch|start|play|find|close|turn|set|organi[sz]e|clean|show|move|put)\b/i.test(low)) {
+    return { kind: 'question', text, current: CURRENT.test(low) };
+  }
+  return { kind: 'command', text };
+}
+
+// "open Discord" + "Spotify" -> "open Spotify"; "find my resume" + "the cover letter" -> "find my the cover letter"
+function rebuild(before, after, ctx) {
+  const a = clean(after);
+  // a full command on its own: use it as is
+  if (/^(open|launch|start|close|play|find|search|google|move|put|organi[sz]e|clean|show|turn|set|remind|join|ask|tell)\b/i.test(a)) return a;
+  const b = clean(before);
+  const verb = b.match(/^(open|launch|start|close|play|find|search for|google|show me|show)\b/i);
+  if (verb) return `${verb[1]} ${a}`;
+  if (ctx.last && ctx.last.verb) return `${ctx.last.verb} ${a}`;
+  return a;
+}
+
+// "join Discord Afterparty call and ask the boys what we're playing"
+function parseDiscord(text) {
+  const low = text.toLowerCase();
+  const join = /\b(join|hop in|get in|connect to)\b/.test(low);
+  const call = /\b(call|voice|vc)\b/.test(low);
+  const alias = (text.match(/discord\s+(?:server\s+|channel\s+)?([A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)*|\w+)\s+(?:call|voice|vc|channel|server|chat)/i)
+    || text.match(/\b(?:the\s+)?([A-Z][\w'-]+)\s+(?:call|voice chat|vc|channel)\b/) || [])[1] || null;
+  const ask = text.match(/\b(?:ask|tell)\s+(?:the boys|everyone|them|the group|the guys|people|chat)?\s*(.+)$/i);
+  let question = ask ? ask[1].replace(/^(if|whether)\s+/i, '').trim() : null;
+  if (question) {
+    question = question.replace(/\bwe're\b/gi, 'we are').replace(/\bwhat we are\b/i, 'what are we').replace(/\bwhat we're\b/i, 'what are we');
+    if (!/[?.!]$/.test(question)) question += '?';
+    question = question[0].toUpperCase() + question.slice(1);
+  }
+  return { alias: alias && !/^(the|a|my|our)$/i.test(alias) ? alias : null, join, call, question };
+}
+
+module.exports = { route, clean, rebuild, parseDiscord };
