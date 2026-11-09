@@ -237,7 +237,7 @@ function createGames({ store, permissions, log, launch, sessions, guardFor }) {
     let grant = null;
     try { grant = await approve(task, {
       title: `Let Nova play ${prof.name}?`,
-      lines: [`Goal: ${prof.goal}.`, `Up to ${minutes} minute${minutes > 1 ? 's' : ''}; arrow keys only, only in that game window.`, 'She lets go of every key and pauses if the game loses focus or you touch the mouse or keyboard.', 'Stop anytime with the Stop button or Ctrl+Alt+X.'],
+      lines: [`Goal: ${prof.goal}.`, `Up to ${minutes} minute${minutes > 1 ? 's' : ''}; arrow keys only, only in that game window.`, 'No purchases, trades or chat. If a shop, menu or anything unexpected appears, she stops and hands it to you.', 'She lets go of every key and pauses if the game loses focus or you touch the mouse or keyboard.', 'Stop anytime with the Stop button or Ctrl+Alt+X.'],
       categories: ['game', 'control'], targets: { game: [prof.id] }, ttlMs: minutes * 60000 + 30000,
     }); } catch (e) { if (e.category === 'denied') return reply(task, 'OK, I won\'t play.'); throw e; }
     const adapter = await sessions.open(prof.id);

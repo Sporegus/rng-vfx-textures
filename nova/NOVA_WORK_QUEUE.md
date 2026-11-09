@@ -11,8 +11,8 @@ This file says what is being worked on, in what order, and how to pick it up aft
 ## Now
 
 - [x] Phase 1 build: commits 7521b62 → 24afa7e on `zinx-desktop-helper` (see NOVA_MORNING_REPORT.md)
-- [ ] Phase 1 remaining fixable items: TTS output interface, stalled-perception test, routine recording in the app, quit hang investigation, prerecorded-speech check, live research check
-- [ ] PHASE1_COMPLETION_GATE.md written, checkpoint commit recorded
+- [x] Phase 1 remaining fixable items (quit crash, mic selection/test, shortcuts, bubble copy/links, speech output interface, game stalls/menus, routine recording, job priority/questions/summary/notes/diff, Discord disconnects, app names)
+- [x] PHASE1_COMPLETION_GATE.md written: PASSED with external blockers recorded; checkpoint = commit "Phase 1 completion gate"
 - [ ] Phase 2: P2-A audit + benchmark baseline
 - [ ] P2-B routing, retrieval, cancellation, caching, resources, performance modes
 - [ ] P2-C right-click menu, settings, unified task/project/reference interfaces

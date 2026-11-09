@@ -160,6 +160,9 @@ function createPipeline(deps) {
 
   // opening an app: through the OS launcher, then checking it really started
   async function openApp(task, name) {
+    // a name you gave an app ("browser" -> Google Chrome), from Settings > App names
+    const real = deps.appAlias && deps.appAlias(name);
+    if (real && real.toLowerCase() !== String(name).toLowerCase()) { log && log.event('app.alias', { from: name, to: real }); name = real; }
     ui.status({ taskId: task.id, state: 'executing', text: `Opening ${name}…` });
     const r = await tools.run(task, { tool: 'app.open', args: { name }, direct: true });
     if (r.result && r.result.notFound) {

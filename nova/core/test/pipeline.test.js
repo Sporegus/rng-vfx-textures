@@ -173,3 +173,12 @@ test('questions she can answer herself (math, time) skip the model', async () =>
   assert.ok(h.pageRuns.some(s => s.intent === 'math'), JSON.stringify(h.pageRuns));
   assert.ok(!h.events.some(e => e.type === 'choose'));
 });
+
+test('a name you gave an app is used when opening it', async () => {
+  const { createPipeline } = require('../pipeline');
+  const brain = require('../../brain/brain');
+  const h = harness();
+  const p = createPipeline({ tasks: h.tasks, permissions: h.permissions, tools: h.tools, log: h.log, brain, ui: h.ui, page: { run: async () => ({}) }, llm: null, appAlias: (n) => n.toLowerCase() === 'browser' ? 'Google Chrome' : null });
+  await p.input({ text: 'open browser' });
+  assert.ok(h.replies().some(r => /Opened Google Chrome/.test(r)), h.replies().join(' | '));
+});

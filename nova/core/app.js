@@ -180,7 +180,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
     guardFor: () => (win.available() ? createGuard({ win }) : null),
   });
 
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research });
+  const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });
   pipeline.onStop(() => { speechOut.stop('stop');  win.releaseAll(); games.stop(); for (const [wid, w] of waits) { waits.delete(wid); both('closed', { id: wid }); w.resolve(w.kind === 'approve' ? { allow: false, cancelled: true } : null); } toPage('stopped', {}); });
@@ -283,6 +284,11 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
         timings: pipeline.timings(), log: log.recent(200), capability: capability(), providers: chooser.status(),
         platform: `${process.platform} ${os.release()}`, versions: { electron: process.versions.electron, node: process.versions.node, nova: app.getVersion() },
         winHelper: win.available(), db: store.version && store.version(),
+        mic: micStatus,
+        permissions: { screenConsent: !!settings().screenConsent, active: permissions.list().filter(g => g.active).map(g => ({ scope: g.scope.kind, categories: g.categories, expires: g.expires })) },
+        activeTasks: tasks.active().map(t => ({ text: t.text, state: t.state, kind: t.kind })),
+        lastTool: [...log.recent(300)].reverse().find(e => e.type === 'tool.result' || e.type === 'tool.error') || null,
+        speech: speechOut.status(),
         resources: (() => {
           const m = app.getAppMetrics();
           const cpu = m.reduce((a, p) => a + (p.cpu ? p.cpu.percentCPUUsage : 0), 0);
@@ -303,6 +309,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'discord:targets': return store.recall('discord_target').map(r => ({ key: r.key, ...r.value }));
       case 'discord:add': return discord.addTarget(arg);
       case 'discord:remove': store.forget(arg.key); return { ok: true };
+      case 'alias:add': { const a = String(arg.alias || '').toLowerCase().trim(), app2 = String(arg.app || '').trim(); if (!a || !app2 || a.length > 40 || app2.length > 80) throw new Error('Give a short name and the app it means.'); store.remember('alias:' + a, 'app_alias', { alias: a, app: app2 }); return { ok: true }; }
+      case 'aliases': return store.recall('app_alias').map(r => ({ key: r.key, ...r.value }));
       case 'roblox:add': games.addPlace(arg.alias, arg.placeId); return { ok: true };
       case 'keys': return { anthropic: keys.has('anthropic'), openai: keys.has('openai'), 'discord-bot': keys.has('discord-bot') };
       case 'keys:save': if (!['anthropic', 'openai', 'discord-bot'].includes(arg.name)) return { ok: false }; keys.save(arg.name, arg.value); return { ok: true };

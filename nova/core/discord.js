@@ -27,6 +27,8 @@ function botAdapter({ token, fetchImpl = fetch, timeoutMs = 10000 }) {
       return res.json();
     } catch (e) {
       if (e.name === 'AbortError') throw new NovaError('timeout', 'Discord didn\'t answer in time.');
+      // the connection dropped: the message may or may not have arrived, so it's treated like a timeout (checked, never resent)
+      if (!(e instanceof NovaError)) throw new NovaError('timeout', 'The connection to Discord dropped.', { network: true });
       throw e;
     } finally { clearTimeout(timer); }
   };

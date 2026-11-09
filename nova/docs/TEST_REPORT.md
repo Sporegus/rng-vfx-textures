@@ -2,7 +2,7 @@
 
 Run on 2026-11-09 in a Linux cloud container (no Windows, no microphone, no GPU, no API keys).
 
-**Automated:** `npm run test:core` → **82 passed, 0 failed** (9 files). The existing suites (`npm test`: brain + voice) still pass; their one `✗` line ("passport photo" → wallpaper) predates this work and the suite allows it.
+**Automated:** `npm run test:core` → **97 passed, 0 failed** (11 files). The existing suites (`npm test`: brain + voice) still pass; their one `✗` line ("passport photo" → wallpaper) predates this work and the suite allows it.
 **Real app:** Nova (Electron 45) was launched under a virtual display and driven with Playwright. The screenshots in `docs/screenshots/` come from those runs.
 
 What the words mean:
@@ -17,7 +17,7 @@ What the words mean:
 | 1 | Typed and mic commands reach the same pipeline | PASS (fixture) + PASS (live app, typed) | `pipeline.test.js` "typed and voice commands go through the same pipeline". In the app, typed requests run through `core:input` (screens 02, 06). Mic path NOT RUN live: no microphone or speech model here. |
 | 2 | Silence/noise don't trigger actions | PASS (fixture) | "silence and noise do nothing" |
 | 3 | Partial/final ASR executes once | PASS (fixture) | "partial transcripts never act; a final one acts exactly once" |
-| 4 | Prerecorded spoken command transcribed and routed | **NOT RUN** | Needs the offline speech model (downloads on first use on your PC) and an audio device. The routing half is covered by #1 and #3. Manual check in the morning checklist. |
+| 4 | Prerecorded spoken command transcribed and routed | PASS (real recognizer) | `scripts/speech-check.js`: Kokoro speaks the command, then the real VAD + recognizer (moonshine-tiny), the wake parser and the pipeline: 6/6 (`docs/speech-check-results.json`). The speech is synthetic, not a human or a mic. |
 | 5 | Misrecognized destination requires correction | PASS (fixture) | "an uncertain app name asks instead of guessing; the correction is used" |
 | 6 | "Open Notepad" really launches/focuses | PASS (fixture) / **NOT RUN live** | Fixture: "open app is verified by finding its window". Live needs Windows; run `npm run check-windows`, then try it (checklist). |
 | 7 | Not-installed app → helpful error | PASS (fixture) | "an app that is not installed gets a helpful answer" |

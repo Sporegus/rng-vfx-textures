@@ -117,3 +117,25 @@ test('"open Afterparty on Discord" just opens it for you', async () => {
   assert.ok(s.h.replies().some(r => /Opened Afterparty in Discord/.test(r)));
   assert.equal(s.sent.length, 0);
 });
+
+test('real bot adapter: missing permissions and a dropped connection are handled honestly', async () => {
+  const { botAdapter } = require('../discord');
+  const h = harness();
+  const scope = { kind: 'task', id: 't-perm' };
+  h.permissions.grant({ scope, categories: ['communicate'], targets: { channel: ['333333333333'] }, effects: { text: 'hi' } });
+  // 1. the bot isn't allowed in that channel
+  let calls = 0;
+  const forbidden = botAdapter({ token: () => 'test-token', fetchImpl: async () => { calls++; return { ok: false, status: 403, json: async () => ({}) }; } });
+  const d1 = createDiscord({ store: h.store, adapter: forbidden, launch: async () => {}, log: h.log, permissions: h.permissions });
+  await assert.rejects(d1.sendOnce({ jobId: 'p', iteration: 'i1', channelId: '333333333333', content: 'hi', scope }), /isn't allowed to post in that channel/);
+  assert.equal(calls, 1);
+  // 2. the connection drops mid-send, and Discord can't be reached to check: unverified, never resent
+  let posts = 0;
+  const flaky = botAdapter({ token: () => 'test-token', fetchImpl: async (url, o) => { if (o && o.method === 'POST') posts++; throw new TypeError('fetch failed'); } });
+  const d2 = createDiscord({ store: h.store, adapter: flaky, launch: async () => {}, log: h.log, permissions: h.permissions });
+  await assert.rejects(d2.sendOnce({ jobId: 'n', iteration: 'i1', channelId: '333333333333', content: 'hi', scope }), (e) => e.ambiguous && /won't resend/.test(e.message));
+  await assert.rejects(d2.sendOnce({ jobId: 'n', iteration: 'i1', channelId: '333333333333', content: 'hi', scope }), (e) => e.ambiguous);
+  assert.equal(posts, 1, 'one POST attempt in total');
+  // the token never shows up in logs
+  assert.ok(!JSON.stringify(h.log.recent(200)).includes('test-token'));
+});
