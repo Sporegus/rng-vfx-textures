@@ -206,6 +206,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const { createFiles } = require('./files');
   const userFolder = (name) => { const map = { downloads: 'downloads', desktop: 'desktop', documents: 'documents', pictures: 'pictures', music: 'music', videos: 'videos' }; try { return map[name] ? app.getPath(map[name]) : null; } catch { return null; } };
   const files = createFiles({ store, log, roots: () => [...['downloads', 'desktop', 'documents', 'pictures', 'music', 'videos'].map(userFolder).filter(Boolean), ...projects.list().flatMap(p => p.folders)], trash: (p) => shell.trashItem(p) });
+  const { createContent } = require('./content');
+  const content = createContent({ dir: path.join(app.getPath('documents'), 'Nova'), log });
   const { createReminders } = require('./reminders');
   const { createNotifications } = require('./notifications');
   const reminders = createReminders({ store, log });
@@ -214,7 +216,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const workflows = createWorkflows({ store, log, settings, saveSettings });
   workflows.ensurePresets();
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder,
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder, content, openFile: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); },
     rememberAlias: (alias, app2, provenance) => store.remember('alias:' + String(alias).toLowerCase().trim(), 'app_alias', { alias: String(alias).toLowerCase().trim(), app: app2, provenance: { ...provenance, at: Date.now() } }) });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });

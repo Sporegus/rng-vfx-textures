@@ -74,6 +74,15 @@ function route(raw, ctx = {}) {
   const nth = low.match(/^(?:(?:do|pick|choose|take|go with|use|select)\s+)?(?:the\s+)?(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:one|option|choice)$/);
   if (nth) return { kind: 'pick', index: { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3, last: -1 }[nth[1]], text };
 
+  // ---- documents and tables in a real format
+  const fmtWord = '(pdf|word(?: doc(?:ument)?)?|docx|excel(?: (?:file|sheet|spreadsheet))?|spreadsheet|xlsx|csv|markdown|md|chart|bar chart)';
+  const docMake = low.match(new RegExp('^(?:please\\s+)?(?:make|create|generate|build|export|save|turn|put|write)\\b.*?\\b(?:as|into|to|in)\\s+(?:a\\s+|an\\s+)?' + fmtWord + '\\b')) || low.match(new RegExp('^(?:please\\s+)?(?:make|create|generate|build)\\s+(?:me\\s+)?(?:a\\s+|an\\s+)?' + fmtWord + '\\b'));
+  if (docMake) {
+    const f = docMake[1];
+    const format = /pdf/.test(f) ? 'pdf' : /word|docx/.test(f) ? 'docx' : /excel|spreadsheet|xlsx/.test(f) ? 'xlsx' : /csv/.test(f) ? 'csv' : /chart/.test(f) ? 'svg' : 'md';
+    return { kind: 'document', format, fromLast: /\b(that|this|it|the answer|your answer|the report|the research|what you (?:said|found))\b/.test(low.replace(/\bthat (?:shows|lists|compares|has)\b/, '')), text };
+  }
+
   // ---- duplicates (by content)
   const dup = low.match(/\b(?:find|show|look for|check for|any)\b.*\bduplicates?\b(?:.*\b(?:in|from|on)\s+(?:my\s+|the\s+)?(downloads|desktop|documents|pictures|photos|music|videos))?/) || low.match(/\bduplicate (?:files|photos|pictures|images|songs)\b(?:.*\b(?:in|from|on)\s+(?:my\s+|the\s+)?(downloads|desktop|documents|pictures|photos|music|videos))?/);
   if (dup) return { kind: 'files', op: 'duplicates', folder: (dup[1] || 'downloads').replace('photos', 'pictures'), text };

@@ -114,6 +114,33 @@ function createPipeline(deps) {
         return { picked: o.label };
       }
       case 'compose': return answer(task, r.text, { compose: true });
+      case 'document': {
+        if (!deps.content) return blocked('Document export isn\'t set up.');
+        let title, blocks = [], rows = null, chart = null;
+        if (r.fromLast) {
+          const last = ctx.lastAnswer;
+          if (!last || Date.now() - last.at > 30 * 60000) return reply(task, 'There\'s no recent answer to save. Ask me something first, then say "save that as a PDF".');
+          title = last.question.replace(/[?.!]+$/, '').slice(0, 60);
+          blocks = last.text.split(/\n\s*\n/).map(p => ({ p }));
+          if (last.sources && last.sources.length) blocks.push({ h2: 'Sources' }, ...last.sources.map((s2, i) => ({ p: `[${i + 1}] ${s2.title} - ${s2.url} (retrieved ${String(s2.retrieved || '').slice(0, 10)})` })));
+        } else {
+          const p = llm && llm.pick();
+          if (!p) return reply(task, 'Making a new document needs a chat brain to write it (Tasks panel > Settings). I can save an answer I already gave as a file, though: ask, then say "save that as a PDF".', { error: 'unavailable' });
+          tasks.move(task, 'executing');
+          ui.status({ taskId: task.id, state: 'executing', text: 'Writing it…' });
+          const want = r.format === 'xlsx' || r.format === 'csv' ? '{"title": "...", "rows": [["Header1","Header2"], ["value", 1]]}  (numbers as numbers)' : r.format === 'svg' ? '{"title": "...", "chart": [{"label": "...", "value": 1}]}' : '{"title": "...", "blocks": [{"h2": "..."}, {"p": "..."}, {"table": [["a","b"],["c","d"]]}]}';
+          const res = await p.chat({ system: SYSTEM('Return ONLY JSON, no prose.'), maxTokens: 3000, messages: [{ role: 'user', content: `${r.text}\n\nReply with JSON exactly like: ${want}. Don't invent facts you don't know; say so in the text instead.` }], signal: task.ac.signal });
+          let j = null; try { j = JSON.parse((res.text.match(/\{[\s\S]*\}/) || ['null'])[0]); } catch {}
+          if (!j || typeof j !== 'object') return reply(task, 'The model didn\'t return usable content, so I didn\'t make a file.', { error: 'failed' });
+          title = String(j.title || 'Nova document').slice(0, 60);
+          if (Array.isArray(j.rows)) rows = j.rows.slice(0, 2000).map(rw => Array.isArray(rw) ? rw.slice(0, 50).map(v => typeof v === 'number' ? v : String(v == null ? '' : v)) : []);
+          if (Array.isArray(j.chart)) chart = j.chart.slice(0, 40).map(d => ({ label: String(d.label || ''), value: Number(d.value) || 0 }));
+          if (Array.isArray(j.blocks)) blocks = j.blocks.slice(0, 400).filter(b => b && typeof b === 'object');
+        }
+        const out = deps.content.write({ title, blocks, rows: rows || (r.format === 'xlsx' || r.format === 'csv' ? (blocks.find(b => b.table) || {}).table : null), chart, format: r.format });
+        if (deps.openFile) { const v = await choose(task, `Made ${require('path').basename(out.file)} (checked: a valid ${out.format.toUpperCase()}). Open it?`, [{ label: 'Open it', value: 'open', primary: true }, { label: 'Show the folder', value: 'folder' }, { label: 'Not now', value: 'no' }]); if (v === 'open') await deps.openFile(out.file); if (v === 'folder') await deps.openFile(require('path').dirname(out.file)); }
+        return reply(task, `Saved ${out.file}`, { file: out.file, check: out.check });
+      }
       case 'files': {
         if (!deps.files || !deps.folders) return blocked('File tools aren\'t set up.');
         const dir = deps.folders(r.folder);
@@ -399,6 +426,7 @@ function createPipeline(deps) {
       if (reviewed.trim()) out = reviewed;
     }
     out = out || '…';
+    ctx.lastAnswer = { question: text, text: out, sources: sources || null, at: Date.now() };
     // concise first, details on request
     const long = out.length > 500;
     const short = long ? (out.split(/\n\s*\n/)[0].slice(0, 400) + (out.split(/\n\s*\n/)[0].length > 400 ? '…' : '')) : out;
