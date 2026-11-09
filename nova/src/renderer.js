@@ -160,16 +160,23 @@
     stopMoving();
     z.mode = 'fall'; z.vx = vx; z.vy = vy; z.perch = null; z.sitting = false;
   }
-  function walkTo(x, opts = {}) {
+  // She doesn't walk or run: getting somewhere is a teleport (until her own teleport
+  // animation lands, the glitch blink below). A working animation (sweep, carry,
+  // search, paint) plays on the spot instead of pacing back and forth.
+  async function walkTo(x, opts = {}) {
     stopMoving();
-    if (z.mode !== 'stand') return Promise.resolve(false);
+    if (z.mode !== 'stand') { await sleep(200); return false; }   // (callers loop on this; never spin)
     const s = surface();
     x = clamp(x, s.x1, s.x2);
     z.sitting = false; z.asleep = false;
-    return new Promise((resolve) => {
-      const anim = opts.anim || (opts.run ? 'run' : 'walk'), pace = S.animInfo(anim, settings.skin).speed;   // (a drawn walk sets its own pace)
-      z.walk = { x, run: !!opts.run, anim, speed: opts.speed ? opts.speed * sc() / 2 : pace ? pace * sc() : (opts.run ? 230 : 85) * sc() / 2, resolve };
-    });
+    if (Math.abs(x - z.x) > 2) z.facing = Math.sign(x - z.x);
+    if (opts.anim && opts.anim !== 'walk') {
+      await play(opts.anim, clamp(Math.abs(x - z.x) / (opts.speed || 85) * 1000, 700, 2400));
+      return true;
+    }
+    if (Math.abs(x - z.x) < 8) return true;
+    await teleportTo(x, s.y, z.perch);
+    return true;
   }
   function jumpTo(x, y, perchId) {
     stopMoving();
@@ -205,7 +212,7 @@
       z.hold = { anim, until: now + ms, resolve };
     });
   }
-  async function teleportTo(x, y) {
+  async function teleportTo(x, y, perchId = null) {   // (perchId: arrive standing on that window)
     const out = S.packOf('warpout', settings.skin), inn = S.packOf('warpin', settings.skin);
     if (out && inn) {   // the drawn look's Halo Warp: scan out where she is, rebuild where she's going
       const len = (p) => p.durations.reduce((t, d) => t + d, 0);
@@ -217,7 +224,7 @@
       sfx('glitch');
       await play('warpin', len(inn));
       if (z.mode !== 'warp') return;   // (picked up mid-warp)
-      if (z.y < H) startFall(0, 0); else z.mode = 'stand';
+      if (perchId) { z.perch = perchId; z.mode = 'stand'; } else if (z.y < H) startFall(0, 0); else z.mode = 'stand';
       return;
     }
     sfx('glitch');
@@ -229,7 +236,8 @@
     emit('glitch', z.x, z.y - CHEST * sc(), 14);
     await sleep(260);
     zEl.classList.remove('glitch');
-    if (z.y < H) startFall(0, 0); else z.mode = 'stand';
+    if (z.mode === 'drag') return;   // (picked up mid-blink)
+    if (perchId) { z.perch = perchId; z.mode = 'stand'; } else if (z.y < H) startFall(0, 0); else z.mode = 'stand';
   }
   const goFloor = async () => {
     if (!z.perch) return;
@@ -266,9 +274,13 @@
       }
       if (z.chase) {
         if (now > z.chase.until) { z.chase = null; }
-        else if (!z.walk) {
+        else if (!z.walk && !z.chase.blinking && now > (z.chase.next || 0)) {
           const dx = mouse.x - z.x;
-          if (Math.abs(dx) > 30) { z.facing = Math.sign(dx); z.x += Math.sign(dx) * Math.min(Math.abs(dx), 260 * sc() / 2 * dt); }
+          if (Math.abs(dx) > 90) {   // (she pops over to the mouse instead of running)
+            z.facing = Math.sign(dx); z.chase.blinking = true;
+            const c = z.chase;
+            teleportTo(clamp(mouse.x - Math.sign(dx) * 40, 40, W - 40), H).finally(() => { c.blinking = false; c.next = now + 700; });
+          }
         }
       }
     } else if (z.mode === 'fall') {
@@ -312,7 +324,7 @@
     if (z.mode === 'fall') return 'fall';
     if (now < z.landUntil) return 'land';
     if (z.walk) return z.walk.anim;
-    if (z.chase) return Math.abs(mouse.x - z.x) > 30 ? 'run' : 'love';
+    if (z.chase) return Math.abs(mouse.x - z.x) > 90 ? 'idle' : 'love';
     if (z.hold) {
       if (now < z.hold.until) return z.hold.anim;
       const r = z.hold.resolve; z.hold = null; r();
@@ -427,7 +439,7 @@
     await goFloor();
     const leftSide = win.x - 30 * s > 20;
     const standX = leftSide ? win.x - 22 * s : Math.min(W - 30, win.x + win.width + 22 * s);
-    await walkTo(standX, { run: true });
+    await walkTo(standX);
     await pointAt(win.x + (leftSide ? 60 : win.width - 60), clamp(win.y + Math.min(140, win.height / 2), 10, H - 10), label, 4000);
   }
 
@@ -882,9 +894,11 @@
     await goFloor();
     const colors = ['#ff3d8b', '#39f5ff', '#ffe14d', '#7cf29e', '#9d7dff'];
     const from = z.x < W / 2 ? 60 : W - 60, to = W - from;
-    await walkTo(from, { run: true });
-    const trail = setInterval(() => { wipes.push({ x: z.x, t: 0, color: pick(colors) }); emit('paint', z.x, z.y - CHEST * sc(), 2); }, 40);
-    await walkTo(to, { anim: 'paint', speed: 700 });
+    await walkTo(from);
+    z.facing = Math.sign(to - from);
+    const t0 = now, span = 1400;
+    const trail = setInterval(() => { const x = from + (to - from) * Math.min(1, (now - t0) / span); wipes.push({ x, t: 0, color: pick(colors) }); emit('paint', x, z.y - CHEST * sc(), 2); }, 40);
+    await play('paint', span);
     clearInterval(trail);
     sfx('ok'); play('cheer', 1500);
     emit('sparkle', z.x, z.y - CHEST * sc(), 20);
@@ -1130,7 +1144,7 @@
     try { new Notification('Nova', { body: msg, silent: true }); } catch {}
     for (let i = 0; i < 3; i++) setTimeout(() => sfx('ding'), i * 700);
     await goFloor();
-    await walkTo(W / 2, { run: true });
+    await walkTo(W / 2);
     emit('confetti', z.x, z.y - CHEST * sc(), 30);
     play('cheer', 2500);
     ask(`⏰ ${msg}`, [{ label: 'Thanks!', value: 'ok', primary: true }, { label: '+5 min', value: 'snooze' }]).then(v => { if (v === 'snooze') startTimer(300, t.label, { reminder: t.reminder }); else if (v) closeBubble(); });
@@ -1819,7 +1833,7 @@
     const r = Math.random();
     if (ws && !z.perch && r < 0.3) { hopOnto(ws); return; }
     if (z.perch && r < 0.1) { goFloor(); return; }
-    if (r < 0.6) { const s = surface(); walkTo(rand(s.x1, s.x2)); return; }
+    if (r < 0.42) { const s = surface(); walkTo(rand(s.x1, s.x2)); return; }   // (a teleport now, and rarer)
     if (r < 0.8) { z.sitting = true; return; }
     if (r < 0.88) { play('wave', 1400); return; }
     if (r < 0.95) { play('think', 2200); return; }
@@ -1827,7 +1841,7 @@
   }
   async function hopOnto(ws) {
     const tx = clamp(z.x, ws.x1 + 30, ws.x2 - 30);
-    await walkTo(tx);
+    if (Math.abs(tx - z.x) > 8) await teleportTo(tx, H);   // (pop under the window, then hop up)
     const now2 = windowSurface();
     if (now2 && now2.id === ws.id && z.mode === 'stand') { await jumpTo(clamp(z.x, now2.x1 + 20, now2.x2 - 20), now2.y, now2.id); z.sitting = Math.random() < 0.6; }
   }
@@ -1999,5 +2013,5 @@
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools
-  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, makeWallpaper, intro, showStatus, hist, overNova };
+  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, walkTo, chase, makeWallpaper, intro, showStatus, hist, overNova };
 })();
