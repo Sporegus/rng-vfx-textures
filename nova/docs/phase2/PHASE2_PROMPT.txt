@@ -1,0 +1,431 @@
+CLAUDE — NOVA PHASE 2: EVERYDAY CAPABILITIES, MOBILE CONTROL, INTELLIGENCE AND SPEED
+QUEUED FOLLOW-UP: FINISH AND VERIFY THE EXISTING NOVA BUILD FIRST
+
+This is a SECOND implementation assignment for my Windows 11 desktop assistant NOVA. It supplements the work already assigned. It does not replace, interrupt, or excuse unfinished work in the current assignment.
+
+EXECUTION ORDER IS MANDATORY:
+1. Finish the currently assigned NOVA work.
+2. Verify it against its actual acceptance criteria and repair failures.
+3. Record the Phase 1 completion evidence and a recoverable checkpoint.
+4. Continue automatically into this Phase 2 assignment.
+5. Implement, test, optimize, and deliver Phase 2 without asking me “shall I continue?”
+
+Read this prompt now, record it as a queued phase, and then return to any unfinished current work. Do not start implementing Phase 2 features early because they look more interesting.
+
+I am going away/to bed. Make routine reversible implementation decisions independently. Do not stop for ordinary choices of UI layout, module names, libraries, or internal architecture. Keep actual permission, login, spending, account, and platform boundaries intact. A request to build an autonomous assistant does not grant that assistant unrestricted authority.
+
+0. PRECEDENCE AND CONTINUITY
+
+- The existing NOVA task and its acceptance criteria remain first priority.
+- The reference brief is NOVA_Overnight_Brain_Build_Prompt.txt; the latest prepared version is labeled REVISION 3. If it is available, read it fully and reconcile it with the assignment actually in progress.
+- Preserve all already accepted requirements and user corrections. If you received an earlier revision, finish that assigned work first, then include missing requirements summarized below in Phase 2. Do not pretend you received or completed a document you cannot access.
+- Do not reset the task list, discard working features, restart the entire project, or replace the existing stack just because this is a new prompt.
+- Preserve unrelated work and uncommitted changes. Keep development in the established project or an isolated checkout.
+- Create a queue/checkpoint file that records the current assignment, this next assignment, exact ordering, and how to resume after context loss.
+- This sequencing instruction takes priority over any earlier suggestion to implement the two phases in parallel.
+- Do not contact my friends, send real Discord messages, join real calls, automate real gameplay, publish changes, or start a paid live assistant relay simply to demonstrate development progress. Use fixtures or specifically authorized test environments.
+- Never claim a prompt guarantees work continues beyond your session, usage, tool, or environment limits. Persist progress so a real authorized runner or later session can resume accurately.
+
+1. PHASE 1 COMPLETION GATE
+
+Before modifying Phase 2 features:
+A. Inspect the current code, task list, original brief, tests, reports, and running application.
+B. Map each original requirement to implementation, an actual test, and its result.
+C. Complete the missing implementation and fix known failures.
+D. Run the required checks and relevant regression checks.
+E. Demonstrate the existing end-to-end workflow with actual providers/hardware where available.
+F. Record the checkpoint/build identifier and evidence in PHASE1_COMPLETION_GATE.md.
+
+Use statuses with precise meanings:
+- IMPLEMENTED_AND_VERIFIED: real behavior was exercised and evidence exists.
+- IMPLEMENTED_MOCK_TESTED: the surrounding code was tested with fixtures, but the real integration was not.
+- BLOCKED_EXTERNAL: a specific unavailable credential, permission, platform, or hardware dependency prevents completion.
+- FAILED: an acceptance check was exercised and failed.
+- NOT_IMPLEMENTED: work remains.
+
+A passing mock does not prove a real microphone, desktop interface, model provider, or chat integration works. “The code compiles,” “I wrote the files,” and “the model said done” are insufficient completion evidence.
+
+Start Phase 2 only when the original assignment's completion gate is satisfied. Fixable Phase 1 defects must be fixed first. Where the original assignment explicitly allows a documented unavailable integration, honor that definition transparently; do not silently reclassify required live behavior as optional.
+
+If a real external blocker prevents the gate from passing, finish all other authorized Phase 1 work and leave an exact resumable blocker record. Do not falsely declare Phase 1 complete or jump to Phase 2. This is a technical completion gate, not a request to pause for routine user approval.
+
+When the gate passes, write the result and proceed immediately. No confirmation question is needed.
+
+2. PRODUCT GOAL AND HONEST CAPABILITIES
+
+I want NOVA to offer the useful breadth of a capable AI assistant with excellent access to my own projects, desktop, and approved tools. Her advantages should be convenience, project continuity, fast routine actions, and reliable completion.
+
+Translate “as capable as ChatGPT, but better for my desktop and optimized” into measurable engineering requirements. Do not promise universal intelligence, guaranteed accuracy, better underlying reasoning than the configured models, or arbitrary control of every application.
+
+Build on the same task pipeline and permission system:
+typed/voice/authorized remote input → grounded intent/context → plan → permission checks → tools → verification → response.
+
+Maintain a capability registry with:
+- What a capability can actually do.
+- Required configuration and permissions.
+- Supported inputs/outputs and tool schema.
+- Ready, unavailable, experimental, or blocked status.
+- Last tested environment/version where relevant.
+- Error, cancellation, and recovery behavior.
+
+NOVA should say “I can open that app, but this action is not integrated yet” rather than inventing results. No decorative buttons that imply working features.
+
+Preserve her approved holographic idle, angular blue-haired character, proportions, existing transparency, and desktop behavior. No halo, nose dot, art redesign, or fresh animation repair. Continue using the text bubble until real TTS is configured.
+
+3. COVERAGE AUDIT: REUSE WHAT EXISTS
+
+Inspect and reuse these prior requirements. Finish missing items after the Phase 1 gate rather than building a second competing implementation:
+- Microphone selection, push-to-talk, finalized transcription, correction, and Stop.
+- Shared typed/voice task pipeline and conversation context.
+- Screen awareness, UI accessibility, targeted vision, and grounded control.
+- Task-scoped permissions, revocation, input release, and focus handling.
+- Research with source evidence and uncertainty.
+- Durable tasks, checkpoints, jobs, budgets, deadlines, and recovery.
+- ChatGPT ↔ Claude handoffs with correct conversation identity and artifact transfer.
+- Supported Discord adapter and truthful text-versus-call-audio behavior.
+- Game research/launching and allowed bounded control, with explicit per-game limitations.
+- Right-click menu, tray recovery, settings, reasoning modes, and resource profiles.
+- Measured memory/latency and bounded animation buffers.
+- Test evidence that distinguishes actual integration results from fixtures.
+
+Build one coherent application, not multiple dashboards, permission managers, memory stores, or microphone services.
+
+4. INTELLIGENCE THAT SAVES TIME
+
+Implement effective routing:
+- Known unambiguous low-impact commands use a direct validated tool path.
+- Everyday language interpretation uses an appropriate available model.
+- Complex analysis, planning, troubleshooting, or review can use a more capable configured route.
+- Uncertainty, failed verification, or changed conditions can trigger escalation.
+- All routes use the same permissions, validation, and result verification.
+
+Simple requests such as volume changes must not start a multi-assistant debate. Deep tasks must not be forced through a weak shortcut just to look fast.
+
+Add reusable, versioned workflows:
+- Save successful task procedures with preconditions, intended app state, verified steps, and failure handling.
+- Do not store a fragile list of coordinates as learned intelligence.
+- Revalidate important conditions before reuse.
+- User corrections can update a workflow or preference after appropriate confirmation.
+- Keep provenance, an edit history, and a way to revert/delete the learned item.
+- Never infer permanent authorization from a successful one-time action.
+
+Improve context:
+- Retrieve only relevant project/task notes, files, prior decisions, and recent actions.
+- Preserve exact user constraints and source references.
+- Refresh transient observations rather than storing a stale screen as fact.
+- Separate user preferences from model guesses.
+- Clarify consequential ambiguity briefly instead of executing the wrong thing.
+
+Use evidence checks:
+- Evaluate whether the requested outcome occurred.
+- Compare outputs with acceptance criteria.
+- Use deterministic tools for calculations and verifiable file operations.
+- Ask for deeper review when the task warrants it; avoid unnecessary recursive criticism.
+- Stop when the agreed criteria are met.
+
+5. RESPONSIVENESS AND RESOURCE ENGINEERING
+
+First profile the actual application and machine: CPU, RAM, GPU/VRAM when available, runtime framework, model providers, audio path, rendering, and background processes. Choose budgets from measured behavior.
+
+Optimize independently:
+- Input responsiveness.
+- Speech endpoint/transcription delay.
+- Model first-output and total latency.
+- Tool action and verification time.
+- Rendering smoothness.
+- Memory, GPU memory, disk growth, and network usage.
+
+Implement:
+- Immediate visible listening/status feedback, without falsely indicating completion.
+- Local Stop handling independent of model/network responsiveness.
+- Streaming text where supported.
+- Bounded asynchronous queues and cancellation propagation.
+- Priority for new user interactions over background tasks.
+- Event-driven observation, targeted captures, and small necessary context.
+- Bounded caches with expiry/invalidation and no reuse of stale targets.
+- On-demand loading/unloading of large inactive components, with an idle grace period to avoid reload thrashing.
+- Reuse of connections, initialized clients, and safe shared resources.
+- Backoff under memory/CPU pressure, with a clear status.
+- Limited independent concurrency; exclusive locks for desktop input, audio ownership, and shared mutable project state.
+- No perpetual high-frequency screen capture or repeated identical web searches.
+- No invisible proliferation of browser tabs, workers, subprocesses, logs, or image buffers.
+
+Preserve master artwork but use appropriate runtime sizes and bounded decoding/frame buffers. Measure visual quality after optimization. A 3000 × 4000 RGBA frame is about 46 MiB decoded; do not assume every master frame belongs in RAM. This is a sizing example, not a claim about the existing renderer.
+
+Use local and cloud components according to configured permissions, hardware, privacy, and budget. A cloud model avoids local model-weight residency but introduces network dependence and usage costs. Benchmark optional smaller/quantized local models for correctness and latency before selecting them.
+
+Create a reproducible benchmark suite:
+- At least 30 representative requests covering direct commands, ordinary conversation, ambiguous instructions, project retrieval, research, screen understanding, and longer workflows.
+- Measure cold and warm behavior separately.
+- Record median and p95 latency with sample counts, hardware/provider details, and variability.
+- Compare task success and errors as well as speed.
+- Include a repeated-operation/soak test for memory growth and cancellation leaks.
+- Retain the baseline and before/after results. Never invent performance numbers.
+
+Target responsive local feedback and interruption; set achievable task-specific latency/memory goals after profiling. Do not promise every task finishes instantly or silently reduce accuracy/permissions to hit a benchmark.
+
+6. NATURAL CONVERSATION AND FUTURE VOICE
+
+Make conversation useful beyond command recognition:
+- Follow recent references and corrections.
+- Handle “wait,” “actually,” “cancel that,” and “do the second option.”
+- Let me edit an incorrect transcript.
+- Keep task status separate from conversational filler.
+- Offer concise answers with an expandable detailed view.
+- Continue a conversation while a background job runs without mixing its permissions or context into another task.
+- Handle interruption and turn-taking without duplicate commands.
+- Avoid responding to television, Discord callers, or future TTS as if they were me.
+
+Keep reliable push-to-talk as the baseline. Wake-word features remain opt-in and honestly labeled. Do not confuse voice familiarity with identity verification.
+
+No custom voice is available yet: text response is the working output. Build and test a clean future interface for synthesis, playback, interruption, and optional lip-sync events. Do not mark those features live or fake speech. Call audio routing remains a separate explicitly configured capability.
+
+7. PROJECT AWARENESS AND PERSONAL KNOWLEDGE
+
+“Let's work on Black Sun” should resolve a verified project profile, show its current task, and open only the configured tools/files. It must not silently publish, edit maps, or launch unrelated automation.
+
+A project profile can contain:
+- Approved folders/repositories and tool launch targets.
+- Relevant references, design constraints, and decisions.
+- Current branch/build/task status.
+- Useful app/conversation bindings.
+- Next action and known blockers.
+- Permissions, kept separate from descriptive context.
+
+Keep Black Sun, other Roblox projects, and NOVA development isolated. Prevent one project's prompts, files, recipient mappings, or secrets from leaking into another.
+
+Create a reference inbox:
+- “Save this image as an armour reference.”
+- “Remember this link for the terrain.”
+- “Find the mask reference I saved.”
+
+Use explicit selections or shared files when possible. Store the source, user note, project, and retrieval-friendly metadata. Offer visual/text search only through configured capabilities. Do not silently index the whole drive or collect unrelated private windows.
+
+Memory controls must let me inspect, correct, export, and delete saved items. Record uncertainty and provenance. Corrections to stable preferences should not require me to repeat them forever, but one-off requests should not become permanent rules automatically.
+
+8. EVERYDAY ROUTINES, MEDIA, AND NOTIFICATIONS
+
+Add editable task presets such as Gaming, Study, Development, and Wind down:
+- Open configured apps and project notes.
+- Arrange windows on selected monitors.
+- Adjust permitted media/volume settings.
+- Start configured timers.
+- Apply selected notification preferences.
+- Restore reversible previous settings where appropriate.
+
+Preview a new routine's effects before granting repeatable execution. Follow the same scoped permissions as other tasks. Music playback can trigger an existing approved dance animation only if that integration/animation is available; do not modify the art to claim the feature works.
+
+Notification triage:
+- Use supported authorized sources.
+- Group routine notifications.
+- Respect user-defined important contacts/apps/topics and quiet hours.
+- Summarize what was missed, with links to originals where available.
+- Do not silently dismiss important items or reply to people.
+- Do not manufacture access to a service's notifications.
+
+Expose timers, local reminders/scheduled tasks, and calendars only through real implemented adapters. Correctly handle timezones, daylight-saving changes, missed runs, duplicates, and cancellation. Missing integrations should not disable local timers or the task dashboard.
+
+9. TROUBLESHOOTING, FILES, AND CONTENT CREATION
+
+For “Why isn't this working?”:
+- Identify the affected app/project.
+- Collect only relevant authorized error text, logs, versions, and visible state.
+- Research uncertain details using current official documentation where appropriate.
+- Explain the likely cause and distinguish evidence from inference.
+- Make a scoped reversible fix when authorized, then rerun the failing check.
+- Stop repeating the same failed fix. Record attempted remedies.
+- Never delete data, weaken security, or change unrelated system settings to make a test pass.
+
+For files:
+- Search approved folders and explicit selections.
+- Preview organization, rename, and move operations.
+- Treat matching names as insufficient proof of duplicate contents; verify bytes/hashes when appropriate.
+- Detect conflicts and preserve originals/recovery paths.
+- Use Recycle Bin/reversible operations where available rather than permanent deletion.
+- Offer undo only for operations actually reversible and report partial failure accurately.
+- Respect disk space and file locks.
+
+For general assistant work, implement available capabilities for:
+- Drafting, rewriting, explaining, tutoring, brainstorming, and translation.
+- Reading/summarizing supported documents and PDFs.
+- Working with supported tables/spreadsheets, formulas, and charts.
+- Coding help and scoped code/project edits with validation.
+- Creating/exporting useful reports, text files, and other supported deliverables.
+- Image understanding and, if an actual provider is configured, image generation/editing.
+
+Use capability adapters and native document/plotting tools where appropriate. Actual file formats, calculations, page layout, and source attribution must be validated. Do not return plain text renamed as a PDF/spreadsheet or claim an image was generated without a real output. Preview changes to important existing files and preserve their identity.
+
+If a capability needs an unavailable provider/license, implement its configuration/error boundary and report it accurately; do not fabricate support or install paid services.
+
+10. PHONE DASHBOARD — SECURE REMOTE CONTROL
+
+Build a responsive mobile web dashboard as the first version. No native iPhone app is required for the core workflow. Make it usable in Safari and optionally installable to the Home Screen where supported.
+
+The desktop remains the execution host. The phone is an authenticated client.
+
+Required mobile capabilities:
+- View live task state and recent verified progress.
+- Send a new instruction to the shared task pipeline.
+- Pause, cancel, and resume eligible jobs.
+- Review and approve the exact pending action.
+- View/download approved task artifacts and selected screenshots.
+- Read the morning digest and blocked-item list.
+- Inspect connection state and command acknowledgement.
+
+Build local development access first. Support an explicitly configured secure remote transport for outside-home use. Do not silently create public hosting, open router ports, expose a command endpoint to the internet, register accounts, or change firewall/security rules.
+
+Security and correctness requirements:
+- Authenticated pairing initiated from the trusted desktop; short-lived single-use pairing challenge.
+- No permanent bearer secret in a URL, screenshot, or browser log.
+- Encrypted transport outside a properly isolated local development environment.
+- Revocable device/session credentials, expiry, and a paired-device list.
+- Server-side authorization on every request. Hiding a button is not authorization.
+- Defend applicable HTTP/WebSocket endpoints against cross-site requests, invalid origins, replay, and unauthorized subscriptions.
+- Rate-limit authentication and command submission.
+- Task/action IDs and deduplication so reconnecting/resubmitting cannot perform the same side effect twice.
+- Remote approvals bind to the exact pending action revision, target, content, and expiry.
+- A stale approval cannot authorize a modified action.
+- Do not store secrets or sensitive screenshots in an offline service-worker cache.
+- Audit remote actions without logging credentials.
+- Display stale/offline data honestly; never show “stopped” until the host has acknowledged it.
+- A local Stop/revocation takes priority and invalidates conflicting remote actions.
+- No streaming the desktop or microphone to the phone by default.
+
+If outside-home transport or iPhone-specific testing is unavailable, fully implement/test the local dashboard and security boundaries, and mark the remote/iPhone checks pending. Do not call browser emulation a real physical iPhone test.
+
+A hidden monitor may be fine for some work, but do not promise UI automation survives a locked/sleeping PC or every display configuration. Show host state and pause unsupported actions safely.
+
+11. LONG-RUNNING ASSISTANT COORDINATION
+
+Retain and strengthen the original coordinator:
+- Bind each participant to the correct project/account/conversation or supported API session.
+- Do not assume an API can access the user's existing browser chat or subscription.
+- Use only supported, authorized integration routes.
+- Distinguish streaming, active tool work, completed turns, failures, and actual completed goals.
+- Relay relevant prompts, files, screenshots, and test results without missing attachments or leaking unrelated information.
+- Validate tasks from other assistants against the original user contract.
+- Verify evidence before accepting “done.”
+- Preserve exact constraints through compaction/session changes.
+- Persist checkpoints, transmission state, dependencies, retry counts, and budgets.
+- Reconcile uncertain sends before retrying; prevent duplicate prompts/actions.
+- Detect repeated errors, unchanged outputs, contradictory reviews, and no-progress loops.
+- Continue authorized independent branches when one is blocked, without skipping the Phase 1 gate.
+- Finish when objective criteria pass rather than creating endless polish tasks.
+
+One approval may cover ordinary generated prompts/results between the approved participants within the job's scope. It does not cover new recipients, secrets, purchases, deployments, or widened objectives.
+
+Let the phone inspect and control this same job system. Do not create a separate remote task store that can disagree with the desktop.
+
+12. GAME ASSISTANCE AND RESEARCH
+
+Retain the previously requested game features:
+- Launch the exact selected game/Roblox experience through supported official routes.
+- Research current mechanics, compare builds, explain items, and coach from authorized visible context.
+- Track user-approved goals and notes.
+- Support recorded routines or adaptive play only where the platform and game permit it.
+- Ground control in per-game profiles and actual observations.
+- Use bounded inputs, watchdogs, focus checks, and immediate key/button release.
+- Verify progress with visible counters or documented owned-test telemetry.
+- Stop safely on repeated failure, unexpected menus, uncertain state, or new spending/communication requirements.
+
+Do not assume a private server or keyboard macro makes automated play permitted. No modified Roblox clients, exploit injection, private-memory manipulation, anti-cheat evasion, or disguising automation.
+
+Research and coaching should remain useful even when playing automatically is unavailable. Do not claim performance in a local test game proves competence in Roblox or fast combat. Test in permitted fixtures/owned development environments; do not change or publish my existing game projects merely to demonstrate this feature.
+
+13. RIGHT-CLICK SETTINGS AND TWO INDEPENDENT MODE CONTROLS
+
+Right-click NOVA → Talk, Reasoning mode, Performance profile, Tasks, Pause/Resume, Microphone, Settings, Hide, Quit.
+Keep tray access, keyboard navigation, multi-monitor positioning, and correct click-through/drag behavior.
+
+Reasoning:
+- Auto: choose appropriate effort.
+- Quick: fast familiar tasks and concise replies.
+- Think: deliberate multi-step work.
+- Thorough: bounded deeper research/review.
+
+Performance:
+- Gaming: prioritize interactive response and reduce background resource competition.
+- Balanced: normal defaults.
+- Overnight: allow more authorized background work within existing limits.
+
+Map modes to actual provider capabilities and measured runtime behavior. Do not invent model names/settings or claim a mode changes the underlying intelligence magically. Permission levels remain independent.
+
+Settings should cover appearance, bubble/text size, voice input, future voice output, project profiles, memory, integrations, task limits, remote devices, privacy, notifications, and diagnostics. Show actual unavailable states and keep advanced options expandable.
+
+14. IMPLEMENTATION SEQUENCE AFTER THE PHASE 1 GATE
+
+P2-A: Audit and benchmark. Record existing functionality, gaps, resource use, and regression baseline.
+P2-B: Improve routing, retrieval, cancellation, caching, resource management, and performance modes.
+P2-C: Complete right-click settings and unified task/project/reference interfaces.
+P2-D: Improve conversation, project memory, reusable routines, notification handling, and everyday content/file tools.
+P2-E: Implement and validate the mobile dashboard and secure local pairing/control.
+P2-F: Integrate mobile control with existing long-running jobs; strengthen handoff/recovery evidence.
+P2-G: Complete supported game coaching/research/allowed control and capability reporting.
+P2-H: Run acceptance, security, failure/recovery, visual, and resource checks; fix regressions; package.
+
+Do not turn these into approval stops. Continue automatically through dependencies. If a Phase 2 external integration is blocked, finish its local implementation/configuration/tests and continue independent Phase 2 work. Clearly report the blocked live connection.
+
+15. PHASE 2 ACCEPTANCE AND REGRESSION TESTS
+
+Keep the original tests and add meaningful coverage:
+1. Simple unambiguous commands take the direct path; complex/uncertain requests escalate correctly.
+2. Faster routing does not bypass permission, target verification, or change task success silently.
+3. Benchmarks compare cold/warm latency, task accuracy, peak/steady memory, and rendering behavior.
+4. Repeated microphone/screenshot/task/menu cycles do not produce unbounded memory or worker growth.
+5. Stop remains responsive under model delays and resource pressure.
+6. Relevant context is retrieved without mixing projects or stale screen facts.
+7. Corrections persist appropriately; one-time requests do not become permanent permissions.
+8. Reference capture/retrieval preserves sources and project identity.
+9. Voice correction/interruptions do not duplicate pending actions.
+10. A routine applies intended changes and restores only actually reversible settings.
+11. Notification summaries reflect real authorized source items, and do not send replies.
+12. File previews, duplicate verification, collisions, undo, and locked-file errors work.
+13. A supported document/table/report is produced and validated in its actual format.
+14. Troubleshooting verifies the fix against the original failure.
+15. Right-click/tray/settings work without breaking animation, dragging, transparency, or focus.
+16. Reasoning and resource modes remain distinct and map to real capabilities.
+17. Mobile pairing expires, cannot be reused, and can be revoked.
+18. Unauthenticated or wrong-device requests cannot read data, approve actions, or execute commands.
+19. Cross-site/replay attempts, stale approvals, and reconnect duplicates are rejected.
+20. Remote Stop is acknowledged truthfully; local revocation wins over pending remote commands.
+21. Mobile view handles small screens, offline state, stale data, and host sleep/lock correctly.
+22. Browser simulation and real-device checks are labeled separately.
+23. A coordinator loop completes a revision cycle with verified evidence and delivered attachments.
+24. Crash/restart and missing acknowledgements do not create duplicate side effects.
+25. Limits and no-progress detection stop a stalled workflow without stopping unrelated eligible work.
+26. Research cites consulted sources and distinguishes claims from inference.
+27. Game coaching works independently of autonomous play; permitted fixture control reaches a verified goal.
+28. Focus loss/cancel/error releases every held input and pauses further game actions.
+29. Provider outage/missing setup degrades gracefully without losing durable task state.
+30. The Phase 1 regression suite still passes after Phase 2 changes.
+
+Use real integration checks where available, fixtures where necessary, and explain the difference. Do not mark unrun cases passed. Do not replace real postcondition checks with tests that only confirm a method was called.
+
+16. REQUIRED DELIVERABLES
+
+Leave:
+- A working runnable build and exact launch instructions.
+- PHASE1_COMPLETION_GATE.md with evidence/checkpoint identity.
+- PHASE2_REQUIREMENTS_MATRIX.md showing implemented, verified, mocked, blocked, and missing items.
+- PERFORMANCE_BASELINE_AND_RESULTS.md with measured before/after data and remaining bottlenecks.
+- A concise settings/modes and mobile-pairing user guide.
+- The unified task/project/capability schema and migrations.
+- Runnable automated tests, safe fixtures, and live-test instructions.
+- A short real-app demonstration where capture is available.
+- NOVA_PHASE2_HANDOFF.md with actual completed features, limitations, configuration steps, rollback, and next actions.
+- A durable resume record if execution is interrupted.
+
+Do not leak credentials into reports, screenshots, exports, or test fixtures. Do not duplicate the entire repository into multiple delivery folders unnecessarily.
+
+Final report:
+- State whether Phase 1's gate passed.
+- State what Phase 2 genuinely works now.
+- Identify exact live versus mocked/blocked integrations.
+- Show the most meaningful measured speed/memory results.
+- Provide a small set of commands I can try immediately.
+- Explain how to pair my phone, or precisely what remains unavailable.
+- List remaining blockers without hiding them behind a “complete” headline.
+- Do not finish with “would you like me to continue?” If authorized implementation remains possible, keep working.
+
+BEGIN BY FINISHING THE EXISTING ASSIGNMENT. Only after its completion gate passes, proceed automatically through this Phase 2 plan. The goal is a dependable, fast, useful assistant—not a larger collection of unfinished features.
+
