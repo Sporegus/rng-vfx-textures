@@ -31,7 +31,7 @@
     render();
   }
   async function render() {
-    const fn = { tasks, jobs, memory, settings, capability, diagnostics, projects, refs }[tab] || tasks;
+    const fn = { tasks, jobs, memory, settings, capability, diagnostics, projects, refs, routines }[tab] || tasks;
     try { await fn(); } catch (e) { view.innerHTML = `<div class="card">Couldn't load this: ${esc(e.message)}</div>`; }
     const o = await P.query('overview');
     const n = o.waits.length;
@@ -167,6 +167,25 @@
     view.append(h(`<div class="card events">${events.slice(-80).map(e => `${new Date(e.t).toLocaleTimeString()}  ${esc(e.kind)}  ${esc(JSON.stringify(e.data || {})).slice(0, 220)}`).join('<br>')}</div>`));
   }
 
+  // ------------------------------------------------------------------ routines and reminders
+  async function routines() {
+    const [wfs, rems] = await Promise.all([P.query('workflows'), P.query('reminders')]);
+    view.innerHTML = '';
+    view.append(h('<h2>Routines</h2><div class="muted">Say "start gaming mode" / "end gaming mode", or "save that as …" after she does something. Each run shows what it will do first.</div>'));
+    for (const w of wfs) {
+      const c = h(`<div class="card"><div class="title">${esc(w.name)} <span class="muted">v${w.version} · ${esc(w.provenance.kind === 'preset' ? 'built-in preset' : w.provenance.kind === 'learned' ? 'learned from "' + (w.provenance.from || '') + '"' : 'yours')}</span>${w.approvedHash ? ' <span class="state paused">always allowed (this version)</span>' : ''}</div><div class="lines">${w.plan.map((p, i) => `${i + 1}. ${esc(p.text)}${p.reversible ? ' <span class="muted">(undone by "end")</span>' : ''}`).join('<br>')}</div><div class="row"></div></div>`).firstChild;
+      const row = c.querySelector('.row');
+      if (w.history.length) row.append(btn('Revert to v' + w.history[w.history.length - 1].version, '', () => P.query('workflow:revert', { name: w.name }).then(render)));
+      if (w.approvedHash) row.append(btn('Ask me again next time', '', () => P.query('workflow:forgetApproval', { name: w.name }).then(render)));
+      row.append(btn('Delete', 'danger', () => P.query('workflow:remove', { name: w.name }).then(render)));
+      view.append(c);
+    }
+    view.append(h('<h2>Reminders</h2>'));
+    if (!rems.length) view.append(h('<div class="empty">No reminders. Say "remind me at 5pm to …".</div>'));
+    else view.append(table(['When', 'What', ''], rems.map(r => [when(r.due), esc(r.text), `<button class="danger" data-rc="${esc(r.id)}">Cancel</button>`])));
+    view.querySelectorAll('[data-rc]').forEach(b => b.addEventListener('click', () => P.query('reminder:cancel', { id: b.dataset.rc }).then(render)));
+  }
+
   // ------------------------------------------------------------------ projects
   let editProject = null;
   async function projects() {
@@ -285,6 +304,12 @@
     }
     view.append(scc);
 
+    view.append(h('<h2>What counts as important</h2><div class="muted">Used by "what did I miss?": these come first; everything else is grouped. Nova never replies to anyone.</div>'));
+    const imp = s.important || { apps: [], contacts: [], topics: [] };
+    const ic = h(`<div class="card grid"><label>People</label><input data-i="contacts" value="${esc((imp.contacts || []).join(', '))}" placeholder="Jordan, Mum"><label>Apps</label><input data-i="apps" value="${esc((imp.apps || []).join(', '))}" placeholder="Nova jobs, Reminders"><label>Topics</label><input data-i="topics" value="${esc((imp.topics || []).join(', '))}" placeholder="black sun, invoice"></div>`).firstChild;
+    ic.querySelectorAll('[data-i]').forEach(i => i.addEventListener('change', () => P.query('important:set', Object.fromEntries([...ic.querySelectorAll('[data-i]')].map(x => [x.dataset.i, x.value.split(',').map(v => v.trim()).filter(Boolean)])))));
+    view.append(ic);
+
     view.append(h('<h2>Discord places</h2><div class="muted">Nova only uses places you add here. IDs: Discord Settings > Advanced > Developer Mode, then right-click > Copy ID.</div>'));
     if (targets.length) view.append(table(['Name', 'Server / channel', 'Type', ''], targets.map(t => [esc(t.alias), `<span class="mono">${esc(t.guildId)} / ${esc(t.channelId)}${t.textChannelId ? ' (text ' + esc(t.textChannelId) + ')' : ''}</span>`, esc(t.kind), `<button class="danger" data-dt="${esc(t.key)}">Remove</button>`])));
     view.querySelectorAll('[data-dt]').forEach(b => b.addEventListener('click', () => P.query('discord:remove', { key: b.dataset.dt }).then(render)));
@@ -309,8 +334,9 @@
   // ------------------------------------------------------------------ capability + diagnostics
   async function capability() {
     const c = await P.query('capability');
-    view.innerHTML = '<h2>What works on this PC right now</h2>';
-    view.append(table(['Ability', 'State', 'Notes'], c.map(x => [esc(x.what), st(x.state.replace(/ /g, '_')), esc(x.why)])));
+    view.innerHTML = '<h2>What works on this PC right now</h2><div class="muted">Checked from your setup each time you open this. "Last tested" is the most recent real evidence, not a promise.</div>';
+    const stc = (s) => s === 'ready' ? 'live' : s === 'experimental' ? 'paused' : 'failed';
+    view.append(table(['Ability', 'Status', 'What it does / needs', 'On errors', 'Last tested'], c.map(x => [esc(x.name), `<span class="state ${stc(x.status)}">${esc(x.status)}</span>${x.why ? `<div class="muted">${esc(x.why)}</div>` : ''}`, esc(x.does) + (x.needs.length ? `<div class="muted">Needs: ${esc(x.needs.join(', '))}</div>` : ''), esc(x.errors), `<span class="muted">${esc(x.tested)}</span>`])));
   }
   async function diagnostics() {
     const d = await P.query('diagnostics');

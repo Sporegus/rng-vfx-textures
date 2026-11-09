@@ -256,33 +256,27 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   }
   ipcMain.on('core:panel', (_, tab) => openPanel(tab || 'tasks'));
 
-  const capability = () => {
-    const winOk = win.available();
-    const ch = chooser.status();
-    const live = (ok, what, why) => ({ what, state: ok ? 'live' : 'not set up', why: ok ? '' : why });
-    return [
-      { what: 'Typed requests and the bubble', state: 'live', why: '' },
-      { what: 'Microphone', state: micStatus.state === 'error' || micStatus.state === 'lost' ? 'problem' : micStatus.state, why: micStatus.error || (micStatus.device ? micStatus.device + (micStatus.muted ? ' (muted)' : '') : 'Her Voice menu > Microphone to pick and test one.') },
-      { what: 'Push-to-talk / wake word', state: settings().listen ? 'live' : 'push-to-talk', why: settings().listen ? 'Listening for "Nova" (experimental; push-to-talk is the dependable way).' : `Press ${(settings().shortcuts || {}).ptt || 'Ctrl+Alt+V'} to talk once.` },
-      { what: 'Opening apps (verified)', ...pick(winOk, 'Windows only.') },
-      { what: 'Moving and arranging windows', ...pick(winOk, 'Windows only.') },
-      { what: 'Reading the screen (UI text, OCR)', ...pick(winOk && settings().screenConsent, winOk ? 'Asks for consent the first time.' : 'Windows only.') },
-      { what: 'Typing and pressing buttons for you', ...pick(winOk, 'Windows only; always asks first.') },
-      { what: 'Answers from Claude (API)', ...pick(ch.anthropic && ch.anthropic.ok, 'Add an Anthropic API key in Settings.') },
-      { what: 'Answers from ChatGPT models (API)', ...pick(ch.openai && ch.openai.ok, 'Add an OpenAI API key in Settings.') },
-      { what: 'Answers from the free on-device brain', ...pick(ch.local && ch.local.ok, 'Tray > Voice > Chat brain.') },
-      { what: 'Web research with sources', state: 'live', why: 'Wikipedia + DuckDuckGo (no account).' },
-      { what: 'Discord: open a channel for you', state: 'live', why: 'Add the channel in Settings > Discord first.' },
-      { what: 'Discord: post as the Nova bot', ...pick(keys.has('discord-bot'), 'Needs your own bot token (Settings > Discord). Never posts as you.') },
-      { what: 'Discord: talk in a voice call', state: 'not built', why: 'Needs a bot with voice and text-to-speech; Nova has no voice yet.' },
-      { what: 'Jobs between assistants: Claude Code CLI', ...pick(participants['claude-cli'].available().ok && !participants['claude-cli'].available().unchecked, 'Install Claude Code ("claude" command).') },
-      { what: 'Jobs between assistants: your existing ChatGPT/Claude chats', state: 'not possible', why: 'Neither app lets another program post into a chat; Nova won\'t scrape sessions.' },
-      { what: 'Games: Nova\'s test game', state: 'live', why: 'Say "play the test game".' },
-      { what: 'Games: Roblox', state: 'launch + advice', why: 'Official links only; Roblox\'s rules don\'t allow automated play.' },
-      { what: 'Her voice (text to speech)', state: speechOut.status().ok ? 'live' : 'later', why: speechOut.status().ok ? '' : speechOut.status().reason + ' The speech output interface (core/speech-out.js) is ready for one.' },
-    ];
-    function pick(ok, why) { return { state: ok ? 'live' : 'not set up', why: ok ? '' : why }; }
-  };
+  const { createCapabilities } = require('./capabilities');
+  const caps = createCapabilities((cid) => {
+    const winOk = win.available(), ch = chooser.status();
+    const anyBrain = ['anthropic', 'openai', 'local'].some(k => ch[k] && ch[k].ok);
+    switch (cid) {
+      case 'voice-in': return micStatus.state === 'error' || micStatus.state === 'lost' ? { ok: false, why: micStatus.error || 'microphone problem' } : { ok: true, experimental: !!settings().listen, why: micStatus.device ? micStatus.device + (micStatus.muted ? ' (muted)' : '') : 'push-to-talk ready; pick a mic in her Voice menu' };
+      case 'voice-out': return speechOut.status().ok ? { ok: true } : { ok: false, why: speechOut.status().reason };
+      case 'apps': case 'windows': case 'control': return winOk ? { ok: true } : { ok: false, why: 'Windows only (the helper isn\'t available here).' };
+      case 'screen': return !winOk ? { ok: false, why: 'Windows only.' } : { ok: true, why: settings().screenConsent ? 'always allowed (revocable)' : 'asks first' };
+      case 'answers': return anyBrain ? { ok: true, why: Object.entries(ch).filter(([, v]) => v.ok).map(([k]) => k).join(', ') } : { ok: false, why: 'Add an API key in Settings, or turn on the free on-device brain.' };
+      case 'documents': return { ok: true, why: anyBrain ? '' : 'saving answers works; new documents need a model' };
+      case 'discord-post': return keys.has('discord-bot') ? { ok: true } : { ok: false, why: 'Needs your own bot token (Settings > Discord). Never posts as you.' };
+      case 'jobs-cli': { const a = participants['claude-cli'].available(); return a.ok && !a.unchecked ? { ok: true, experimental: true } : { ok: false, why: a.reason || 'Install Claude Code (the "claude" command).' }; }
+      case 'phone': return deps2.remote ? deps2.remote.capability() : { ok: false, why: 'Not started.' };
+      case 'notifications': return { ok: true, why: 'Nova\'s own events; Windows notifications not available in this build' };
+      default: return { ok: true };
+    }
+  });
+  const deps2 = {};
+  const capability = () => caps.list();
+
 
   // panel requests: read things, change settings, manage jobs/memory/keys. Nothing here runs a tool.
   ipcMain.handle('core:query', async (_, what, arg = {}) => {
