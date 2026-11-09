@@ -1976,6 +1976,7 @@
         finally { coreApproved = false; }
         return;
       }
+      case 'reminder': sfx('ok'); play('wave', 1500); ask(`⏰ ${m.text}${m.late ? ' (this was due while your PC was off)' : ''}`, [{ label: 'Done', value: 'ok', primary: true }], { quiet: true }); addHist('nova', '⏰ ' + m.text); return;
       case 'jobnote': if (bubble.classList.contains('hidden') && !isQuiet()) say(m.text, { ms: m.important ? 7000 : 3500 }); else addHist('nova', m.text); return;
       case 'highlight': if (m.onScreen) pointAt(m.x + m.w / 2, m.y + m.h / 2, (m.label || 'HERE').toUpperCase().slice(0, 18), 5000); return;
     }

@@ -74,6 +74,16 @@ function route(raw, ctx = {}) {
   const nth = low.match(/^(?:(?:do|pick|choose|take|go with|use|select)\s+)?(?:the\s+)?(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:one|option|choice)$/);
   if (nth) return { kind: 'pick', index: { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3, last: -1 }[nth[1]], text };
 
+  // ---- duplicates (by content)
+  const dup = low.match(/\b(?:find|show|look for|check for|any)\b.*\bduplicates?\b(?:.*\b(?:in|from|on)\s+(?:my\s+|the\s+)?(downloads|desktop|documents|pictures|photos|music|videos))?/) || low.match(/\bduplicate (?:files|photos|pictures|images|songs)\b(?:.*\b(?:in|from|on)\s+(?:my\s+|the\s+)?(downloads|desktop|documents|pictures|photos|music|videos))?/);
+  if (dup) return { kind: 'files', op: 'duplicates', folder: (dup[1] || 'downloads').replace('photos', 'pictures'), text };
+
+  // ---- reminders and what you missed
+  const remCancel = text.match(/^(?:cancel|delete|remove|clear)\s+(?:my\s+|the\s+|all\s+(?:my\s+)?)?reminders?(?:\s+(?:to|about|for)\s+(.+?))?[.!]?$/i);
+  if (remCancel) return { kind: 'reminders', op: 'cancel', match: remCancel[1] || null, text };
+  if (/^(?:what|which|show(?: me)?|list)\s+(?:are\s+)?(?:my\s+)?reminders(?:\s+do i have)?\??$/i.test(low) || /^what reminders do i have\??$/i.test(low)) return { kind: 'reminders', op: 'list', text };
+  if (/^(?:what did i miss|what'?d i miss|anything new|catch me up|what happened (?:while i was (?:away|gone|asleep|out)))\??$/i.test(low)) return { kind: 'notifications', text };
+
   // ---- routines / modes ("start gaming mode", "end study mode", "save that as my stream setup")
   const wfRun = text.match(/^(?:start|run|begin|enter|switch to|activate|turn on|go into)\s+(?:my\s+|the\s+)?(.+?)\s+(?:mode|preset|workflow|routine)[.!]?$/i);
   if (wfRun && !/\b(until|record|replay)\b/i.test(low)) return { kind: 'workflow', op: 'run', name: wfRun[1].trim(), text };

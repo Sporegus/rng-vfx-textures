@@ -157,7 +157,13 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
     const goal = j.goal.length > 40 ? j.goal.slice(0, 38) + '…' : j.goal;
     const text = j.state === 'waiting_on_assistant' ? `${goal}: ${j.nextAction}` : j.state === 'completed' ? `✅ Job done: ${goal}` : `⛔ Job needs you: ${goal} (${(j.stopReason || '').slice(0, 80)})`;
     toPage('jobnote', { jobId: j.id, text, important });
+    if (j.state === 'completed' || important) notifications.push({ app: 'Nova jobs', title: text.replace(/^[✅⛔]\s*/, ''), kind: j.state === 'completed' ? 'info' : 'blocked', sourceId: j.id + ':' + j.state });
   });
+  // reminders: checked every 15 s (and right away after sleep/restart); each fires once
+  const fireReminders = () => { for (const r of reminders.due()) { toPage('reminder', { text: r.text, late: r.late, due: r.due }); notifications.push({ app: 'Reminders', title: r.text + (r.late ? ' (missed while the PC was off)' : ''), kind: 'reminder', sourceId: r.id }); } };
+  const remTimer = setInterval(fireReminders, 15000); remTimer.unref && remTimer.unref();
+  setTimeout(fireReminders, 3000);
+  try { require('electron').powerMonitor.on('resume', () => setTimeout(fireReminders, 2000)); } catch {}
   const scheduler = createScheduler({ store, jobs, log });
   scheduler.start();
 
@@ -197,11 +203,18 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const references = createReferences({ store, dir: path.join(dir, 'references'), log, projects,
     clipboard: { image: () => { const img = clipboard.readImage(); return img.isEmpty() ? null : { png: img.toPNG(), size: img.getSize() }; }, text: () => clipboard.readText() },
     open: { path: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); }, url: (u) => shell.openExternal(u) } });
+  const { createFiles } = require('./files');
+  const userFolder = (name) => { const map = { downloads: 'downloads', desktop: 'desktop', documents: 'documents', pictures: 'pictures', music: 'music', videos: 'videos' }; try { return map[name] ? app.getPath(map[name]) : null; } catch { return null; } };
+  const files = createFiles({ store, log, roots: () => [...['downloads', 'desktop', 'documents', 'pictures', 'music', 'videos'].map(userFolder).filter(Boolean), ...projects.list().flatMap(p => p.folders)], trash: (p) => shell.trashItem(p) });
+  const { createReminders } = require('./reminders');
+  const { createNotifications } = require('./notifications');
+  const reminders = createReminders({ store, log });
+  const notifications = createNotifications({ store, log, important: () => settings().important || {} });
   const { createWorkflows } = require('./workflows');
   const workflows = createWorkflows({ store, log, settings, saveSettings });
   workflows.ensurePresets();
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows,
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder,
     rememberAlias: (alias, app2, provenance) => store.remember('alias:' + String(alias).toLowerCase().trim(), 'app_alias', { alias: String(alias).toLowerCase().trim(), app: app2, provenance: { ...provenance, at: Date.now() } }) });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });
@@ -289,6 +302,10 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'job:cancel': return jobs.cancel(arg.id);
       case 'job:delete': store.deleteJob(arg.id); return { ok: true };
       case 'job:demo': return startDemoJob();
+      case 'reminders': return reminders.pending();
+      case 'reminder:cancel': return reminders.cancel(arg.id);
+      case 'notifications': return notifications.digest({ markSeen: false });
+      case 'important:set': saveSettings({ important: { apps: arg.apps || [], contacts: arg.contacts || [], topics: arg.topics || [] } }); return settings().important;
       case 'workflows': return workflows.list().map(w => ({ ...w, plan: w.steps.map(workflows.describeStep) }));
       case 'workflow:edit': return workflows.edit(arg.name, { steps: arg.steps, why: 'edited in the panel' });
       case 'workflow:revert': return workflows.revert(arg.name);
@@ -403,7 +420,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   jobs.recover().then((r) => { jobs.kick(); return r; }).then((r) => { if (r.length) log.event('jobs.recovered', { count: r.length, resumed: r.filter(x => x.resumed).length }); }).catch(() => {});
   log.event('core.started', { platform: process.platform, winHelper: win.available() });
 
-  return { pipeline, store, log, jobs, games, stop, openPanel, close() { try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
+  return { pipeline, store, log, jobs, games, stop, openPanel, close() { clearInterval(remTimer); try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
 }
 
 module.exports = { startCore, secrets };

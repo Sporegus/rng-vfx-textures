@@ -95,7 +95,7 @@ function createPipeline(deps) {
   // ------------------------------------------------------------------ routing
   async function handle(task, r, source) {
     switch (r.kind) {
-      case 'status': return status(task, r.what);
+      case 'status': if (r.what === 'finished' && deps.notifications) { const d = await deps.notifications.digest(); return reply(task, d.text + (d.unavailable.length ? `\n(Not included: ${d.unavailable.join('; ')})` : '')); } return status(task, r.what);
       case 'jobs': return deps.jobs ? deps.jobs.control(r.op, { task, ui }) : reply(task, 'No long-running jobs are set up yet.');
       case 'panel': ui.openPanel(r.tab); return reply(task, `Opening ${r.tab}.`);
       case 'tool': tasks.move(task, 'executing'); return runCalls(task, r.calls, { direct: true });
@@ -114,6 +114,33 @@ function createPipeline(deps) {
         return { picked: o.label };
       }
       case 'compose': return answer(task, r.text, { compose: true });
+      case 'files': {
+        if (!deps.files || !deps.folders) return blocked('File tools aren\'t set up.');
+        const dir = deps.folders(r.folder);
+        if (!dir) return reply(task, `I can't find your ${r.folder} folder.`);
+        tasks.move(task, 'executing');
+        ui.status({ taskId: task.id, state: 'executing', text: `Checking ${r.folder}…` });
+        const d = await deps.files.duplicates([dir], { signal: task.ac.signal });
+        if (!d.groups.length) return reply(task, `No duplicate files in ${r.folder} (checked ${d.scanned} files by their contents).`);
+        const extra = d.groups.flatMap(g => g.extra);
+        const mb = (d.wastedBytes / 1048576).toFixed(1);
+        const v = await choose(task, `${d.groups.length} file${d.groups.length > 1 ? 's have' : ' has'} exact copies in ${r.folder} (same bytes, checked by hash): ${extra.length} extra cop${extra.length > 1 ? 'ies' : 'y'}, ${mb} MB.\nE.g. ${d.groups.slice(0, 3).map(g => require('path').basename(g.keep)).join(', ')}`, [{ label: `Move the ${extra.length} extra copies to the Recycle Bin (keeps the oldest of each)`, value: 'recycle' }, { label: 'Just tell me, change nothing', value: 'no' }]);
+        if (v !== 'recycle') return reply(task, 'Okay, I didn\'t change anything.');
+        await approve(task, { title: `Move ${extra.length} duplicate${extra.length > 1 ? 's' : ''} to the Recycle Bin?`, lines: [...extra.slice(0, 6).map(p => '• ' + p), extra.length > 6 ? `…and ${extra.length - 6} more` : '', 'One copy of each stays. You can restore them from the Recycle Bin.'].filter(Boolean), categories: ['files_delete'], targets: { folder: [dir] } });
+        const res = await deps.files.recycle(extra);
+        return reply(task, `Moved ${res.done.length} to the Recycle Bin${res.failed.length ? `. ${res.failed.length} couldn't be moved: ${res.failed.slice(0, 3).map(f => require('path').basename(f.file) + ' (' + f.why + ')').join(', ')}` : ''}.`, { verified: res.failed.length === 0 });
+      }
+      case 'reminders': {
+        if (!deps.reminders) return blocked('Reminders aren\'t set up.');
+        if (r.op === 'cancel') { const c = deps.reminders.cancel(r.match); return reply(task, c.length ? `Cancelled ${c.length === 1 ? `"${c[0].text}"` : c.length + ' reminders'}.` : 'You don\'t have a matching reminder.'); }
+        const p = deps.reminders.pending();
+        return reply(task, p.length ? 'Your reminders:\n' + p.slice(0, 10).map(x => `• ${new Date(x.due).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}: ${x.text}`).join('\n') : 'You have no reminders.');
+      }
+      case 'notifications': {
+        if (!deps.notifications) return status(task, 'finished');
+        const d = await deps.notifications.digest();
+        return reply(task, d.text + (d.unavailable.length ? `\n(Not included: ${d.unavailable.join('; ')})` : ''));
+      }
       case 'workflow': return deps.workflows ? deps.workflows.handle(task, r, { approve, reply, choose, lastSteps: ctx.lastSteps, run: {
         app: async (t, name) => { const res = await tools.run(t, { tool: 'app.open', args: { name: (deps.appAlias && deps.appAlias(name)) || name }, direct: true }); return { ok: !!(res.result && !res.result.notFound && res.verified !== false), note: res.result && res.result.notFound ? 'not installed' : res.verified === false ? 'couldn\'t confirm its window' : '' }; },
         intent: async (t, s) => { const res = await pageStep(t, { intent: s.intent, slots: s.slots || {}, ready: true, missing: [], confidence: 1 }, 'routine'); return { ok: !(res && (res.error || res.cancelled)) }; },
@@ -196,6 +223,15 @@ function createPipeline(deps) {
         const again = brain.answer(step, v).steps[0];
         if (again.missing && again.missing.length) return reply(task, "Sorry, I didn't catch that. Let's try again later!");
         Object.assign(step, again);
+      }
+      // reminders are kept by the core (they survive restarts and sleep), not by the page
+      if (step.intent === 'reminder' && deps.reminders) {
+        const w = (step.slots && step.slots.when) || {};
+        const rem = deps.reminders.add({ text: step.slots.text, inSeconds: w.in, at: w.at });
+        const whenText = new Date(rem.due).toLocaleString([], { weekday: new Date(rem.due).toDateString() === new Date().toDateString() ? undefined : 'short', hour: 'numeric', minute: '2-digit' });
+        results.push(reply(task, `I'll remind you at ${whenText}${rem.text ? ` to ${rem.text.replace(/^to\s+/i, '')}` : ''}. ⏰${rem.note ? ' ' + rem.note : ''}`, { reminder: rem.id }));
+        remember({ type: 'intent', intent: 'reminder', slots: step.slots });
+        continue;
       }
       if (step.intent === 'app.open' && tools.get('app.open')) {
         for (const name of step.slots.apps) results.push(await openApp(task, name));
