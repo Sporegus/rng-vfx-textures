@@ -94,10 +94,9 @@ The database upgrades itself (v1 → v2, adding columns only). An older build ig
 ## Remaining work, in order
 
 1. Run the Windows check and acceptance list on your PC.
-2. Start the voice service only on demand (it uses about 108 MB even when voice is off).
-3. Unload the local chat model when idle.
-4. A longer soak on Windows, to confirm the small residual renderer growth isn't a leak.
-5. A calendar adapter.
-6. Music-triggered dance (art untouched).
-7. A real iPhone test.
-8. Clicking the native right-click popup in an automated test.
+2. Unload the local chat model when idle. (The voice service already starts only on demand: idle 752 → 644 MB.)
+3. A longer soak on Windows, to confirm the small residual renderer growth isn't a leak.
+4. A calendar adapter.
+5. Music-triggered dance (art untouched).
+6. A real iPhone test.
+7. Clicking the native right-click popup in an automated test.

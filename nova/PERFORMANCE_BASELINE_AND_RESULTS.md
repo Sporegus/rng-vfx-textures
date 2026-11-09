@@ -64,7 +64,7 @@ Model first-token and total latency are **not measured** (no provider configured
 
 | | Baseline | After |
 |---|---|---|
-| Whole app at idle (all Electron processes, working set) | 903 MB | **752 MB** |
+| Whole app at idle (all Electron processes, working set) | 903 MB | **752 MB**; **644 MB** with the voice service now started on demand (voice off) |
 | Whole app after a soak (150 requests, 50 menus, 10 Stops) | 1298 MB | **811 MB** |
 | Renderer (her overlay) with the hologram look, steady | ~650 MB | **163 MB** |
 | Renderer with the pixel look (for comparison) | 142 MB | 142 MB |
@@ -95,11 +95,11 @@ The JS heap, DOM and process count stay flat. A small residual renderer growth o
 - **Memory/CPU pressure:** under 8% free RAM (minimum 800 MB), or CPU at 92% or more for two 15-second samples in a row, new background jobs wait and the status says why. Your requests and Stop are never held back. Tested.
 - **Performance profiles:** Gaming starts no background jobs and turns off wandering and effects. Balanced allows 1 job at a time; Overnight allows 2. Job helper processes (test commands, Claude Code) run at below-normal OS priority.
 - **Bounded:** at most 8 open requests (more are refused with a message); research cache of 100 entries; outbox, events, notifications, audit and request IDs are all capped.
-- **Not done:** unloading the large on-device chat model after an idle period. It loads only if you turn it on; an idle unload is a next step.
+- **On demand:** the voice service (speech models) starts the first time voice is used, or at launch only if voice, listening or the chat brain is on. **Not done:** unloading the on-device chat model after an idle period.
 
 ## 5. Remaining bottlenecks
 
 1. Cold app start is about 0.8 s here. Most of that is Electron itself; not optimized.
-2. The base cost of Electron's processes is about 590 MB here (browser, GPU, network, audio, voice service) and dominates total memory. The voice service is about 108 MB even when voice is off; starting it only on demand is the next win.
+2. The base cost of Electron's processes (browser, GPU, network, audio) is about 480 MB here and dominates total memory. The voice service (about 108 MB) now starts only when voice is used: idle went from 752 to 644 MB, and push-to-talk still starts it (verified with the speech model present).
 3. The small residual renderer growth under heavy menu use; recheck on Windows.
 4. Model latency depends on the provider. Thorough mode makes up to 2 calls plus research, by design.

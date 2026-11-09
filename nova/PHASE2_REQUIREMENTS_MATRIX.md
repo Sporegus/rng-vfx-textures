@@ -25,7 +25,7 @@
 | 5 | Profile, then budgets from measurements | VERIFIED | `PERFORMANCE_BASELINE_AND_RESULTS.md` |
 | 5 | Immediate feedback, local Stop, streaming, bounded queues, cancellation | VERIFIED | Stop median 0.8 ms; status pill; 8-request cap; streaming in `answer()` (mock) |
 | 5 | Caches bounded; no perpetual capture; no worker/tab/log proliferation | VERIFIED | Caps everywhere; process count flat across the soak |
-| 5 | On-demand load/unload of large components with an idle grace period | PARTIAL | The chat model loads only when turned on; **no idle unload**; the voice service starts with the app (about 108 MB) |
+| 5 | On-demand load/unload of large components with an idle grace period | PARTIAL | The voice service (speech models, about 108 MB) now starts only when voice is used (verified in the real app); the chat model loads only when turned on; **no idle unload yet** |
 | 5 | Backoff under pressure with clear status; locks for input/audio/workspace | VERIFIED (logic) | `core/resources.js` tests; desktop/workspace leases; mic has a single owner |
 | 5 | Runtime-sized animation buffers; visual quality measured | VERIFIED | Renderer 650 → 163 MB; visual check at 1x/1.5x |
 | 5 | Benchmark suite of 30+ requests, cold/warm, p95, accuracy, soak, before/after | VERIFIED | `bench/`; results in `bench/results/` |

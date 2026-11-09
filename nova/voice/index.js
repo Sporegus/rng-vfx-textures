@@ -91,11 +91,29 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
     const st = settings();
     proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), voiceName: st.voiceName, chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null, eleven: eleven() });
   }
-  ipcMain.on('voice', (_, m) => { if (proc) proc.postMessage(m); });
+  // started on demand: only when voice is actually used (it holds speech models in memory)
+  ipcMain.on('voice', (_, m) => {
+    if (!proc) {
+      if (!m || m.type === 'hush' || (m.type === 'listen' && !m.on)) return;   // nothing to do without it
+      start();
+    }
+    if (proc) proc.postMessage(m);
+  });
   app.on('will-quit', () => { quitting = true; if (proc) proc.kill(); });
-  start();
+  { const st = settings(); if (st.voice || st.listen || st.chat) start(); }   // otherwise it starts the first time you use voice
+  // without the service running, the page still needs to know whether the voice models are already downloaded
+  const reportModels = () => {
+    if (proc) return;
+    try {
+      const models = require('./models');
+      const have = ((models.have(root, 'clone') && models.have(root, 'vocos')) || models.have(root, 'voiceEmo') || models.have(root, 'voice')) && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight'));
+      toPage({ type: 'status', what: 'models', have: { voice: !!have } });
+    } catch {}
+  };
+  { const w = getWin(); if (w && !w.isDestroyed()) { w.webContents.on('did-finish-load', () => setTimeout(reportModels, 500)); setTimeout(reportModels, 1500); } }
   return {
-    send: (m) => proc && proc.postMessage(m),
+    send: (m) => { if (!proc) start(); proc && proc.postMessage(m); },
+    running: () => !!proc,
     chatReady: () => !!(proc && chatReady),
     // the local chat brain, for the core's answers: ask(text, onText, signal) -> reply text
     ask(text, onText, signal) {
