@@ -126,6 +126,9 @@ function createController({ adapter, profile, guard, log, now = () => Date.now()
         lastLives = obs.hud.lives;
         if (obs.hud.state === 'won' || (obs.hud.total && obs.hud.coins === obs.hud.total)) return result('completed', `Collected ${obs.hud.coins}/${obs.hud.total} coins (read from the game's own counter).`, obs);
         if (obs.hud.state === 'over') return result('failed', 'Out of lives.', obs);
+        // anything the profile doesn't know (a shop, a dialog, a menu): stop, let go, and hand it to you
+        if (obs.hud.state && !['playing', 'recovering', 'won', 'over', 'paused'].includes(obs.hud.state)) { await releaseAll(); return result('paused', `Something unexpected came up in the game (${obs.hud.state}), so I let go and stopped. It's yours to handle${/shop|store|buy|purchase/i.test(obs.hud.state) ? '; I never buy anything' : ''}.`, obs); }
+        if (!obs.hud.state) { await releaseAll(); return result('paused', 'I can\'t read the game\'s status any more, so I let go and stopped.', obs); }
         if (obs.hud.state === 'recovering' || !obs.player) { await sleep(120, signal); continue; }
         // nearest coin
         const pc = { x: obs.player.x + obs.player.w / 2, y: obs.player.y + obs.player.h / 2 };
@@ -224,6 +227,7 @@ function createGames({ store, permissions, log, launch, sessions, guardFor }) {
       return reply(task, `I won't do that: it ${pol.reasons.join(' and ')}. I can still help you plan, find guides, or look at what's on screen.`, { blocked: true });
     }
     if (/\broblox\b/i.test(text)) return roblox(task, text, { ui, reply });
+    if (/\broutines?\b/i.test(text)) return routines(task, text, { ui, approve, reply });
     const all = profiles();
     const prof = /\b(test|fixture|coin) ?game\b|\bcoins?\b/i.test(text) ? all['nova-fixture'] : Object.values(all).find(p => text.toLowerCase().includes(p.name.toLowerCase().split(' (')[0]));
     if (!prof) return reply(task, "I don't have a profile for that game, so I won't press keys in it. I can look at it with you and give advice: say \"what's on my screen\" or ask me about it.");
@@ -245,6 +249,37 @@ function createGames({ store, permissions, log, launch, sessions, guardFor }) {
     log && log.event('game.run', { profile: prof.id, status: res.status, actions: res.stats.actions, falls: res.stats.falls, ms: res.stats.ms });
     const extra = res.stats.falls ? ` I fell in the pit ${res.stats.falls} time${res.stats.falls > 1 ? 's' : ''} and switched to safer paths.` : '';
     return reply(task, `${res.status === 'completed' ? 'Done.' : res.status === 'stopped' ? 'Stopped, and I let go of every key.' : 'I paused.'} ${res.reason}${extra} (${res.stats.actions} moves, ${(res.stats.ms / 1000).toFixed(1)} s)`, { game: res });
+  }
+
+  // record what you do in a game (only its own keys are kept), then replay it until a goal
+  const saved = () => store ? store.recall('game_routine').map(r => ({ key: r.key, ...r.value })) : [];
+  async function routines(task, text, { ui, approve, reply }) {
+    const prof = PROFILES['nova-fixture'];   // the only game with recording/replay allowed so far
+    if (/\brecord\b/i.test(text)) {
+      if (!sessions || !sessions.record) return reply(task, 'I can\'t record in this setup.');
+      const name = ((text.match(/\b(?:called|named)\s+["“]?([\w -]{1,30})/i) || [])[1] || 'my routine').trim();
+      const events = await sessions.record(prof.id, { task, ui });
+      if (!events) return reply(task, 'Okay, I didn\'t save anything.');
+      const r = recordRoutine(events, prof, { until: { field: 'coins', atLeast: 1 } });
+      if (!r.steps.some(s => s.key)) return reply(task, 'I didn\'t see any of the game\'s keys (arrow keys), so there\'s nothing to save.');
+      store.remember('routine:' + name.toLowerCase(), 'game_routine', { ...r, name });
+      return reply(task, `Saved "${name}": ${r.steps.filter(s => s.key).length} key presses in ${prof.name}${r.dropped ? ` (I left out ${r.dropped} other key${r.dropped > 1 ? 's' : ''}; typed text is never recorded)` : ''}. Say "replay the ${name} routine until 3 coins".`);
+    }
+    const all = saved();
+    if (!all.length) return reply(task, 'You haven\'t recorded a routine yet. Say "record a routine in the test game".');
+    const r = all.find(x => text.toLowerCase().includes(String(x.name).toLowerCase())) || (all.length === 1 ? all[0] : null);
+    if (!r) return reply(task, `Which routine? I have: ${all.map(x => x.name).join(', ')}.`);
+    const n = Number((text.match(/until (?:i have |there are |you have )?(\d+)\s*coins?/i) || [])[1]) || 1;
+    const run = { ...r, until: { field: 'coins', atLeast: n } };
+    try {
+      await approve(task, { title: `Replay "${r.name}" in ${prof.name}?`, lines: [`Its ${run.steps.filter(s => s.key).length} recorded arrow-key presses, up to ${run.maxLoops} times, until the game shows ${n} coin${n > 1 ? 's' : ''}.`, 'Only in that game window. Stop anytime (Ctrl+Alt+X).'], categories: ['game', 'control'], targets: { game: [prof.id] }, ttlMs: 3 * 60000 });
+    } catch (e) { if (e.category === 'denied') return reply(task, 'Okay, I won\'t.'); throw e; }
+    const adapter = await sessions.open(prof.id);
+    const ctl = createController({ adapter, profile: prof, guard: guardFor && guardFor(adapter), log });
+    current = { task: task.id, ctl };
+    const res = await ctl.routine(run, { signal: task.ac && task.ac.signal, maxMs: 120000 });
+    current = null;
+    return reply(task, `${res.status === 'completed' ? 'Done.' : res.status === 'stopped' ? 'Stopped, and I let go of every key.' : 'I paused.'} ${res.reason} (${res.stats.loops} loop${res.stats.loops === 1 ? '' : 's'}, ${res.stats.actions} key presses)`, { game: res });
   }
 
   async function roblox(task, text, { ui, reply }) {

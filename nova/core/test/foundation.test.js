@@ -25,11 +25,28 @@ function setup() {
 test('store migrates, survives reopen and keeps data', () => {
   const dir = tmp(), file = path.join(dir, 'nova.db');
   let s = openStore(file);
-  assert.equal(s.version(), 1);
-  s.putJob({ id: 'job_1', goal: 'g', state: 'queued', created: 1 });
+  assert.equal(s.version(), 2);
+  s.putJob({ id: 'job_1', goal: 'g', state: 'queued', created: 1, priority: 'high', notes: 'mine' });
   s.close();
   s = openStore(file);
   assert.equal(s.job('job_1').goal, 'g');
+  assert.equal(s.job('job_1').priority, 'high');
+  s.close();
+});
+
+test('an existing v1 database upgrades in place and keeps its jobs', () => {
+  const { MIGRATIONS } = require('../store');
+  const { DatabaseSync } = require('node:sqlite');
+  const file = path.join(tmp(), 'old.db');
+  const db = new DatabaseSync(file);
+  db.exec('CREATE TABLE meta (k TEXT PRIMARY KEY, v TEXT);'); db.exec(MIGRATIONS[0]);
+  db.prepare("INSERT INTO meta (k, v) VALUES ('schema', '1')").run();
+  db.prepare("INSERT INTO jobs (id, goal, state, contract, created, updated, version) VALUES ('job_old', 'old job', 'paused', '{}', 1, 1, 1)").run();
+  db.close();
+  const s = openStore(file);
+  assert.equal(s.version(), 2);
+  assert.equal(s.job('job_old').goal, 'old job');
+  assert.equal(s.job('job_old').priority, 'normal');
   s.close();
 });
 

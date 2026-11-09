@@ -1,0 +1,69 @@
+{
+  "ran": "2026-11-09T09:51:19.013Z",
+  "recognizer": "moonshine-tiny-en-int8 (Nova's \"smaller speech model\")",
+  "voice": "Kokoro heart (synthetic speech, not a human or a microphone)",
+  "results": [
+    {
+      "said": "Nova, open notepad.",
+      "heard": "Nova open notepad",
+      "wake": true,
+      "command": "open notepad",
+      "ran": [
+        "app.open:Notepad"
+      ],
+      "ok": true,
+      "asrMs": 125
+    },
+    {
+      "said": "Nova, what is twelve times seven?",
+      "heard": "Nova, what is 12 times 7?",
+      "wake": true,
+      "command": "what is 12 times 7",
+      "ran": [
+        "math"
+      ],
+      "ok": true,
+      "asrMs": 129
+    },
+    {
+      "said": "Nova, set a timer for ten minutes.",
+      "heard": "Nova set a timer for 10 minutes",
+      "wake": true,
+      "command": "set a timer for 10 minutes",
+      "ran": [
+        "timer"
+      ],
+      "ok": true,
+      "asrMs": 101
+    },
+    {
+      "said": "Nova, stop.",
+      "heard": "Nova stop",
+      "wake": true,
+      "command": "stop",
+      "ran": [],
+      "ok": true,
+      "asrMs": 82
+    },
+    {
+      "said": "Nova, open Discord. Actually, Spotify.",
+      "heard": "Nova open discord actually spotify",
+      "wake": true,
+      "command": "open discord actually spotify",
+      "ran": [
+        "app.open:Spotify"
+      ],
+      "ok": true,
+      "asrMs": 97
+    },
+    {
+      "said": "The weather is nice today.",
+      "heard": "The weather is nice today.",
+      "wake": false,
+      "command": "the weather is nice today",
+      "ran": [],
+      "ok": true,
+      "asrMs": 98
+    }
+  ]
+}

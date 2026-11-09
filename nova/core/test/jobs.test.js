@@ -235,3 +235,76 @@ test('instructions injected by another assistant cannot widen the job (test 33)'
   assert.equal(s.parts.rev.received.size, 0, 'the reviewer never got the injected text');
   assert.deepEqual(s.permissions.list().filter(g => g.active && !before.includes(g.id)), [], 'no new permissions');
 });
+
+test('a routine technical question is answered from the contract and recorded; a question needing you blocks', async () => {
+  let asked = 0;
+  const s = setup({ implementer: async (env) => {
+    if (!/You asked/.test(env.context)) { asked++; return { status: 'complete', output: 'QUESTION: should add() accept strings too, or numbers only?' }; }
+    fs.writeFileSync(path.join(s.dir, 'add.js'), 'exports.add=(a,b)=>a+b;\n'); return { status: 'complete', output: 'Numbers only (assumed). Done.' };
+  } });
+  s.jobs.approve(s.j);
+  const done = await s.jobs.run(s.j.id);
+  assert.equal(done.state, 'completed');
+  assert.equal(asked, 1);
+  const a = s.jobs.events(s.j.id).find(e => e.kind === 'assumption');
+  assert.match(a.data.question, /strings too/);
+  assert.match(a.data.answer, /reversible/);
+
+  const t = setup({ implementer: async () => ({ status: 'complete', output: 'QUESTION: may I use your OpenAI API key from the .env?' }) });
+  t.jobs.approve(t.j);
+  const blocked = await t.jobs.run(t.j.id);
+  assert.equal(blocked.state, 'blocked');
+  assert.match(blocked.stopReason, /only you can decide/);
+});
+
+test('the planner gets a compact summary with your exact constraints', async () => {
+  let ctx = '';
+  const s = setup({ planner: async (env) => { ctx = env.context; return { status: 'complete', output: /Last review: accept/.test(env.context) ? '{"done":true}' : '{"task":"write add.js"}' }; } });
+  s.jobs.update(s.j.id, { contract: { constraints: ['Do not rename exports', 'Keep Node 18 support'] } });
+  s.jobs.approve(s.jobs.job(s.j.id));
+  await s.jobs.run(s.j.id);
+  assert.match(ctx, /Constraints \(exact\): Do not rename exports; Keep Node 18 support/);
+  assert.match(ctx, /Done when \(exact\): add\(2,3\) is 5/);
+  assert.ok(s.jobs.job(s.j.id).context.constraints.includes('Keep Node 18 support'));
+});
+
+test('jobs can\'t target Nova\'s own running folder', () => {
+  const store = openStore(':memory:');
+  const self = fs.mkdtempSync(path.join(os.tmpdir(), 'nova-self-'));
+  const jobs = createJobs({ store, permissions: createPermissions({ store }), participants: {}, selfDir: self });
+  const j = jobs.draft('improve nova', { workspace: path.join(self), criteria: ['x'] });
+  assert.ok(jobs.validateContract(j).some(e => /Nova's own running folder/.test(e)));
+});
+
+test('the queue starts approved jobs by priority, one at a time; notes are searchable', async () => {
+  const store = openStore(':memory:');
+  const order = [];
+  const mk = (name) => {
+    const s = setup({ store, planner: async (env) => { if (!order.includes(name)) order.push(name); return { status: 'complete', output: /Last review: accept/.test(env.context) ? '{"done":true}' : '{"task":"write add.js"}' }; } });
+    return s;
+  };
+  const a = mk('low'), b = mk('high');
+  // one coordinator over both (the participants differ per setup, so give it both sets under the same ids)
+  a.jobs.approve(a.j); b.jobs.approve(b.j);
+  a.jobs.setPriority(a.j.id, 'low'); b.jobs.setPriority(b.j.id, 'high');
+  const started = b.jobs.kick();
+  assert.deepEqual(started, [b.j.id], 'the high-priority job starts first, alone');
+  for (let i = 0; i < 100 && store.job(b.j.id).state !== 'completed'; i++) await new Promise(r => setTimeout(r, 20));
+  assert.equal(store.job(b.j.id).state, 'completed');
+  b.jobs.setNotes(b.j.id, 'asked by Spencer for the inventory tool');
+  assert.deepEqual(b.jobs.search('inventory').map(j => j.id), [b.j.id]);
+});
+
+test('read-only diff shows what changed since the job started (git projects)', async () => {
+  const { execFileSync } = require('child_process');
+  const s = setup();
+  execFileSync('git', ['init', '-q'], { cwd: s.dir });
+  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'add', '.'], { cwd: s.dir });
+  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'start'], { cwd: s.dir });
+  s.jobs.approve(s.j);
+  await s.jobs.run(s.j.id);
+  const d = await s.jobs.diff(s.j.id);
+  assert.equal(d.available, true);
+  assert.ok(d.since && d.untracked.includes('add.js'));
+  assert.match(d.undo, /checkout/);
+});

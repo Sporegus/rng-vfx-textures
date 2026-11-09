@@ -33,6 +33,10 @@ const MIGRATIONS = [
    CREATE TABLE leases (name TEXT PRIMARY KEY, owner TEXT, expires INTEGER);
    CREATE TABLE memory (key TEXT PRIMARY KEY, kind TEXT, value TEXT, created INTEGER, updated INTEGER);
    CREATE TABLE schedules (id TEXT PRIMARY KEY, job_id TEXT, at INTEGER, tz TEXT, missed TEXT, last_run INTEGER, enabled INTEGER);`,
+  // 2: job priority, your notes, and the compact context summary
+  `ALTER TABLE jobs ADD COLUMN priority TEXT DEFAULT 'normal';
+   ALTER TABLE jobs ADD COLUMN notes TEXT DEFAULT '';
+   ALTER TABLE jobs ADD COLUMN context TEXT;`,
 ];
 
 function openStore(file) {
@@ -79,12 +83,12 @@ function openStore(file) {
 
     // ---- jobs
     putJob(j) {
-      db.prepare(`INSERT INTO jobs (id, goal, state, contract, plan, budgets, usage, checkpoint, next_action, stop_reason, created, updated, version)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET goal=excluded.goal, state=excluded.state, contract=excluded.contract,
+      db.prepare(`INSERT INTO jobs (id, goal, state, contract, plan, budgets, usage, checkpoint, next_action, stop_reason, created, updated, version, priority, notes, context)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET goal=excluded.goal, state=excluded.state, contract=excluded.contract,
         plan=excluded.plan, budgets=excluded.budgets, usage=excluded.usage, checkpoint=excluded.checkpoint, next_action=excluded.next_action,
-        stop_reason=excluded.stop_reason, updated=excluded.updated, version=excluded.version`)
+        stop_reason=excluded.stop_reason, updated=excluded.updated, version=excluded.version, priority=excluded.priority, notes=excluded.notes, context=excluded.context`)
         .run(j.id, j.goal, j.state, S(j.contract), S(j.plan), S(j.budgets), S(j.usage), S(j.checkpoint), j.nextAction || null,
-          j.stopReason || null, j.created, Date.now(), j.version || 1);
+          j.stopReason || null, j.created, Date.now(), j.version || 1, j.priority || 'normal', j.notes || '', S(j.context));
     },
     job(id) { const r = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id); return r ? rowToJob(r) : null; },
     jobs: (states) => db.prepare('SELECT * FROM jobs ORDER BY created DESC').all().map(rowToJob).filter(j => !states || states.includes(j.state)),
@@ -141,7 +145,8 @@ function openStore(file) {
   };
   function rowToJob(r) {
     return { id: r.id, goal: r.goal, state: r.state, contract: J(r.contract), plan: J(r.plan), budgets: J(r.budgets), usage: J(r.usage),
-      checkpoint: J(r.checkpoint), nextAction: r.next_action, stopReason: r.stop_reason, created: r.created, updated: r.updated, version: r.version };
+      checkpoint: J(r.checkpoint), nextAction: r.next_action, stopReason: r.stop_reason, created: r.created, updated: r.updated, version: r.version,
+      priority: r.priority || 'normal', notes: r.notes || '', context: J(r.context) };
   }
   return api;
 }

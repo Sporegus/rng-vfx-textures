@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('nova', {
     pageDone: (id, result) => ipcRenderer.send('core:page:done', id, result),
     panel: (tab) => ipcRenderer.send('core:panel', tab),
     timing: (what, ms) => ipcRenderer.send('core:timing', what, ms),
+    mic: (status) => ipcRenderer.send('core:mic', status),
     on: (cb) => ipcRenderer.on('core', (_, m) => cb(m)),
   },
   // her voice: send audio and requests to the voice service, hear back from it

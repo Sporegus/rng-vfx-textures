@@ -4,7 +4,7 @@
 (() => {
   const P = window.novaPanel;
   const view = document.getElementById('view');
-  let tab = 'tasks', openJob = null, timer = null;
+  let tab = 'tasks', openJob = null, timer = null, jobQuery = '';
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const h = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
   const when = (t) => t ? new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
@@ -74,7 +74,7 @@
   // ------------------------------------------------------------------ jobs
   async function jobs() {
     if (openJob) return jobDetail(openJob);
-    const list = (await P.query('overview')).jobs;
+    let list = (await P.query('overview')).jobs;
     view.innerHTML = '';
     const top = h(`<div class="row" style="margin-top:0"></div>`).firstChild;
     top.append(btn('Run the coordination demo (fixtures)', '', async () => { const r = await P.query('job:demo'); openJob = r.id; render(); }),
@@ -93,8 +93,12 @@
       view.querySelectorAll('[data-unsched]').forEach(b => b.addEventListener('click', () => P.query('schedule:remove', { id: b.dataset.unsched }).then(render)));
     }
     view.append(h('<h2>Jobs</h2>'));
+    const sq = h(`<input placeholder="Search goals and notes…" value="${esc(jobQuery)}" style="width:100%;margin-bottom:8px">`).firstChild;
+    sq.addEventListener('change', () => { jobQuery = sq.value; render(); });
+    view.append(sq);
+    if (jobQuery) list = await P.query('job:search', { q: jobQuery });
     if (!list.length) view.append(h('<div class="empty">No jobs yet. Ask Nova to "coordinate ChatGPT and Claude on …", or run the demo.</div>'));
-    else view.append(table(['Goal', 'State', 'Cycles', 'Next', 'Updated'], list.map(j => [`<a href="#" data-job="${esc(j.id)}">${esc(j.goal)}</a>`, st(j.state), j.usage.cycles + ' / ' + j.budgets.maxCycles, esc(j.stopReason || j.nextAction || ''), when(j.updated)])));
+    else view.append(table(['Goal', 'State', 'Priority', 'Cycles', 'Next', 'Updated'], list.map(j => [`<a href="#" data-job="${esc(j.id)}">${esc(j.goal)}</a>`, st(j.state), esc(j.priority || 'normal'), j.usage.cycles + ' / ' + j.budgets.maxCycles, esc(j.stopReason || j.nextAction || ''), when(j.updated)])));
     view.querySelectorAll('[data-job]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); openJob = a.dataset.job; render(); }));
     view.append(h('<h2>Morning digest</h2>'));
     view.append(h(`<div class="log">${esc(await P.query('digest'))}</div>`));
@@ -139,6 +143,26 @@
     view.append(c);
     view.append(h(`<h2>Status</h2>`));
     view.append(h(`<div class="card"><div class="grid"><label>Next</label><div>${esc(j.nextAction || '')}</div><label>Stopped because</label><div>${esc(j.stopReason || '—')}</div><label>Cycles</label><div>${j.usage.cycles} of ${j.budgets.maxCycles} (no-progress streak ${j.usage.noProgress})</div><label>Plan version</label><div>${j.plan.version}</div><label>Spend</label><div>$${(j.usage.spendUsd || 0).toFixed(2)}${j.budgets.maxSpendUsd ? ' of $' + j.budgets.maxSpendUsd : ''}; ${j.usage.tokens || 0} tokens</div><label>Last check</label><div>${j.checkpoint && j.checkpoint.finalCheck ? (j.checkpoint.finalCheck.passed ? 'passed' : 'failed') + ' on revision ' + esc(j.checkpoint.finalCheck.revision) : '—'}</div></div></div>`));
+    const elapsed = j.usage.started ? Math.round(((['completed', 'cancelled', 'failed'].includes(j.state) ? j.updated : Date.now()) - j.usage.started) / 60000) : 0;
+    const left = j.usage.started ? Math.max(0, Math.round(j.budgets.maxHours * 60 - elapsed)) : j.budgets.maxHours * 60;
+    view.append(h(`<div class="card grid"><label>Running for</label><div>${elapsed} min (${left} min left of ${j.budgets.maxHours} h)</div><label>Waiting on</label><div>${j.state === 'waiting_on_assistant' ? esc(j.nextAction) : '—'}</div><label>Priority</label><div><select data-prio><option ${j.priority === 'high' ? 'selected' : ''}>high</option><option ${(j.priority || 'normal') === 'normal' ? 'selected' : ''}>normal</option><option ${j.priority === 'low' ? 'selected' : ''}>low</option></select></div></div>`));
+    view.querySelector('[data-prio]').addEventListener('change', (e) => P.query('job:priority', { id: j.id, priority: e.target.value }).then(render));
+    const fc = j.checkpoint && (j.checkpoint.finalCheck || (j.checkpoint.review && j.checkpoint.review.check));
+    if (fc && fc.files && fc.files.length) {
+      view.append(h('<h2>Deliverables (checked by Nova)</h2>'));
+      view.append(table(['File', 'Size', 'SHA-256'], fc.files.map(f => [esc(f.name), f.missing ? '<span class="state failed">missing</span>' : f.size + ' B', `<span class="mono">${esc((f.sha256 || '').slice(0, 16))}</span>`])));
+    }
+    view.append(h('<h2>Notes</h2>'));
+    const nt = h(`<textarea rows="3" style="width:100%" placeholder="Your notes for this job (searchable)">${esc(j.notes || '')}</textarea>`).firstChild;
+    nt.addEventListener('change', () => P.query('job:notes', { id: j.id, notes: nt.value }));
+    view.append(nt);
+    const dv = h('<div class="row"></div>').firstChild;
+    dv.append(btn('Show what changed in the project', '', async () => {
+      const d = await P.query('job:diff', { id: j.id });
+      const box = h(`<div class="log">${d.available ? esc((d.since ? 'Since ' + d.since.slice(0, 12) + ':\n' : '') + (d.stat || 'No changes to tracked files.') + (d.untracked.length ? '\nNew files: ' + d.untracked.join(', ') : '') + (d.undo ? '\n\n' + d.undo : '')) : esc(d.reason)}</div>`).firstChild;
+      dv.after(box);
+    }));
+    view.append(dv);
     view.append(h(`<h2>Events</h2>`));
     view.append(h(`<div class="card events">${events.slice(-80).map(e => `${new Date(e.t).toLocaleTimeString()}  ${esc(e.kind)}  ${esc(JSON.stringify(e.data || {})).slice(0, 220)}`).join('<br>')}</div>`));
   }
@@ -182,6 +206,20 @@
     if (s.screenConsent) pv.children[1].append(btn('Revoke', 'danger', () => P.query('settings:set', { screenConsent: false }).then(render)));
     pv.querySelectorAll('[data-q]').forEach(i => i.addEventListener('change', () => P.query('settings:set', { quietHours: { from: pv.querySelector('[data-q=from]').value, to: pv.querySelector('[data-q=to]').value } })));
     view.append(pv);
+
+    const sc = await P.query('shortcuts');
+    view.append(h('<h2>Shortcuts</h2><div class="muted">Work from anywhere. If another app already uses one, it shows here; pick a different one.</div>'));
+    const scc = h('<div class="card grid"></div>').firstChild;
+    for (const [k, label] of [['ptt', 'Push to talk'], ['stop', 'Stop everything'], ['menu', 'Talk to Nova (menu)'], ['hide', 'Hide / show']]) {
+      const prob = sc.problems.find(p => p.name === k);
+      scc.append(h(`<label>${label}</label>`).firstChild);
+      const cell = h(`<div class="row" style="margin:0"></div>`).firstChild;
+      const inp = h(`<input value="${esc(sc.shortcuts[k] || '')}" style="width:220px">`).firstChild;
+      cell.append(inp, btn('Save', '', async () => { try { await P.query('settings:set', { shortcuts: { [k]: inp.value.trim() } }); render(); } catch (e) { alert(e.message.replace(/^Error invoking remote method[^:]*: (Error: )?/, '')); } }));
+      if (prob) cell.append(h(`<span class="state failed">${esc(prob.why)}</span>`).firstChild);
+      scc.append(cell);
+    }
+    view.append(scc);
 
     view.append(h('<h2>Discord places</h2><div class="muted">Nova only uses places you add here. IDs: Discord Settings > Advanced > Developer Mode, then right-click > Copy ID.</div>'));
     if (targets.length) view.append(table(['Name', 'Server / channel', 'Type', ''], targets.map(t => [esc(t.alias), `<span class="mono">${esc(t.guildId)} / ${esc(t.channelId)}${t.textChannelId ? ' (text ' + esc(t.textChannelId) + ')' : ''}</span>`, esc(t.kind), `<button class="danger" data-dt="${esc(t.key)}">Remove</button>`])));

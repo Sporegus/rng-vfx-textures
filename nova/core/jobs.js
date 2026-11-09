@@ -30,7 +30,7 @@ const OUT_OF_SCOPE = [
   [/\b(new goal|change the (goal|objective)|instead (build|make|do)|forget the (task|goal)|ignore (the|your) (contract|instructions|rules))\b/i, 'changes the objective'],
 ];
 
-function createJobs({ store, permissions, log, participants = {}, now = () => Date.now(), owner = 'nova-' + process.pid, execImpl = execFile }) {
+function createJobs({ store, permissions, log, participants = {}, now = () => Date.now(), owner = 'nova-' + process.pid, execImpl = execFile, selfDir = path.resolve(__dirname, '..'), maxConcurrent = 1 }) {
   const running = new Map();       // jobId -> { ac, finishStep }
   const listeners = new Set();
   const emit = (j) => { for (const l of listeners) { try { l(j); } catch {} } };
@@ -55,6 +55,8 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
       budgets: { ...DEFAULT_BUDGETS, ...(opts.budgets || {}) },
       usage: { cycles: 0, spendUsd: 0, noProgress: 0, replans: 0, started: null, tokens: 0 },
       checkpoint: null, nextAction: 'waiting for your approval', stopReason: null,
+      priority: 'normal', notes: '',            // your own notes (searchable); priority orders the queue
+      context: null,                             // compact summary a fresh assistant session can continue from
     };
     save(j); event(j, 'drafted', { goal: j.goal });
     return j;
@@ -81,6 +83,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     const c = j.contract, errs = [];
     if (!c.workspace) errs.push('choose a project folder');
     else if (!fs.existsSync(c.workspace)) errs.push('the project folder does not exist');
+    else if (selfDir && (path.resolve(c.workspace) + path.sep).startsWith(path.resolve(selfDir) + path.sep)) errs.push('that is Nova\'s own running folder: changes to Nova go through a separate development copy, never a job inside her');
     if (!c.participants.length) errs.push('pick at least one participant');
     for (const p of c.participants) {
       const a = participants[p.id];
@@ -173,6 +176,28 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     return res;
   }
 
+  // a reply that is a question rather than work done
+  const questionOf = (res) => {
+    if (!res) return null;
+    if (res.status === 'question') return String(res.output || '').trim() || 'a question';
+    const o = String(res.output || '').trim();
+    const m = o.match(/^QUESTION:\s*([\s\S]+)/i);
+    if (m) return m[1].trim();
+    const pj = (() => { try { return JSON.parse((o.match(/\{[\s\S]*\}/) || ['null'])[0]); } catch { return null; } })();
+    return pj && typeof pj.question === 'string' ? pj.question : null;
+  };
+  // the compact context a planner (or a fresh session) gets: exact constraints, what's done, what's open, what's next
+  function summarize(j, review) {
+    const done = (j.plan.steps || []).slice(-6).map(s => `- ${s.iteration}: ${s.task.slice(0, 160)}`);
+    const ctx = {
+      goal: j.goal, criteria: j.contract.criteria.slice(), constraints: j.contract.constraints.slice(),
+      done: done, open: review ? `${review.verdict}${review.corrections ? ': ' + String(review.corrections).slice(0, 600) : ''}` : null,
+      checks: review && review.check ? (review.check.passed ? 'passing' : 'failing') + ` on revision ${review.check.revision}` : 'not run yet',
+      next: review ? 'address the open items' : 'first step',
+    };
+    j.context = ctx;
+    return [`Goal: ${ctx.goal}`, `Done when (exact): ${ctx.criteria.join('; ') || '(see files/tests)'}`, ctx.constraints.length ? `Constraints (exact): ${ctx.constraints.join('; ')}` : '', done.length ? `Steps so far:\n${done.join('\n')}` : 'This is the first step.', ctx.open ? `Last review: ${ctx.open}` : '', `Latest checks: ${ctx.checks}`].filter(Boolean).join('\n');
+  }
   const roleOf = (j, role) => (j.contract.participants.find(p => p.role === role) || {}).id;
   const parseJson = (s) => { try { return JSON.parse((String(s).match(/\{[\s\S]*\}/) || ['null'])[0]); } catch { return null; } };
 
@@ -187,7 +212,11 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     if (signal) signal.addEventListener('abort', () => ac.abort(), { once: true });
     const ctl = { ac, finishStep: false };
     running.set(j.id, ctl);
-    if (!j.usage.started) j.usage.started = now();
+    if (!j.usage.started) {
+      j.usage.started = now();
+      // where the project started, so you can see (and undo by hand) exactly what the job changed
+      j.usage.startRev = await gitHead(j.contract.workspace);
+    }
     setState(j, 'running', 'starting the next cycle');
     let review = j.checkpoint && j.checkpoint.review || null;
     let lastFingerprint = j.checkpoint && j.checkpoint.fingerprint || null;
@@ -201,7 +230,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
         // 1. planner: the next bounded task (or "done", which is checked, not trusted)
         const plan = await step(j, iteration + '-plan', roleOf(j, 'planner'), {
           objective: j.goal, destinationRole: 'planner',
-          context: review ? `Last review: ${review.verdict}. ${review.corrections || ''}\nLatest checks: ${review.check ? (review.check.passed ? 'passing' : 'failing') : 'not run yet'}` : 'This is the first step.',
+          context: summarize(j, review),
           constraints: [...j.contract.constraints, `Work only inside the project folder.`, `Done when: ${j.contract.criteria.join('; ')}`],
           expectedOutput: 'JSON: {"task": "<one concrete, bounded implementation task>"} or {"done": true, "reason": "..."}',
           evidence: review && review.check ? review.check.files.map(f => ({ name: f.name, sha256: f.sha256, summary: f.missing ? 'missing' : `${f.size} bytes` })) : [],
@@ -218,11 +247,25 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
         j.plan = { version: j.plan.version + 1, steps: [...j.plan.steps.slice(-19), { iteration, task: String(p.task).slice(0, 2000) }] };
         // 2. implementer: one bounded task, sent once
         if (ctl.finishStep) return pause(j, 'Finished the current safe step, as you asked.');
-        const impl = await step(j, iteration + '-impl', roleOf(j, 'implementer'), {
+        let impl = await step(j, iteration + '-impl', roleOf(j, 'implementer'), {
           objective: String(p.task), destinationRole: 'implementer', context: `Overall goal: ${j.goal}`,
-          constraints: [...j.contract.constraints, 'Work only inside the project folder.', 'Report what you changed and how you tested it.'],
+          constraints: [...j.contract.constraints, 'Work only inside the project folder.', 'Report what you changed and how you tested it.', 'If a routine technical choice is unclear, pick a reversible default and say which.'],
           expectedOutput: 'What you changed, files touched, and test results.',
         }, ac.signal);
+        // a routine technical question: answer it from your contract with a reversible default (recorded), at most twice per step.
+        // Anything that needs YOU (approval, credentials, money, scope) blocks instead.
+        for (let n = 1, q = questionOf(impl); q && n <= 2; n++, q = questionOf(impl)) {
+          if (/\b(approv|permission|password|credential|api key|token|pay|purchase|billing|account|deploy|publish|delete|scope|should i (also|expand))/i.test(q)) {
+            return finish(j, 'blocked', `${roleOf(j, 'implementer')} asked something only you can decide: "${q.slice(0, 200)}"`);
+          }
+          const answer = `Use the simplest reversible option that satisfies: ${j.contract.criteria.join('; ') || 'the stated goal'}.${j.contract.constraints.length ? ' Constraints: ' + j.contract.constraints.join('; ') + '.' : ''} Note the assumption in your report.`;
+          event(j, 'assumption', { iteration, question: q.slice(0, 300), answer });
+          impl = await step(j, `${iteration}-impl-a${n}`, roleOf(j, 'implementer'), {
+            objective: String(p.task), destinationRole: 'implementer', context: `You asked: ${q.slice(0, 1000)}\nAnswer from the job contract: ${answer}`,
+            constraints: [...j.contract.constraints, 'Work only inside the project folder.'], expectedOutput: 'What you changed, files touched, and test results.',
+          }, ac.signal);
+        }
+        if (questionOf(impl)) return finish(j, 'blocked', `${roleOf(j, 'implementer')} keeps asking questions instead of working; it needs you.`);
         // 3. Nova's own checks on the current revision (an assistant's claims aren't evidence)
         setState(j, 'verifying', 'checking the work');
         const check = await verify(j, ac.signal);
@@ -319,8 +362,8 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     const ok = permissions.check({ category: 'relay', scope: { kind: 'job', id: j.id }, target: { kind: 'participant', value: (j.contract.participants[0] || {}).id }, effects: { objective: card(j).effects.objective } });
     if (!ok.ok) { j.state = 'paused'; j.nextAction = 'needs a fresh approval'; save(j); return { ok: false, reason: 'This job\'s approval has expired or was revoked, so it needs a fresh OK before it continues.', needsApproval: true }; }
     j.state = 'queued'; save(j);
-    run(j.id).catch(e => log && log.event('job.run_error', { job: j.id, message: e.message }));
-    return { ok: true };
+    kick();   // starts now, or after the job ahead of it (priority order)
+    return { ok: true, queued: !running.has(j.id) };
   }
   function cancel(jobId) {
     const ctl = running.get(jobId);
@@ -335,9 +378,10 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     const out = [];
     for (const j of store.jobs(['running', 'waiting_on_assistant', 'verifying', 'queued'])) {
       const valid = permissions.check({ category: 'relay', scope: { kind: 'job', id: j.id }, target: { kind: 'participant', value: (j.contract.participants[0] || {}).id }, effects: { objective: card(j).effects.objective } }).ok;
-      if (j.contract.restartResume && valid && now() < j.contract.deadline) { event(j, 'recovered', { auto: true }); j.state = 'queued'; save(j); out.push({ id: j.id, resumed: true }); run(j.id).catch(() => {}); }
+      if (j.contract.restartResume && valid && now() < j.contract.deadline) { event(j, 'recovered', { auto: true }); j.state = 'queued'; save(j); out.push({ id: j.id, resumed: true }); }
       else { pause(j, valid ? 'Nova restarted; resume it when you\'re ready.' : 'Nova restarted and the job\'s approval is no longer valid.'); out.push({ id: j.id, resumed: false }); }
     }
+    kick();
     return out;
   }
 
@@ -370,7 +414,41 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     return reply(task, `I drafted a job card in the Tasks panel. Pick the project folder and what "done" means, then approve it once and I'll run it. Note: I can't post into your existing ChatGPT or Claude chats; I use the API or the Claude command instead.${unavailable.length ? '\nNot ready yet: ' + unavailable.join('; ') : ''}`);
   }
 
+  function gitHead(dir) {
+    return new Promise((res) => { if (!dir || !fs.existsSync(path.join(dir, '.git'))) return res(null); execImpl('git', ['-C', dir, 'rev-parse', 'HEAD'], { timeout: 5000, windowsHide: true }, (e, out) => res(e ? null : String(out).trim())); });
+  }
+  // read-only: what changed in the project since the job started (git projects)
+  function diff(jobId) {
+    const j = store.job(jobId);
+    if (!j || !j.contract.workspace) return Promise.resolve({ available: false, reason: 'No project folder.' });
+    if (!fs.existsSync(path.join(j.contract.workspace, '.git'))) return Promise.resolve({ available: false, reason: 'The project folder isn\'t a git repository, so I can only show which deliverables changed (see the job\'s checks).' });
+    const base = j.usage.startRev;
+    return new Promise((res) => execImpl('git', ['-C', j.contract.workspace, 'diff', '--stat', ...(base ? [base] : [])], { timeout: 10000, windowsHide: true, maxBuffer: 2 * 1024 * 1024 }, (e, out) => {
+      execImpl('git', ['-C', j.contract.workspace, 'status', '--porcelain'], { timeout: 10000, windowsHide: true }, (e2, st) => res({ available: true, since: base, stat: e ? '' : String(out).slice(-6000), untracked: e2 ? [] : String(st).split('\n').filter(l => l.startsWith('??')).map(l => l.slice(3)).slice(0, 50), undo: base ? `To undo by hand: git -C "${j.contract.workspace}" checkout ${base.slice(0, 12)} -- .  (review first; new files aren't removed)` : null }));
+    }));
+  }
+  // the queue: approved jobs start in priority order, a few at a time (default one)
+  const RANK = { high: 0, normal: 1, low: 2 };
+  function kick() {
+    if (running.size >= maxConcurrent) return [];
+    const next = store.jobs(['queued']).filter(j => !running.has(j.id)).sort((a, b) => (RANK[a.priority || 'normal'] - RANK[b.priority || 'normal']) || a.created - b.created);
+    const started = [];
+    for (const j of next.slice(0, maxConcurrent - running.size)) {
+      started.push(j.id);
+      run(j.id).catch(e => log && log.event('job.run_error', { job: j.id, message: e.message })).finally(() => setTimeout(kick, 0));
+    }
+    return started;
+  }
+  function setPriority(jobId, p) {
+    if (!RANK.hasOwnProperty(p)) throw new NovaError('invalid', 'Priority is high, normal or low.');
+    const j = store.job(jobId); if (!j) throw new NovaError('not_found', 'No such job.');
+    j.priority = p; save(j); event(j, 'priority', { priority: p }); return j;
+  }
+  function setNotes(jobId, notes) { const j = store.job(jobId); if (!j) throw new NovaError('not_found', 'No such job.'); j.notes = String(notes).slice(0, 4000); save(j); return j; }
+  function search(q) { const t = String(q || '').toLowerCase().trim(); return store.jobs().filter(j => !t || [j.goal, j.notes, j.stopReason, j.nextAction].some(x => String(x || '').toLowerCase().includes(t))); }
+
   return {
+    kick, setPriority, setNotes, search, diff,
     draft, card, approve, validateContract, inScope, run, resume, cancel, control, recover, summary, digest, verify, draftFromRequest,
     job: (id) => store.job(id), events: (id) => store.events(id), list: () => store.jobs(),
     update(jobId, patch) {

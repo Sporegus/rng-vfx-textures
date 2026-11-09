@@ -41,6 +41,10 @@ addEventListener('focus', () => { if (g.state === 'paused') g.state = g.prev || 
 document.addEventListener('visibilitychange', () => { if (document.hidden) dispatchEvent(new Event('blur')); });
 // the failure case on demand: a "gust" shoves the player into the pit (tests use it to force a fall mid-run)
 window.fixtureGust = () => { g.x = pit.x + 10; g.y = pit.y + 10; };
+// more failure cases: the game stops responding to keys (stalled), or a shop menu pops up asking for money
+let frozen = false;
+window.fixtureFreeze = (on = true) => { frozen = on; };
+window.fixtureShop = () => { g.prev = g.state; g.state = 'shop'; document.getElementById('paused').textContent = 'SHOP: 100 coins for $0.99'; document.getElementById('paused').style.display = 'flex'; };
 // tests (and a person) can pause/resume explicitly too
 window.fixturePause = (p) => { if (p) dispatchEvent(new Event('blur')); else dispatchEvent(new Event('focus')); };
 const ctx = document.getElementById('c').getContext('2d');
@@ -48,7 +52,7 @@ let last = performance.now();
 function tick(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   if (g.state === 'recovering' && t > g.recoverUntil) g.state = 'playing';
-  if (g.state === 'playing') {
+  if (g.state === 'playing' && !frozen) {
     const v = SPEED * dt;
     if (held.has('l')) g.x -= v; if (held.has('r')) g.x += v;
     if (held.has('u')) g.y -= v; if (held.has('d')) g.y += v;
@@ -66,7 +70,7 @@ function tick(t) {
   ctx.fillStyle = g.state === 'recovering' ? '#5fa8b8' : '#00e5ff'; ctx.fillRect(Math.round(g.x), Math.round(g.y), SIZE, SIZE);
   const got = coins.filter(c => c.got).length;
   document.getElementById('hud').textContent = `Coins: ${got}/${coins.length} · Lives: ${g.lives} · State: ${g.state}`;
-  document.getElementById('paused').style.display = g.state === 'paused' ? 'flex' : 'none';
+  if (g.state !== 'shop') document.getElementById('paused').style.display = g.state === 'paused' ? 'flex' : 'none';
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);

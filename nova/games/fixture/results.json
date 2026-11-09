@@ -1,5 +1,5 @@
 {
-  "ran": "2026-11-09T09:47:52.236Z",
+  "ran": "2026-11-09T10:08:29.652Z",
   "browser": "Chromium (Playwright, headless)",
   "results": [
     {
@@ -10,7 +10,7 @@
         "actions": 19,
         "falls": 0,
         "observations": 20,
-        "ms": 7754,
+        "ms": 7734,
         "coins": 5,
         "total": 5
       },
@@ -24,7 +24,7 @@
         "actions": 23,
         "falls": 1,
         "observations": 28,
-        "ms": 9595,
+        "ms": 10259,
         "coins": 5,
         "total": 5
       },
@@ -38,7 +38,7 @@
         "actions": 3,
         "falls": 0,
         "observations": 5,
-        "ms": 1359,
+        "ms": 1306,
         "coins": 0,
         "total": 5
       },
@@ -47,7 +47,7 @@
     {
       "case": "stop",
       "status": "stopped",
-      "releaseMs": 2
+      "releaseMs": 3
     },
     {
       "case": "routine",
@@ -56,9 +56,20 @@
       "stats": {
         "loops": 3,
         "actions": 17,
-        "ms": 7549,
+        "ms": 7550,
         "coins": 1
       }
+    },
+    {
+      "case": "stalled",
+      "status": "failed",
+      "reason": "My moves stopped changing anything in the game, so I stopped.",
+      "actions": 7
+    },
+    {
+      "case": "shop menu",
+      "status": "paused",
+      "reason": "Something unexpected came up in the game (shop), so I let go and stopped. It's yours to handle; I never buy anything."
     }
   ]
 }

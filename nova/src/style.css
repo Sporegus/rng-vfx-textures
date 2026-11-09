@@ -87,7 +87,8 @@ html, body {
   font: 700 18px/1 var(--font); cursor: pointer; padding: 0 2px;
 }
 .b-x:hover { color: #fff; }
-#b-text { font-size: 14px; font-weight: 700; line-height: 1.35; min-height: 1.35em; white-space: pre-wrap; }
+#b-text { font-size: 14px; font-weight: 700; line-height: 1.35; min-height: 1.35em; white-space: pre-wrap; user-select: text; cursor: text; max-height: 45vh; overflow-y: auto; overflow-wrap: anywhere; }
+#b-text a { color: var(--accent); text-decoration: underline; cursor: pointer; }
 #b-text::after { content: "_"; color: var(--accent); animation: blink 0.8s steps(2) infinite; }
 #b-body:empty { display: none; }
 #b-body { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
@@ -146,6 +147,9 @@ html, body {
 #status.listening::before { background: #ff4d6d; box-shadow: 0 0 8px #ff4d6d; animation: blink .8s steps(2) infinite; }
 #status.working::before, #status.thinking::before { background: #ffb020; box-shadow: 0 0 6px #ffb020; animation: blink .6s steps(2) infinite; }
 #status.waiting::before { background: #c084fc; box-shadow: 0 0 6px #c084fc; }
+
+.b-meter { height: 8px; background: #0a0614; border: 1px solid #3a2b5c; }
+.b-meter span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 60ms linear; }
 
 /* bubble extras: Stop, history, the words she heard, approval cards */
 .b-stop {

@@ -205,6 +205,11 @@ port.on('message', async ({ data: m }) => {
         onText: (text, seconds) => send({ type: 'heard', text, seconds, utteranceId: `u${process.pid}-${++utterances}` }),   // one id per final phrase, so it runs once
       });
       break;
+    // the microphone test in her Voice menu: transcribe a short recording once (nothing is kept)
+    case 'transcribe':
+      if (!ears) { send({ type: 'transcribed', id: m.id, error: 'Her speech model isn\'t loaded yet.' }); break; }
+      ears.transcribe(Float32Array.from(m.samples || [])).then((text) => send({ type: 'transcribed', id: m.id, text }), (e) => send({ type: 'transcribed', id: m.id, error: e.message }));
+      break;
     case 'say': say(m.id, m.text, m.opts || {}); break;
     case 'eleven': elevenCreds = m.creds || null; delete mouths.eleven; break;
     case 'hush': hushAll(); if (chatAbort) chatAbort.abort(); break;

@@ -19,6 +19,7 @@ const { createDiscord, botAdapter } = require('./discord');
 const { createResearch } = require('./research');
 const { createJobs } = require('./jobs');
 const { createScheduler } = require('./schedule');
+const { createSpeechOut } = require('./speech-out');
 const { createGames, electronAdapter } = require('./games');
 const participantsMod = require('./participants');
 const llm = require('./llm');
@@ -48,7 +49,7 @@ function secrets(dir) {
   };
 }
 
-function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
+function startCore({ app, getWin, settings, saveSettings, actions, voice, shortcutStatus = () => ({ shortcuts: {}, problems: [] }) }) {
   const dir = app.getPath('userData');
   const store = openStore(path.join(dir, 'nova.db'));
   const log = createLog({ dir: path.join(dir, 'logs') });
@@ -89,7 +90,13 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
     approve: (card) => pendingWait('approve', card),          // never auto-approved: only your click (or spoken yes) answers
     choose: (q) => pendingWait('choose', q),
     openPanel: (tab, extra) => openPanel(tab, extra),
-    highlight: (r) => toPage('highlight', r),
+    // a found control, in screen pixels -> her overlay's coordinates, so she can point at it
+    highlight: (r) => {
+      const w = getWin(); if (!w || w.isDestroyed()) return;
+      const d = screen.screenToDipRect ? screen.screenToDipRect(null, { x: r.x, y: r.y, width: r.w, height: r.h }) : { x: r.x, y: r.y, width: r.w, height: r.h };
+      const b = w.getBounds();
+      toPage('highlight', { x: d.x - b.x, y: d.y - b.y, w: d.width, h: d.height, label: String(r.label || '').slice(0, 40), onScreen: d.x + d.width > b.x && d.x < b.x + b.width && d.y + d.height > b.y && d.y < b.y + b.height });
+    },
   };
   ipcMain.on('core:answer', (_, wid, value) => {
     const w = waits.get(wid);
@@ -129,6 +136,19 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
   participants['claude-cli'].probe().catch(() => {});
   const jobs = createJobs({ store, permissions, log, participants });
   jobs.on((j) => toPanel('job', { job: j }));
+  // short job updates in the bubble ("claude-cli is implementing i2"), at most one per job every 20 s, never in quiet hours
+  const noted = new Map();
+  jobs.on((j) => {
+    const key = j.state + '|' + j.nextAction;
+    const last = noted.get(j.id) || { key: '', t: 0 };
+    if (key === last.key) return;
+    const important = ['completed', 'blocked', 'failed'].includes(j.state);
+    if (!important && (j.state !== 'waiting_on_assistant' || Date.now() - last.t < 20000)) return;
+    noted.set(j.id, { key, t: Date.now() });
+    const goal = j.goal.length > 40 ? j.goal.slice(0, 38) + '…' : j.goal;
+    const text = j.state === 'waiting_on_assistant' ? `${goal}: ${j.nextAction}` : j.state === 'completed' ? `✅ Job done: ${goal}` : `⛔ Job needs you: ${goal} (${(j.stopReason || '').slice(0, 80)})`;
+    toPage('jobnote', { jobId: j.id, text, important });
+  });
   const scheduler = createScheduler({ store, jobs, log });
   scheduler.start();
 
@@ -146,12 +166,24 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
         await new Promise(r => setTimeout(r, 400));
         return electronAdapter(fixtureWin);
       },
+      // watch your keys in the test game window only (Nova's own window), until you press Done
+      async record(pid, { task }) {
+        await this.open(pid);
+        const t0 = Date.now(), events = [];
+        const onKey = (_, input) => { if (input.type === 'keyDown' && !input.isAutoRepeat) events.push({ type: 'down', key: input.key, t: Date.now() - t0 }); else if (input.type === 'keyUp') events.push({ type: 'up', key: input.key, t: Date.now() - t0 }); };
+        fixtureWin.webContents.on('before-input-event', onKey);
+        const v = await pendingWait('choose', { taskId: task.id, question: 'Recording your arrow keys in the test game window (nothing else, never typed text). Play a bit, then press Done.', options: [{ label: 'Done', value: 'done', primary: true }, { label: 'Cancel', value: 'cancel' }] }, 5 * 60000);
+        if (!fixtureWin.isDestroyed()) fixtureWin.webContents.removeListener('before-input-event', onKey);
+        return v === 'done' ? events : null;
+      },
     },
     guardFor: () => (win.available() ? createGuard({ win }) : null),
   });
 
   const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research });
-  pipeline.onStop(() => { win.releaseAll(); games.stop(); for (const [wid, w] of waits) { waits.delete(wid); both('closed', { id: wid }); w.resolve(w.kind === 'approve' ? { allow: false, cancelled: true } : null); } toPage('stopped', {}); });
+  // her future voice: off (no provider) until a real one is set up; Stop always silences it
+  const speechOut = createSpeechOut({ log });
+  pipeline.onStop(() => { speechOut.stop('stop');  win.releaseAll(); games.stop(); for (const [wid, w] of waits) { waits.delete(wid); both('closed', { id: wid }); w.resolve(w.kind === 'approve' ? { allow: false, cancelled: true } : null); } toPage('stopped', {}); });
   tasks.on((t) => both('task', { task: t }));
 
   // ---- input from the page (typed, or voice after the wake word / push-to-talk)
@@ -163,8 +195,9 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
   });
   const stop = (why) => { const t0 = Date.now(); const r = pipeline.stopAll(why); log.event('stop.latency', { ms: Date.now() - t0, why }); return r; };
   ipcMain.handle('core:stop', () => stop('stop button'));
-  globalShortcut.register('Control+Alt+X', () => stop('shortcut Ctrl+Alt+X'));
   // the page tells us how fast it showed "listening" after the hotkey (measured there)
+  let micStatus = { state: 'off' };
+  ipcMain.on('core:mic', (_, st) => { micStatus = { ...st, at: Date.now() }; log.event('mic', { state: st.state, muted: !!st.muted, error: st.error || null }); });
   ipcMain.on('core:timing', (_, what, ms) => { if (typeof ms === 'number' && ms >= 0 && ms < 60000) log.event('timing', { what: String(what).slice(0, 40), ms: Math.round(ms) }); });
 
   // ---- the Tasks panel
@@ -190,7 +223,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
     const live = (ok, what, why) => ({ what, state: ok ? 'live' : 'not set up', why: ok ? '' : why });
     return [
       { what: 'Typed requests and the bubble', state: 'live', why: '' },
-      { what: 'Push-to-talk / wake word', state: settings().listen || settings().voice ? 'live' : 'off', why: 'Tray > Voice (offline speech model, downloads on first use).' },
+      { what: 'Microphone', state: micStatus.state === 'error' || micStatus.state === 'lost' ? 'problem' : micStatus.state, why: micStatus.error || (micStatus.device ? micStatus.device + (micStatus.muted ? ' (muted)' : '') : 'Her Voice menu > Microphone to pick and test one.') },
+      { what: 'Push-to-talk / wake word', state: settings().listen ? 'live' : 'push-to-talk', why: settings().listen ? 'Listening for "Nova" (experimental; push-to-talk is the dependable way).' : `Press ${(settings().shortcuts || {}).ptt || 'Ctrl+Alt+V'} to talk once.` },
       { what: 'Opening apps (verified)', ...pick(winOk, 'Windows only.') },
       { what: 'Moving and arranging windows', ...pick(winOk, 'Windows only.') },
       { what: 'Reading the screen (UI text, OCR)', ...pick(winOk && settings().screenConsent, winOk ? 'Asks for consent the first time.' : 'Windows only.') },
@@ -206,7 +240,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
       { what: 'Jobs between assistants: your existing ChatGPT/Claude chats', state: 'not possible', why: 'Neither app lets another program post into a chat; Nova won\'t scrape sessions.' },
       { what: 'Games: Nova\'s test game', state: 'live', why: 'Say "play the test game".' },
       { what: 'Games: Roblox', state: 'launch + advice', why: 'Official links only; Roblox\'s rules don\'t allow automated play.' },
-      { what: 'Her voice (text to speech)', state: 'later', why: 'Bubble text only for now; the speech output interface is ready.' },
+      { what: 'Her voice (text to speech)', state: speechOut.status().ok ? 'live' : 'later', why: speechOut.status().ok ? '' : speechOut.status().reason + ' The speech output interface (core/speech-out.js) is ready for one.' },
     ];
     function pick(ok, why) { return { state: ok ? 'live' : 'not set up', why: ok ? '' : why }; }
   };
@@ -222,7 +256,11 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
       case 'job': return { job: jobs.job(arg.id), events: jobs.events(arg.id), card: jobs.job(arg.id) ? jobs.card(jobs.job(arg.id)) : null, problems: jobs.job(arg.id) ? jobs.validateContract(jobs.job(arg.id)) : [] };
       case 'job:update': return jobs.update(arg.id, arg.patch);
       case 'job:pickFolder': { const r = await dialog.showOpenDialog(panel, { properties: ['openDirectory'] }); return r.canceled ? null : r.filePaths[0]; }
-      case 'job:approve': { const j = jobs.job(arg.id); jobs.approve(j); jobs.run(j.id).catch(e => log.event('job.run_error', { message: e.message })); return { ok: true }; }
+      case 'job:approve': { const j = jobs.job(arg.id); jobs.approve(j); const started = jobs.kick(); return { ok: true, queued: !started.includes(j.id) }; }
+      case 'job:priority': jobs.setPriority(arg.id, arg.priority); jobs.kick(); return { ok: true };
+      case 'job:notes': jobs.setNotes(arg.id, arg.notes); return { ok: true };
+      case 'job:diff': return jobs.diff(arg.id);
+      case 'job:search': return jobs.search(arg.q);
       case 'job:pause': return jobs.control('pause_all');
       case 'job:finishStep': return jobs.control('finish_step');
       case 'job:resume': return jobs.resume(arg.id);
@@ -271,8 +309,10 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
       case 'keys:forget': keys.forget(arg.name); return { ok: true };
       case 'grants:revoke': { const g = permissions.list().find(x => x.id === arg.id); if (g) permissions.revoke(g, 'you revoked it'); return { ok: true }; }
       case 'settings': return settings();
+      case 'shortcuts': return shortcutStatus();
       case 'settings:set': {
-        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets'];
+        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display'];
+        if (arg.shortcuts) { const ok = /^((Control|Ctrl|Alt|Shift|Super|CommandOrControl)\+)+([A-Z0-9]|F\d{1,2}|Space|Escape|Pause|Insert|Home|End|PageUp|PageDown)$/i; for (const [k, v] of Object.entries(arg.shortcuts)) if (!['menu', 'hide', 'ptt', 'stop'].includes(k) || !ok.test(String(v))) throw new Error(`"${v}" isn't a shortcut Nova can use (try something like Control+Alt+V).`); arg = { ...arg, shortcuts: { ...settings().shortcuts, ...arg.shortcuts } }; }
         const patch = Object.fromEntries(Object.entries(arg).filter(([k]) => allowed.includes(k)));
         saveSettings(patch); return settings();
       }
@@ -307,7 +347,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
   }
 
   // restart: only jobs with a valid restart-resume approval continue
-  jobs.recover().then((r) => { if (r.length) log.event('jobs.recovered', { count: r.length, resumed: r.filter(x => x.resumed).length }); }).catch(() => {});
+  jobs.recover().then((r) => { jobs.kick(); return r; }).then((r) => { if (r.length) log.event('jobs.recovered', { count: r.length, resumed: r.filter(x => x.resumed).length }); }).catch(() => {});
   log.event('core.started', { platform: process.platform, winHelper: win.available() });
 
   return { pipeline, store, log, jobs, games, stop, openPanel, close() { try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };

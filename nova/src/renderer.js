@@ -513,9 +513,11 @@
       if (my !== typeToken) return;
       bText.textContent += ch;
       if (!voiced && ch !== ' ' && i++ % 2 === 0) sfx('blip');
-      await sleep(16);
+      await sleep(text.length > 400 ? 4 : 16);   // long answers type faster
     }
     z.talking = false;
+    // finished typing: make links clickable (they open in your browser)
+    if (/https?:\/\//.test(text)) bText.innerHTML = esc(text).replace(/https?:\/\/[^\s<>"')\]]+/g, (u) => `<a data-url="${u}">${u}</a>`);
   }
   function closeBubble() {
     bubble.classList.add('hidden');
@@ -527,6 +529,7 @@
     api.blur();
   }
   bubble.querySelector('.b-x').addEventListener('click', closeBubble);
+  bText.addEventListener('click', (e) => { const a = e.target.closest && e.target.closest('a[data-url]'); if (a && /^https?:\/\//.test(a.dataset.url)) { e.preventDefault(); api.action('web.open', { url: a.dataset.url }); } });
 
   // Shows a message with optional buttons / input / custom content.
   // Resolves with the clicked button's value, the typed text, or null.
@@ -1452,11 +1455,14 @@
     const want = voice.ready && (settings.listen || Date.now() < voice.ptt);
     api.voice.send({ type: 'listen', on: want });
     if (want && !VIO.micOn) {
-      try { await VIO.startMic((samples) => api.voice.send({ type: 'audio', samples })); }
-      catch (e) { say('I can\'t reach your microphone. Is one plugged in, and is it allowed in Windows privacy settings? 🎙️', { ms: 6000 }); }
-    } else if (!want && VIO.micOn) VIO.stopMic();
+      try { await VIO.startMic((samples) => api.voice.send({ type: 'audio', samples }), { deviceId: settings.micId || null }); micReport('on'); }
+      catch (e) { micReport('error', { error: e.message }); say((e.message || 'I can\'t reach your microphone.') + ' 🎙️', { ms: 6000 }); }
+    } else if (!want && VIO.micOn) { VIO.stopMic(); micReport('off'); }
   }
   setInterval(() => { if (voice.ptt && Date.now() > voice.ptt) { voice.ptt = 0; syncMic(); } }, 1000);
+  // unplugged while listening: stop, say so, and pick it back up when it returns
+  VIO.onLost = () => { micReport('lost'); say('Your microphone was disconnected, so I stopped listening. 🎙️', { ms: 6000 }); };
+  if (navigator.mediaDevices) navigator.mediaDevices.addEventListener('devicechange', () => { if (!VIO.micOn && (settings.listen || Date.now() < voice.ptt)) syncMic(); });
 
   // after she answers something you said, keep listening a moment without needing her name
   VIO.onIdle = () => {
@@ -1629,6 +1635,7 @@
     const v = await ask('Voice & chat:', [
       { icon: '🔊', label: `Talk out loud: ${on(settings.voice)}`, value: 'talk', on: settings.voice },
       { icon: '👂', label: `Listen for "Nova": ${on(settings.listen)}`, value: 'listen', on: settings.listen },
+      { icon: '🎙️', label: `Microphone${VIO.muted ? ' (muted)' : ''}`, value: 'mic' },
       { icon: '🎤', label: 'Change my voice', value: 'pick' },
       { icon: '🧠', label: `Chat brain: ${voice.chat ? 'on' : settings.chat ? 'downloading' : 'off'}`, value: 'chat', on: voice.chat },
       back,
@@ -1653,6 +1660,53 @@
       return voiceMenu();
     }
     if (v === 'chat') return setupChat();
+    if (v === 'mic') return micMenu();
+  }
+
+  // pick the microphone, see its level, mute it, and test it (nothing is recorded or kept)
+  const micReport = (state, extra = {}) => { if (api.core && api.core.mic) api.core.mic({ state, device: VIO.micLabel || null, muted: VIO.muted, ...extra }); };
+  async function micMenu() {
+    let mics = [];
+    try { mics = await VIO.listMics(); } catch {}
+    const cur = settings.micId || null;
+    const v = await ask(`Microphone: ${(mics.find(m => m.id === cur) || {}).label || 'Windows default'}${VIO.muted ? ' (muted)' : ''}`, [
+      { label: 'Windows default', value: 'dev:', on: !cur },
+      ...mics.filter(m => m.id !== 'default' && m.id !== 'communications').map(m => ({ label: m.label, value: 'dev:' + m.id, on: m.id === cur })),
+      { icon: '🧪', label: 'Test it (3 seconds)', value: 'test', primary: true },
+      { icon: VIO.muted ? '🔈' : '🔇', label: VIO.muted ? 'Unmute' : 'Mute', value: 'mute' },
+      back,
+    ], { cols: 1, quiet: true });
+    if (v === '__back' || v == null) return v && voiceMenu();
+    if (v.startsWith('dev:')) {
+      settings = await api.setSettings({ micId: v.slice(4) || null });
+      if (VIO.micOn) { VIO.stopMic(); await syncMic(); }
+      return micMenu();
+    }
+    if (v === 'mute') { VIO.setMuted(!VIO.muted); micReport(VIO.micOn ? 'on' : 'off'); return micMenu(); }
+    if (v === 'test') {
+      const meter = el('div', 'b-meter', '<span></span>');
+      ask('Say something… 🎙️', [], { quiet: true, content: meter });
+      const iv = setInterval(() => { meter.firstChild.style.width = Math.min(100, Math.round(VIO.micLevel * 400)) + '%'; }, 60);
+      let rec;
+      try { rec = await VIO.testRecording(3000, { deviceId: settings.micId || null }); }
+      catch (e) { clearInterval(iv); micReport('error', { error: e.message }); return say(e.message + ' 🎙️', { ms: 6000 }); }
+      finally { clearInterval(iv); }
+      const loud = rec.peak > 0.02;
+      let text = null;
+      if (voice.ready && rec.samples.length) {
+        text = await new Promise((resolve) => {
+          const id = 'mictest-' + Date.now();
+          voice.waits.set(id, resolve);
+          api.voice.send({ type: 'transcribe', id, samples: Array.from(rec.samples) });
+          setTimeout(() => { if (voice.waits.delete(id)) resolve(null); }, 15000);
+        });
+      }
+      micReport('tested', { peak: Math.round(rec.peak * 1000) / 1000, heard: text ? true : false });
+      const msg = !loud ? 'That was very quiet. Is the right microphone picked, and is it unmuted in Windows?'
+        : text ? `I heard: “${text}” 👂` : voice.ready ? 'I could hear sound, but couldn\'t make out words.' : 'Your mic works (I can hear sound). My speech model isn\'t on yet, so I can\'t show the words. Turn on Listen for "Nova" or press Ctrl+Alt+V once.';
+      const again = await ask(msg, [{ label: 'Test again', value: 'test' }, back], { quiet: true });
+      return again === 'test' ? micMenu() : again === '__back' ? voiceMenu() : null;
+    }
   }
 
   // ---------------------------------------------------------------- messages from the voice service
@@ -1704,6 +1758,7 @@
       case 'sentence': { const c = voice.chats.get(m.id); if (c) c.sentence(m.text, m.mood); break; }
       case 'replied': { const c = voice.chats.get(m.id); if (c) c.done(m.text); break; }
       case 'fixed': { const w = voice.waits.get(m.id); if (w) { voice.waits.delete(m.id); w(m.text); } break; }
+      case 'transcribed': { const w = voice.waits.get(m.id); if (w) { voice.waits.delete(m.id); w(m.error ? null : m.text); } break; }
       case 'ask': if (m.name === 'task') answerTask(m); break;
     }
   });
@@ -1864,8 +1919,10 @@
         if (err) { sfx('err'); play('shrug', 1500); }
         else if (/^(done|opened|moved|collected|all set|ok)/i.test(m.text)) { sfx('ok'); play('cheer', 900); }
         const buttons = err && lastAsked ? [{ icon: '↻', label: 'Retry', value: 'retry' }] : [];
-        const v = await ask(m.text, buttons, { quiet: true, ms: buttons.length ? 0 : Math.max(3500, m.text.length * 55), wide: m.text.length > 160 });
+        if (!err && m.text.length > 80) buttons.push({ icon: '⧉', label: 'Copy', value: 'copy', ghost: true });
+        const v = await ask(m.text, buttons, { quiet: true, ms: err ? 0 : Math.min(60000, Math.max(3500, m.text.length * 55)), wide: m.text.length > 160 });
         if (v === 'retry' && lastAsked) command(lastAsked.text, { voice: false });
+        if (v === 'copy') { try { await navigator.clipboard.writeText(m.text); say('Copied. 📋', { ms: 1500 }); } catch { say('I couldn\'t copy that.', { ms: 2000 }); } }
         return;
       }
       case 'approve': {
@@ -1908,7 +1965,8 @@
         finally { coreApproved = false; }
         return;
       }
-      case 'highlight': return;
+      case 'jobnote': if (bubble.classList.contains('hidden') && !isQuiet()) say(m.text, { ms: m.important ? 7000 : 3500 }); else addHist('nova', m.text); return;
+      case 'highlight': if (m.onScreen) pointAt(m.x + m.w / 2, m.y + m.h / 2, (m.label || 'HERE').toUpperCase().slice(0, 18), 5000); return;
     }
   });
 

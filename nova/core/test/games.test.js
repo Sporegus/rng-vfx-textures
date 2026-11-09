@@ -173,3 +173,51 @@ browserTest('a recorded routine replays in its own game only, until its stop con
 });
 
 test.after(() => { if (results.length) fs.writeFileSync(REPORT, JSON.stringify({ ran: new Date().toISOString(), browser: 'Chromium (Playwright, headless)', results }, null, 2) + '\n'); });
+
+browserTest('stalled perception: when moves stop changing anything she stops and lets go (test 37)', async () => {
+  const g = await game(7);
+  try {
+    await g.page.evaluate(() => window.fixtureFreeze(true));
+    const ctl = createController({ adapter: g.adapter, profile: PROFILES['nova-fixture'] });
+    const res = await ctl.run({ maxMs: 30000 });
+    results.push({ case: 'stalled', status: res.status, reason: res.reason, actions: res.stats.actions });
+    assert.equal(res.status, 'failed');
+    assert.match(res.reason, /stopped changing anything/);
+    assert.ok(res.stats.actions <= 8);
+    assert.deepEqual(g.adapter.held(), []);
+  } finally { await g.browser.close(); }
+});
+
+browserTest('an unexpected shop menu stops play, releases keys, buys nothing (test 37)', async () => {
+  const g = await game(7);
+  try {
+    const ctl = createController({ adapter: g.adapter, profile: PROFILES['nova-fixture'] });
+    let n = 0;
+    const res = await ctl.run({ maxMs: 30000, onStep: () => { if (++n === 3) g.page.evaluate(() => window.fixtureShop()); } });
+    results.push({ case: 'shop menu', status: res.status, reason: res.reason });
+    assert.equal(res.status, 'paused');
+    assert.match(res.reason, /unexpected .*shop.*never buy/);
+    assert.deepEqual(g.adapter.held(), []);
+  } finally { await g.browser.close(); }
+});
+
+browserTest('"record a routine" then "replay it until 1 coin" in the pipeline (test 38, end to end)', async () => {
+  const g = await game(7);
+  try {
+    const h = harness();
+    // you play: right for 300 ms, then type a "password" (never recorded), then down
+    const events = [{ type: 'down', key: 'ArrowDown', t: 0 }, { type: 'up', key: 'ArrowDown', t: 200 }, { type: 'down', key: 'ArrowRight', t: 300 }, { type: 'up', key: 'ArrowRight', t: 650 },
+      ...'pw123'.split('').flatMap((k, i) => [{ type: 'down', key: k, t: 700 + i * 20 }, { type: 'up', key: k, t: 710 + i * 20 }]),
+      { type: 'down', key: 'ArrowLeft', t: 900 }, { type: 'up', key: 'ArrowLeft', t: 1250 }];
+    const games = createGames({ store: h.store, log: h.log, sessions: { has: (id) => id === 'nova-fixture', open: async () => g.adapter, record: async () => events } });
+    const pipeline = createPipeline({ tasks: h.tasks, permissions: h.permissions, tools: h.tools, log: h.log, brain, ui: h.ui, page: { run: async () => ({}) }, llm: null, games });
+    await pipeline.input({ text: 'record a routine in the test game called sweep' });
+    assert.ok(h.replies().some(r => /Saved "sweep": 3 key presses .*left out 10 other keys/.test(r)), h.replies().join(' | '));
+    assert.ok(!JSON.stringify(h.store.recall('game_routine')).includes('"key":"p"'));
+    await pipeline.input({ text: 'replay the sweep routine until 1 coin' });
+    assert.ok(h.events.some(e => e.type === 'approve' && /Replay "sweep"/.test(e.title)));
+    const last = h.replies().slice(-1)[0];
+    assert.match(last, /^(Done|I paused)\./);
+    assert.deepEqual(g.adapter.held(), []);
+  } finally { await g.browser.close(); }
+});
