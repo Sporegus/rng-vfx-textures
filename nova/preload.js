@@ -15,6 +15,16 @@ contextBridge.exposeInMainWorld('nova', {
   onCommand: (cb) => ipcRenderer.on('command', (_, cmd, arg) => cb(cmd, arg)),
   onActiveWindow: (cb) => ipcRenderer.on('active-window', (_, w) => cb(w)),
   onBounds: (cb) => ipcRenderer.on('bounds', (_, b) => cb(b)),
+  // Nova's core: everything you ask goes here; it answers with events (status, replies, approval cards)
+  core: {
+    input: (msg) => ipcRenderer.invoke('core:input', msg),
+    stop: () => ipcRenderer.invoke('core:stop'),
+    answer: (id, value) => ipcRenderer.send('core:answer', id, value),
+    pageDone: (id, result) => ipcRenderer.send('core:page:done', id, result),
+    panel: (tab) => ipcRenderer.send('core:panel', tab),
+    timing: (what, ms) => ipcRenderer.send('core:timing', what, ms),
+    on: (cb) => ipcRenderer.on('core', (_, m) => cb(m)),
+  },
   // her voice: send audio and requests to the voice service, hear back from it
   voice: {
     // set up your ElevenLabs voice (the key is encrypted by the main process and never comes back)

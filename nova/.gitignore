@@ -2,3 +2,4 @@ node_modules/
 dist/
 demo/nova-demo.html
 design/sprite-lab.html
+windows-check-result.json

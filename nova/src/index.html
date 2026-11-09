@@ -11,12 +11,16 @@
   <div id="nova"><canvas id="sprite"></canvas></div>
   <div id="tag" class="hidden"></div>
   <div id="hi" class="hidden">hi</div>
+  <div id="status" class="hidden" role="status" aria-live="polite"></div>
   <div id="bubble" class="hidden">
     <div class="b-head">
       <span class="b-name">NOVA</span>
       <span class="b-chip">ONLINE</span>
+      <button class="b-hist" title="Recent messages">≡</button>
+      <button class="b-stop hidden" title="Stop (Ctrl+Alt+X)">■ STOP</button>
       <button class="b-x" title="Close">×</button>
     </div>
+    <div id="b-heard" class="hidden"></div>
     <div id="b-text"></div>
     <div id="b-body"></div>
   </div>
@@ -24,6 +28,7 @@
   <script src="cartoon.js"></script>
   <script src="nova2/nova2.js"></script>
   <script src="nova2.js"></script>
+  <script src="novaidle.js"></script>
   <script src="sprites.js"></script>
   <script src="../brain/intents.js"></script>
   <script src="../brain/brain.js"></script>

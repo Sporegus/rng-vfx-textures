@@ -165,3 +165,11 @@ test('status: "what are you doing" while something is pending', async () => {
   assert.ok(h.replies().some(r => /organize my downloads \(awaiting permission\)/.test(r)));
   release({ allow: false });
 });
+
+test('questions she can answer herself (math, time) skip the model', async () => {
+  const { harness } = require('./harness');
+  const h = harness();
+  await h.pipeline.input({ text: 'what is 12 times 7' });
+  assert.ok(h.pageRuns.some(s => s.intent === 'math'), JSON.stringify(h.pageRuns));
+  assert.ok(!h.events.some(e => e.type === 'choose'));
+});

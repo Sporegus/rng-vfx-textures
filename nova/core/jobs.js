@@ -49,6 +49,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
         deadline: opts.deadline || now() + 8 * 3600e3,
         restartResume: !!opts.restartResume,         // may it resume itself after a restart?
         sharing: opts.sharing || 'project files and test output only',
+        testEnv: opts.testEnv || null,               // extra environment for the test command (no secrets)
       },
       plan: { version: 1, steps: [] },
       budgets: { ...DEFAULT_BUDGETS, ...(opts.budgets || {}) },
@@ -66,7 +67,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
         `Goal: ${j.goal}`,
         `Project folder: ${c.workspace || '(not chosen)'}`,
         `Participants: ${c.participants.map(p => `${p.id} as ${p.role}${participants[p.id] && !participants[p.id].live ? ' (fixture)' : ''}`).join(', ') || '(none)'}`,
-        `Done when: ${[...c.criteria, ...(c.files.length ? [`files exist: ${c.files.join(', ')}`] : []), ...(c.testCommand ? [`\`${c.testCommand.join(' ')}\` passes`] : [])].join('; ') || '(no criteria)'}`,
+        `Done when: ${[...c.criteria, ...(c.files.length ? [`files exist: ${c.files.join(', ')}`] : []), ...(c.testCommand ? [`\`${[path.basename(c.testCommand[0]).replace(/^electron(\.exe)?$/i, 'node'), ...c.testCommand.slice(1)].join(' ')}\` passes`] : [])].join('; ') || '(no criteria)'}`,
         `Shares: ${c.sharing}. Never: secrets, purchases, deployments, public posts, other chats.`,
         `Limits: ${j.budgets.maxHours} h, ${j.budgets.maxCycles} cycles, ${j.budgets.maxRetries} retries per step${j.budgets.maxSpendUsd ? `, $${j.budgets.maxSpendUsd}` : ''}; deadline ${new Date(c.deadline).toLocaleString()}.`,
         c.restartResume ? 'May resume by itself after a restart (until the deadline).' : 'After a restart it waits for you.',
@@ -125,7 +126,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     const cmd = j.contract.testCommand;
     if (!cmd) return Promise.resolve(null);
     return new Promise((resolve) => {
-      const child = execImpl(cmd[0], cmd.slice(1), { cwd: j.contract.workspace, timeout: 10 * 60000, windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (e, out, err) => {
+      const child = execImpl(cmd[0], cmd.slice(1), { cwd: j.contract.workspace, timeout: 10 * 60000, windowsHide: true, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, ...(j.contract.testEnv || {}) } }, (e, out, err) => {
         resolve({ passed: !e, code: e ? (e.code || 1) : 0, output: (String(out) + String(err)).slice(-3000) });
       });
       if (signal) signal.addEventListener('abort', () => { try { child.kill(); } catch {} }, { once: true });
@@ -159,7 +160,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     event(j, 'handoff', { iteration, to: participantId, role: env.destinationRole, chars: text.length });
     setState(j, 'waiting_on_assistant', `waiting on ${participantId} (${env.destinationRole})`);
     let res;
-    try { res = await a.send(env, { signal }); }
+    try { res = await a.send(env, { signal, workspace: j.contract.workspace }); }
     catch (e) { store.outboxSet(outId, e.category === 'cancelled' ? 'unknown' : 'failed', { error: e.message }); throw e; }
     // a turn that's still running or stuck isn't a result
     if (res.status === 'running') { store.outboxSet(outId, 'unknown', { note: 'still running' }); throw new NovaError('blocked', `${participantId} is still working; I'll check again before sending anything else.`, { pause: true }); }

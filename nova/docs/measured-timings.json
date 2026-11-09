@@ -1,0 +1,40 @@
+{
+  "ran": "2026-11-09T09:33:47.025Z",
+  "measuredOn": "Linux container, Xvfb virtual display, software rendering (--disable-gpu); NOT the target Windows PC",
+  "listeningIndicator_ms": {
+    "n": 15,
+    "median": 10,
+    "p95": 35,
+    "max": 35
+  },
+  "stopRoundTrip_ms": {
+    "n": 15,
+    "median": 1.1,
+    "p95": 3.5,
+    "max": 3.5
+  },
+  "stopInCore_ms": {
+    "n": 15,
+    "median": 0,
+    "p95": 2,
+    "max": 2
+  },
+  "typedToFirstStatus_ms": {
+    "n": 10,
+    "median": 2.4,
+    "p95": 5.3,
+    "max": 5.3
+  },
+  "typedToReplyVisible_ms": {
+    "n": 10,
+    "median": 138.5,
+    "p95": 142.6,
+    "max": 142.6
+  },
+  "coreFirstStatus_ms": {
+    "n": 10,
+    "median": 1,
+    "p95": 3,
+    "max": 3
+  }
+}

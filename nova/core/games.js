@@ -108,13 +108,18 @@ function createController({ adapter, profile, guard, log, now = () => Date.now()
   async function run({ signal, maxMs = 120000, maxActions = 400, avoidHazards = true, onStep } = {}) {
     const t0 = now(), evidence = [], stats = { actions: 0, falls: 0, observations: 0 };
     let safe = avoidHazards, lastLives = null, stuck = 0, lastSig = null;
+    if (guard && guard.injected) guard.injected();   // input after this moment that isn't ours means you took over
     const result = (status, reason, obs) => ({ status, reason, stats: { ...stats, ms: now() - t0, coins: obs && obs.hud.coins, total: obs && obs.hud.total }, evidence: evidence.slice(-30) });
     try {
       for (;;) {
         if (signal && signal.aborted) return result('stopped', 'You stopped it.');
         if (now() - t0 > maxMs) return result('paused', `Reached the ${Math.round(maxMs / 1000)} s limit for this run.`);
         if (stats.actions >= maxActions) return result('paused', `Used the ${maxActions}-action limit.`);
-        if (guard) { const g = guard.check(); if (!g.ok) { await releaseAll(); return result('paused', g.reason); } }
+        if (guard) {
+          let g = { ok: true };
+          try { g = (await guard.check(signal)) || { ok: true }; } catch (e) { if (e.category === 'cancelled') throw e; g = { ok: false, reason: e.message }; }
+          if (g.ok === false) { await releaseAll(); return result('paused', g.reason); }
+        }
         const obs = await look(); stats.observations++;
         if (!obs.focused || obs.hud.state === 'paused') { await releaseAll(); return result('paused', 'The game lost focus, so I let go of the keys and paused.', obs); }
         if (lastLives != null && obs.hud.lives < lastLives) { stats.falls++; safe = true; evidence.push({ t: now() - t0, note: 'fell into the hazard; switched to safe paths', lives: obs.hud.lives }); }

@@ -47,13 +47,15 @@ function claudeCli(id, role, { cwd, bin = 'claude', timeoutMs = 30 * 60000, exec
   const check = () => new Promise((res) => execImpl(bin, ['--version'], { timeout: 10000, windowsHide: true }, (e, out) => res(!e && /\d/.test(String(out)))));
   return {
     id, role, kind: 'claude-cli', live: true,
-    available: () => found === false ? { ok: false, reason: 'The claude command isn\'t installed on this PC.' } : !cwd ? { ok: false, reason: 'No project folder chosen for this job.' } : { ok: true, unchecked: found === null },
+    available: () => found === false ? { ok: false, reason: 'The claude command isn\'t installed on this PC.' } : { ok: true, unchecked: found === null },
     async probe() { found = await check(); return found; },
-    async send(env, { signal } = {}) {
+    async send(env, { signal, workspace } = {}) {
+      const dir = workspace || cwd;
+      if (!dir) throw new NovaError('invalid', 'No project folder chosen for this job.');
       if (found === null) await this.probe();
       if (!found) throw new NovaError('unavailable', 'The claude command isn\'t installed on this PC.');
       return new Promise((resolve, reject) => {
-        const child = execImpl(bin, ['-p', envelopeText(env), '--output-format', 'json'], { cwd, timeout: timeoutMs, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }, (e, out, err) => {
+        const child = execImpl(bin, ['-p', envelopeText(env), '--output-format', 'json'], { cwd: dir, timeout: timeoutMs, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }, (e, out, err) => {
           if (signal && signal.aborted) return reject(new NovaError('cancelled', 'Stopped.'));
           if (e) return resolve({ status: /usage limit|rate limit/i.test(String(err)) ? 'limit' : 'failed', output: String(err || e.message).slice(0, 4000) });
           let j = null; try { j = JSON.parse(out); } catch {}

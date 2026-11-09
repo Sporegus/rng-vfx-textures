@@ -131,3 +131,36 @@ html, body {
 .b-bar .fill.hot { background: #ff3355; }
 .b-bar .v { text-align: right; color: var(--muted); }
 .b-note { font-size: 11px; color: var(--muted); }
+
+/* ---------------------------------------------------------------- the hologram idle look (already glowing: no extra filter) */
+#nova.video canvas { image-rendering: auto; filter: none; animation: none; }
+
+/* ---------------------------------------------------------------- what she's doing, right above her head */
+#status {
+  position: fixed; left: 0; top: 0; z-index: 12; pointer-events: none;
+  display: flex; align-items: center; gap: 6px; padding: 3px 8px;
+  font: 800 10px/1 var(--font); letter-spacing: 1.5px; text-transform: uppercase;
+  color: #e9fbff; background: rgba(8, 18, 32, .86); border: 1px solid var(--accent2); white-space: nowrap;
+}
+#status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+#status.listening::before { background: #ff4d6d; box-shadow: 0 0 8px #ff4d6d; animation: blink .8s steps(2) infinite; }
+#status.working::before, #status.thinking::before { background: #ffb020; box-shadow: 0 0 6px #ffb020; animation: blink .6s steps(2) infinite; }
+#status.waiting::before { background: #c084fc; box-shadow: 0 0 6px #c084fc; }
+
+/* bubble extras: Stop, history, the words she heard, approval cards */
+.b-stop {
+  border: 1px solid #ff4d6d; background: #2a0b16; color: #ff8fa3; cursor: pointer;
+  font: 800 9px/1 var(--font); letter-spacing: 1px; padding: 3px 6px;
+}
+.b-stop:hover { background: #ff4d6d; color: #fff; }
+.b-hist { margin-left: auto; border: 0; background: none; color: var(--muted); font: 700 15px/1 var(--font); cursor: pointer; padding: 0 2px; }
+.b-hist:hover { color: #fff; }
+.b-hist + .b-stop, .b-hist + .b-stop + .b-x, .b-hist ~ .b-x { margin-left: 0; }
+#b-heard { font-size: 11px; color: var(--muted); margin-bottom: 4px; white-space: pre-wrap; }
+#b-heard.partial { font-style: italic; opacity: .8; }
+.b-card { border-left: 3px solid #c084fc; padding: 2px 0 2px 8px; font-size: 12px; line-height: 1.4; color: var(--ink); white-space: pre-wrap; }
+.b-card .row { display: block; }
+.b-hlist { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow: auto; font-size: 11px; line-height: 1.35; }
+.b-hlist .you { color: var(--muted); }
+.b-hlist .you::before { content: "you › "; }
+.b-hlist .nova::before { content: "nova › "; color: var(--accent); }

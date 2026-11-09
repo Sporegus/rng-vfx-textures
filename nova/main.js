@@ -7,6 +7,7 @@ const sprites = require('./src/sprites');
 const createActions = require('./actions');
 const windowWatcher = require('./actions/windows');
 const startVoice = require('./voice');
+const { startCore } = require('./core/app');
 
 // She used to be called Zin: move her old settings, memory and downloaded voice
 // models over so nothing is lost or downloaded again
@@ -33,7 +34,8 @@ if (process.argv.includes('--record-voice')) {
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const DEFAULTS = {
-  skin: 'holo', hat: 'none', size: 3, sound: true,
+  // 'idle' is her approved hologram idle (art/idle); the older looks stay in the tray menu
+  skin: 'idle', hat: 'none', size: 3, sound: true,
   wander: true, followWindows: true, startWithWindows: false, introDone: false,
   // voice: talk out loud, listen for "Nova", which voice, a little higher pitch, the smaller speech model
   // (nova is her own voice; sparkle, mochi and luna are extra expressive; heart, bella... stock ones)
@@ -60,7 +62,7 @@ function saveSettings(patch) {
   else buildTrayMenu();
 }
 
-let win = null, tray = null, actions = null, watcher = null, voice = null;
+let win = null, tray = null, actions = null, watcher = null, voice = null, core = null;
 
 // ------------------------------------------------------------- overlay window
 function createOverlay() {
@@ -118,6 +120,11 @@ function toOverlay(w) {
 // ------------------------------------------------------------- tray
 // The tray icon is drawn from the sprite engine, so it always matches Nova's skin.
 function spriteIcon(size) {
+  // her hologram look: the tray icon is her head from the approved idle
+  if (sprites.SKINS[settings.skin] && sprites.SKINS[settings.skin].video) {
+    const img = nativeImage.createFromPath(path.join(__dirname, 'art', 'idle', 'idle-poster.png'));
+    if (!img.isEmpty()) return img.crop({ x: 54, y: 0, width: 220, height: 220 }).resize({ width: size, height: size, quality: 'best' });
+  }
   const W = sprites.W, H = sprites.H;
   const rgba = sprites.frameRGBA('idle', 0, settings.skin, settings.hat);
   if (!sprites.SKINS[settings.skin]) settings.skin = 'holo';
@@ -144,6 +151,8 @@ function buildTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Nova', enabled: false },
     { label: 'Talk to Nova', accelerator: 'Ctrl+Alt+Space', click: () => send('menu') },
+    { label: 'Tasks, approvals & settings…', click: () => core && core.openPanel('tasks') },
+    { label: 'Stop everything', accelerator: 'Ctrl+Alt+X', click: () => core && core.stop('tray') },
     { label: 'Teleport to my mouse', click: () => send('teleport') },
     { label: 'Play the intro again', click: () => send('intro') },
     { type: 'separator' },
@@ -213,8 +222,14 @@ app.whenReady().then(() => {
   globalShortcut.register('Control+Alt+Space', () => { if (!win.isVisible()) toggleVisible(); send('menu'); });
   if (settings.followWindows) startWatcher();
   voice = startVoice({ app, getWin: () => win, settings: () => settings, saveSettings, actions });
-  globalShortcut.register('Control+Alt+V', () => { if (!win.isVisible()) toggleVisible(); send('ptt'); });
+  globalShortcut.register('Control+Alt+V', () => { if (!win.isVisible()) toggleVisible(); send('ptt', Date.now()); });
+  // Nova's core: one pipeline for everything you ask, with approvals, Stop (Ctrl+Alt+X) and the Tasks panel
+  try { core = startCore({ app, getWin: () => win, settings: () => settings, saveSettings, actions, voice }); }
+  catch (e) { console.error('Nova core failed to start:', e); }
+  // she moved to her approved hologram idle: switch once, then your choice sticks
+  if (!settings.idleSkinSet) saveSettings({ skin: 'idle', idleSkinSet: true });
+  if (process.argv.includes('--panel') && core) core.openPanel('tasks');
 });
 app.on('second-instance', () => send('menu'));
-app.on('will-quit', () => { globalShortcut.unregisterAll(); stopWatcher(); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); stopWatcher(); if (core) core.close(); });
 app.on('window-all-closed', () => app.quit());

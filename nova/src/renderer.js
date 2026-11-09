@@ -10,7 +10,7 @@
   const zEl = $('#nova'), cv = $('#sprite'), ctx = cv.getContext('2d', { willReadFrequently: true });
   const bubble = $('#bubble'), bText = $('#b-text'), bBody = $('#b-body'), bChip = $('.b-chip');
   const fxCv = $('#fx'), fx = fxCv.getContext('2d');
-  const tagEl = $('#tag'), hiEl = $('#hi');
+  const tagEl = $('#tag'), hiEl = $('#hi'), statusEl = $('#status'), bHeard = $('#b-heard'), bStop = $('.b-stop');
 
   // The demo page has a fake taskbar; in the real app the window already stops above it.
   const bottomInset = window.NOVA_BOTTOM_INSET || 0;
@@ -333,7 +333,13 @@
     const blink = now < z.blinkUntil && (S.skinOf(settings.skin).live || ['idle', 'walk', 'sit', 'point', 'talk'].includes(anim));
     const s = sc(), pad = S.padOf(settings.skin); // (her drawn look has a bigger canvas)
     const cw = (S.W + pad.x * 2) * s, ch = (S.H + pad.top) * s;
-    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; lastKey = ''; }
+    const isVideo = !!S.skinOf(settings.skin).video;
+    const dpr = isVideo ? (window.devicePixelRatio || 1) : 1;   // her hologram is high-res art: draw at the screen's real pixels
+    if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) {
+      cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); cv.style.width = cw + 'px'; cv.style.height = ch + 'px'; lastKey = '';
+    }
+    zEl.classList.toggle('video', isVideo);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const live = S.skinOf(settings.skin).live;   // (the new Nova moves every frame)
     const key = [anim, S.frameIndex(a, z.frame), settings.skin, settings.hat, z.facing, blink].join('|');
     if (live || key !== lastKey) {
@@ -347,6 +353,7 @@
     zEl.style.transform = `translate(${left}px, ${top}px)`;
     const headY = top + (S.HEAD_TOP + pad.top) * s;
     if (!bubble.classList.contains('hidden')) placeBubble();
+    if (!statusEl.classList.contains('hidden')) statusEl.style.transform = `translate(${Math.round(z.x - statusEl.offsetWidth / 2)}px, ${headY - (tagEl.classList.contains('hidden') ? 24 : 48)}px)`;
     if (!tagEl.classList.contains('hidden')) tagEl.style.transform = `translate(${Math.round(z.x - tagEl.offsetWidth / 2)}px, ${headY - 26}px)`;
     if (!hiEl.classList.contains('hidden')) hiEl.style.transform = `translate(${Math.round(z.x + 6 * s)}px, ${headY - 34}px)`;
   }
@@ -483,7 +490,7 @@
   }
 
   // ================================================================ speech bubble
-  let bubbleToken = 0, pending = null, typeToken = 0, waitingOn = null;
+  let bubbleToken = 0, pending = null, typeToken = 0, waitingOn = null, lastSaid = '';
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -525,6 +532,7 @@
   function ask(text, buttons = [], opts = {}) {
     if (pending) { const p = pending; pending = null; p(null); }
     const token = ++bubbleToken;
+    lastSaid = text;
     bubble.classList.remove('hidden');
     bubble.classList.toggle('wide', !!opts.wide);
     bBody.innerHTML = '';
@@ -606,10 +614,12 @@
       { icon: '🎉', label: 'Fun', value: 'fun' },
       { icon: '✨', label: 'My look', value: 'look' },
       { icon: '🎙️', label: 'Voice & chat', value: 'voice' },
+      ...(api.core ? [{ icon: '📋', label: 'Tasks', value: 'tasks' }] : []),
     ], { input: 'or just tell me: "open spotify", "remind me in 10 min to stretch"…' });
     if (v == null) return;
     const menus = { clean: cleanMenu, organize: organizeMenu, find: findMenu, wall: wallpaperMenu, pc: pcMenu, tools: toolsMenu, fun: funMenu, look: lookMenu, voice: voiceMenu };
     if (menus[v]) return menus[v]();
+    if (v === 'tasks') { closeBubble(); return api.core.panel('tasks'); }
     return command(v);
   }
 
@@ -1230,7 +1240,10 @@
     if (at.vague && at.h < 12) { const pm = at1(at.h + 12); if (pm < when) when = pm; } // "at 5" means whichever 5 comes first
     return Math.round((when - now2) / 1000);
   }
+  let coreApproved = false;   // the core showed you an approval card for this step already
+  let lastAsked = null, coreWait = null;
   async function confirmStep(step, yes) {
+    if (coreApproved) return true;
     play('think', 1200);
     const v = await ask(B.replyFor(step), [{ label: yes, value: 'go', primary: true }, { label: 'No', value: 'no', ghost: true }]);
     if (v === 'no') say('Okay, I won\'t.', { ms: 1800 });
@@ -1240,6 +1253,12 @@
   async function command(text, opts = {}) {
     interaction();
     if (opts.voice) voice.lastAsk = Date.now();
+    if (api.core) {
+      lastAsked = { text, voice: !!opts.voice };
+      busyChip(true);
+      const r = await api.core.input({ text, source: opts.voice ? 'voice' : 'typed', utteranceId: opts.utteranceId || null, final: true });
+      return r;
+    }
     const r = B.understand(text, { last: lastStep });
     // not a command (just chatting, or a question): her chat brain answers, if she has it
     const chatty = r.unknown || !r.steps.length || r.steps.every(s => s.intent.startsWith('chat.') || s.fallback);
@@ -1687,7 +1706,10 @@
     }
   });
   // push to talk (Ctrl+Alt+V): listen for a few seconds, no name needed
-  function pushToTalk() {
+  function pushToTalk(pressedAt) {
+    if (pressedAt && api.core) requestAnimationFrame(() => api.core.timing('listening-indicator', Date.now() - pressedAt));
+    showStatus('listening', 'Listening');
+    setTimeout(() => { if (statusEl.dataset.state === 'listening') showStatus(null); }, 8000);
     if (!voice.ready) return setupVoice();
     VIO.stop(); api.voice.send({ type: 'hush' });
     voice.ptt = Date.now() + 8000;
@@ -1764,13 +1786,119 @@
     if (!s.voice) VIO.stop();
     syncMic();
   });
-  api.onCommand((cmd) => {
+  api.onCommand((cmd, arg) => {
     if (cmd === 'menu') mainMenu();
     if (cmd === 'intro') intro();
     if (cmd === 'teleport') teleportTo(clamp(mouse.x, 40, W - 40), mouse.y);
     if (cmd === 'teleport-in') teleportTo(z.x, z.y);
-    if (cmd === 'ptt') pushToTalk();
+    if (cmd === 'ptt') pushToTalk(arg);
     if (cmd === 'eleven-setup') setupEleven();
+  });
+
+  // ================================================================ Nova's core (main process) -> what you see
+  // Status above her head, replies in the bubble, approval cards with Allow once / Cancel,
+  // choices, Stop, and the page abilities (menus, files, timers) the core asks this page to run.
+  const hist = [];
+  const STATUS = { understanding: ['thinking', 'Thinking'], executing: ['working', 'Working'], verifying: ['working', 'Checking'], awaiting_permission: ['waiting', 'Needs your OK'], listening: ['listening', 'Listening'], transcribing: ['listening', 'Hearing you'] };
+  function showStatus(state, label) {
+    if (!state) { statusEl.classList.add('hidden'); statusEl.dataset.state = ''; return; }
+    const [cls, text] = STATUS[state] || [state, label || state];
+    statusEl.className = cls; statusEl.textContent = label || text; statusEl.dataset.state = state;
+  }
+  const working = new Set();
+  function setWorking(taskId, on) {
+    if (on) working.add(taskId); else working.delete(taskId);
+    bStop.classList.toggle('hidden', !working.size);
+    busyChip(working.size > 0);
+    if (!working.size && statusEl.dataset.state !== 'listening') showStatus(null);
+  }
+  function addHist(who, text) { if (!text) return; hist.push({ who, text: String(text) }); if (hist.length > 30) hist.shift(); }
+  bStop.addEventListener('click', () => { sfx('blip'); if (api.core) api.core.stop(); });
+  bubble.querySelector('.b-hist').addEventListener('click', () => {
+    const list = el('div', 'b-hlist');
+    for (const h of hist.slice(-12)) list.append(el('div', h.who, esc(h.text)));
+    ask(hist.length ? 'Recent:' : 'Nothing yet.', [{ icon: '📋', label: 'Open Tasks', value: 'tasks', ghost: true }], { quiet: true, content: list, wide: true }).then(v => { if (v === 'tasks') { closeBubble(); api.core.panel('tasks'); } });
+  });
+  function heard(text, partial) {
+    bHeard.textContent = text ? (partial ? '“' + text + '…”' : 'you: ' + text) : '';
+    bHeard.classList.toggle('hidden', !text);
+    bHeard.classList.toggle('partial', !!partial);
+  }
+  if (api.core) api.core.on(async (m) => {
+    switch (m.type) {
+      case 'transcript':
+        if (m.source !== 'voice') return;
+        if (m.final) addHist('you', m.text);
+        if (bubble.classList.contains('hidden')) ask('…', [], { quiet: true, ms: 6000 });
+        heard(m.text, !m.final);
+        return;
+      case 'status': {
+        const final = ['completed', 'cancelled', 'failed', 'blocked'].includes(m.state);
+        if (m.taskId) setWorking(m.taskId, !final);
+        if (!final) { showStatus(m.state, m.text && m.text.length < 28 ? m.text.replace(/…$/, '') : null); if (m.state === 'understanding') play('think', 1500); }
+        return;
+      }
+      case 'task': {
+        const t = m.task || {};
+        const final = ['completed', 'cancelled', 'failed', 'blocked'].includes(t.state);
+        setWorking(t.id, !final);
+        if (!final) showStatus(t.state);
+        return;
+      }
+      case 'reply': {
+        if (m.partial) { ask(m.text, [], { quiet: true, from: Math.max(0, bText.textContent.length - 1) }); return; }
+        addHist('nova', m.text);
+        if (m.kind === 'stopped') { working.clear(); setWorking(null, false); showStatus(null); }
+        const err = m.error && !['denied', 'cancelled'].includes(m.error);
+        if (err) { sfx('err'); play('shrug', 1500); }
+        else if (/^(done|opened|moved|collected|all set|ok)/i.test(m.text)) { sfx('ok'); play('cheer', 900); }
+        const buttons = err && lastAsked ? [{ icon: '↻', label: 'Retry', value: 'retry' }] : [];
+        const v = await ask(m.text, buttons, { quiet: true, ms: buttons.length ? 0 : Math.max(3500, m.text.length * 55), wide: m.text.length > 160 });
+        if (v === 'retry' && lastAsked) command(lastAsked.text, { voice: false });
+        return;
+      }
+      case 'approve': {
+        play('think', 1200);
+        const card = el('div', 'b-card');
+        for (const line of m.lines || []) card.append(el('span', 'row', esc(line)));
+        if (m.heard) card.append(el('span', 'row', 'I heard: “' + esc(m.heard) + '”'));
+        coreWait = m.id;
+        const buttons = [{ icon: '✓', label: 'Allow once', value: 'allow', primary: true }, { label: 'Cancel', value: 'cancel', ghost: true }];
+        if (m.heard) buttons.splice(1, 0, { icon: '✎', label: 'Fix what I heard', value: 'edit' });
+        if (m.rememberable) buttons.splice(1, 0, { label: 'Always for this', value: 'remember' });
+        const v = await ask(m.title || 'OK to do this?', buttons, { quiet: true, content: card, wide: true, cols: 1 });
+        if (coreWait !== m.id) return;   // answered somewhere else (the Tasks panel) or expired
+        coreWait = null;
+        if (v === 'edit') {
+          const t = await ask('What did you mean?', [], { input: 'type it', value: m.heard });
+          return api.core.answer(m.id, t ? { allow: false, edit: t } : { allow: false });
+        }
+        api.core.answer(m.id, v === 'allow' ? { allow: true } : v === 'remember' ? { allow: true, remember: true } : { allow: false });
+        if (v === 'allow' || v === 'remember') { sfx('ok'); closeBubble(); }
+        return;
+      }
+      case 'choose': {
+        coreWait = m.id;
+        const opts = (m.options || []).map(o => ({ label: o.label, value: o.value, sub: o.sub, primary: o.primary }));
+        const v = await ask(m.question, opts, { quiet: true, cols: 1, input: m.input || null, wide: true });
+        if (coreWait !== m.id) return;
+        coreWait = null;
+        api.core.answer(m.id, v);
+        return;
+      }
+      case 'closed': if (coreWait === m.id) { coreWait = null; closeBubble(); } return;
+      case 'stopped': working.clear(); setWorking(null, false); z.pointing = null; if (z.hold) z.hold.until = 0; return;
+      case 'page': {
+        // a step the core already understood and checked; do it with the usual show
+        coreApproved = !!m.approved;
+        const before = lastSaid;
+        try { await doStep(m.step); api.core.pageDone(m.id, { ok: true, said: lastSaid !== before ? lastSaid : null }); if (lastSaid !== before) addHist('nova', lastSaid); }
+        catch (e) { api.core.pageDone(m.id, { ok: false, error: e.message || String(e) }); }
+        finally { coreApproved = false; }
+        return;
+      }
+      case 'highlight': return;
+    }
   });
 
   requestAnimationFrame(tick);
@@ -1779,5 +1907,5 @@
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools
-  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, makeWallpaper, intro };
+  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, makeWallpaper, intro, showStatus, hist };
 })();

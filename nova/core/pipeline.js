@@ -69,7 +69,8 @@ function createPipeline(deps) {
   function stopAll(why = 'stop') {
     const t0 = Date.now();
     const n = tasks.cancelAll('Stopped.');
-    permissions.revokeAll(why);
+    permissions.revokeAll(why, { keepKinds: ['job'] });
+    if (deps.jobs) { try { deps.jobs.control('pause_all'); } catch {} }
     for (const h of stopHooks) { try { h(why); } catch (e) { log && log.event('stop.hook_error', { message: e.message }); } }
     log && log.event('stop', { why, cancelled: n, ms: Date.now() - t0 });
     ui.reply({ text: n ? 'Stopped. Anything already done stays done, but nothing else will happen.' : 'Okay, stopped.', kind: 'stopped' });
@@ -100,7 +101,12 @@ function createPipeline(deps) {
       case 'game': return deps.games ? deps.games.handle(task, r, { ui, approve, reply, answer, research: deps.research }) : blocked('Game help isn\'t loaded.');
       case 'research': return deps.research ? researchAnswer(task, r.question) : answer(task, r.text, { current: true });
       case 'job': return deps.jobs ? deps.jobs.draftFromRequest(task, r, { ui, approve, reply }) : blocked('Long-running jobs aren\'t loaded.');
-      case 'question': return r.current && deps.research ? researchAnswer(task, r.text) : answer(task, r.text, { current: r.current });
+      case 'question': {
+        // things she knows herself (math, time, weather, what she can do) don't need a model or the web
+        const own = deps.brain && deps.brain.understand(r.text);
+        if (own && own.steps && own.steps.length && own.steps.every(s => s.confidence >= 0.9 && !s.fallback && s.ready)) return command(task, r.text, source);
+        return r.current && deps.research ? researchAnswer(task, r.text) : answer(task, r.text, { current: r.current });
+      }
       default: return command(task, r.text, source);
     }
   }
@@ -186,7 +192,7 @@ function createPipeline(deps) {
     const ok = permissions.check({ category, scope: { kind: 'task', id: task.id } });
     if (!ok.ok) throw new NovaError('denied', CATEGORY_TEXT.denied);
     if (!page || !page.run) throw new NovaError('unavailable', 'My on-screen helper isn\'t ready yet.');
-    const res = await page.run({ intent: step.intent, slots: step.slots, approved }, task.ac.signal);
+    const res = await page.run({ intent: step.intent, slots: step.slots, ready: step.ready !== false, missing: step.missing || [], confidence: step.confidence, risk, approved }, task.ac.signal);
     if (res && res.error) throw new NovaError(res.category || 'failed', res.error);
     return res || {};
   }

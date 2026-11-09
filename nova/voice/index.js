@@ -7,7 +7,8 @@ const { utilityProcess, ipcMain, session, safeStorage } = require('electron');
 
 module.exports = function startVoice({ app, getWin, settings, saveSettings, actions }) {
   const root = path.join(app.getPath('userData'), 'models');
-  let proc = null, quitting = false, restarts = 0;
+  let proc = null, quitting = false, restarts = 0, chatReady = false, coreId = 0;
+  const coreChats = new Map();
   const toPage = (m) => { const w = getWin(); if (w && !w.isDestroyed()) w.webContents.send('voice', m); };
 
   // Nova's page may use the microphone (and nothing else that needs permission)
@@ -70,6 +71,14 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
   function start() {
     proc = utilityProcess.fork(path.join(__dirname, 'service.js'), [], { serviceName: 'Nova voice', stdio: 'ignore' });
     proc.on('message', async (m) => {
+      // Nova's core asked the local chat brain something: its answer comes back here, not to the page
+      if (typeof m.id === 'string' && m.id.startsWith('core-') && (m.type === 'sentence' || m.type === 'replied')) {
+        const w = coreChats.get(m.id);
+        if (w && m.type === 'sentence') w.onText && w.onText(m.text);
+        if (w && m.type === 'replied') { coreChats.delete(m.id); w.resolve(m.text || ''); }
+        return;
+      }
+      if (m.type === 'status' && m.what === 'chat') chatReady = m.state === 'ready';
       if (m.type === 'rpc') { const result = await answer(m.name, m.args || {}).catch((e) => e.message); if (proc) proc.postMessage({ type: 'rpc-reply', id: m.id, result }); return; }
       toPage(m);
     });
@@ -85,5 +94,18 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
   ipcMain.on('voice', (_, m) => { if (proc) proc.postMessage(m); });
   app.on('will-quit', () => { quitting = true; if (proc) proc.kill(); });
   start();
-  return { send: (m) => proc && proc.postMessage(m) };
+  return {
+    send: (m) => proc && proc.postMessage(m),
+    chatReady: () => !!(proc && chatReady),
+    // the local chat brain, for the core's answers: ask(text, onText, signal) -> reply text
+    ask(text, onText, signal) {
+      return new Promise((resolve, reject) => {
+        if (!proc) return reject(new Error('The voice service isn\'t running.'));
+        const id = 'core-' + (++coreId);
+        coreChats.set(id, { resolve, onText });
+        if (signal) signal.addEventListener('abort', () => { coreChats.delete(id); proc && proc.postMessage({ type: 'hush' }); reject(Object.assign(new Error('Stopped.'), { category: 'cancelled' })); }, { once: true });
+        proc.postMessage({ type: 'chat', id, text, opts: { voice: settings().voiceName, mood: 'cute', speed: 1, speak: false } });
+      });
+    },
+  };
 };

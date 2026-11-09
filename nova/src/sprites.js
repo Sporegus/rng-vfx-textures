@@ -43,10 +43,12 @@
   SKINS.drawn = Object.assign({}, SKINS.holo, { name: 'Nova (drawn)', drawn: true });
   // the new Nova (src/nova2.js): one drawing moved live, with her voice moving her mouth
   SKINS.nova2 = Object.assign({}, SKINS.holo, { name: 'Nova (new)', live: true });
+  // her approved hologram idle (src/novaidle.js): a video loop, redrawn every frame
+  SKINS.idle = Object.assign({}, SKINS.holo, { name: 'Nova (hologram)', live: true, video: true });
   const skinOf = (k) => (typeof k === 'object' && k) ? k : (SKINS[k] || SKINS.holo);
   // how much bigger than the pixel sprite her canvas is (the drawn look needs more room)
   const NO_PAD = { x: 0, top: 0 };
-  const padOf = (k) => (skinOf(k).drawn && root.NovaCartoon ? root.NovaCartoon.PAD : skinOf(k).live && root.Nova2 ? root.Nova2.PAD : NO_PAD);
+  const padOf = (k) => (skinOf(k).video && root.NovaIdle ? root.NovaIdle.PAD : skinOf(k).drawn && root.NovaCartoon ? root.NovaCartoon.PAD : skinOf(k).live && root.Nova2 ? root.Nova2.PAD : NO_PAD);
 
   const HATS = ['none', 'headset', 'tiara', 'halo', 'cap', 'witch'];
 
@@ -564,6 +566,7 @@
   function draw(ctx, opts) {
     const { anim = 'idle', frame = 0, skin = 'holo', hat = 'none', x = 0, y = 0, scale = 3, flip = false, overrides } = opts;
     if (skinOf(skin).drawn && root.NovaCartoon) return root.NovaCartoon.draw(ctx, { anim, frame, x, y, scale, flip });
+    if (skinOf(skin).video) return root.NovaIdle ? root.NovaIdle.draw(ctx, { x, y, scale, W, GROUND, HEAD_TOP }) : undefined;
     if (skinOf(skin).live && root.Nova2) return root.Nova2.draw(ctx, { x, y, scale, t: opts.t || 0, blink: !!(overrides && overrides.eyes === 'blink'), mouth: opts.mouth });
     if (!scratch) {
       scratch = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });

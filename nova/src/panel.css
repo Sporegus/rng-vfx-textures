@@ -1,0 +1,52 @@
+:root {
+  --bg: #0b1422; --bg2: #101d30; --line: #1f3350; --ink: #e6f4ff; --muted: #8aa3c2;
+  --cyan: #39d5ff; --violet: #c084fc; --ok: #3ddc97; --warn: #ffb020; --bad: #ff5c7a;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+  --sans: "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+.hidden { display: none !important; }
+header { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.brand { font: 800 13px var(--mono); letter-spacing: 3px; display: flex; gap: 8px; align-items: center; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+#ask { flex: 1; display: flex; gap: 6px; min-width: 0; }
+#ask input { flex: 1; min-width: 0; }
+input, select, textarea { font: 13px var(--sans); color: var(--ink); background: #07101c; border: 1px solid var(--line); padding: 7px 9px; border-radius: 4px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--cyan); }
+button { font: 700 12px var(--sans); color: var(--ink); background: #16304d; border: 1px solid #24476d; padding: 7px 12px; border-radius: 4px; cursor: pointer; }
+button:hover { background: #1d3d62; }
+button.primary { background: var(--cyan); color: #04131f; border-color: var(--cyan); }
+button.ghost { background: none; color: var(--muted); }
+button.danger, .stop { background: #2a0b16; color: #ff8fa3; border-color: var(--bad); }
+.stop:hover { background: var(--bad); color: #fff; }
+nav { display: flex; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+nav button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); padding: 10px 12px; white-space: nowrap; }
+nav button.on { color: var(--ink); border-bottom-color: var(--cyan); }
+.n { display: inline-block; min-width: 18px; padding: 1px 5px; border-radius: 9px; background: var(--violet); color: #1a0b2e; font-size: 11px; }
+main { padding: 16px; max-width: 980px; }
+h2 { font: 800 11px var(--mono); letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 22px 0 8px; }
+h2:first-child { margin-top: 0; }
+.card { background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; }
+.card.approval { border-left: 3px solid var(--violet); }
+.card .title { font-weight: 700; margin-bottom: 4px; }
+.card .lines { color: #c6d8ee; font-size: 13px; white-space: pre-wrap; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.empty { color: var(--muted); font-style: italic; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.state { font: 700 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; background: #16304d; white-space: nowrap; }
+.state.completed, .state.live { background: #0f3b2c; color: var(--ok); }
+.state.failed, .state.blocked, .state.cancelled { background: #3a1020; color: var(--bad); }
+.state.paused, .state.awaiting_permission, .state.waiting_on_assistant { background: #3a2a08; color: var(--warn); }
+.state.running, .state.executing, .state.verifying, .state.queued { background: #0b2f45; color: var(--cyan); }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-size: 12px; }
+.log { font: 12px/1.5 var(--mono); background: #07101c; border: 1px solid var(--line); padding: 8px; max-height: 320px; overflow: auto; white-space: pre-wrap; }
+.grid { display: grid; grid-template-columns: 160px 1fr; gap: 8px 12px; align-items: center; }
+.grid label { color: var(--muted); font-size: 13px; }
+.events { font: 12px/1.5 var(--mono); max-height: 260px; overflow: auto; }
+.chat .you { color: var(--muted); } .chat .you::before { content: "you › "; }
+.chat .nova::before { content: "nova › "; color: var(--cyan); }

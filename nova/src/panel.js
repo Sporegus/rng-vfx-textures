@@ -1,0 +1,213 @@
+// Nova's Tasks panel: approvals waiting on you, what she's doing, long jobs and
+// their job cards, memory, settings and keys, what works, and diagnostics.
+// It only reads state and sends your answers; it can't run tools itself.
+(() => {
+  const P = window.novaPanel;
+  const view = document.getElementById('view');
+  let tab = 'tasks', openJob = null, timer = null;
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const h = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
+  const when = (t) => t ? new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  const st = (s) => `<span class="state ${esc(s)}">${esc(String(s).replace(/_/g, ' '))}</span>`;
+
+  document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+  document.getElementById('ask').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inp = document.getElementById('ask-in');
+    const text = inp.value.trim(); if (!text) return;
+    inp.value = '';
+    await P.query('say', { text });
+    setTimeout(render, 300);
+  });
+  document.getElementById('stop').addEventListener('click', () => P.query('stop').then(render));
+  P.on((m) => {
+    if (m.type === 'tab') { if (m.jobId) openJob = m.jobId; show(m.tab === 'jobs' || m.jobId ? 'jobs' : m.tab); return; }
+    if (['approve', 'choose', 'closed', 'task', 'job', 'reply'].includes(m.type)) { clearTimeout(timer); timer = setTimeout(render, 150); }
+  });
+
+  function show(t) {
+    tab = t;
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    render();
+  }
+  async function render() {
+    const fn = { tasks, jobs, memory, settings, capability, diagnostics }[tab] || tasks;
+    try { await fn(); } catch (e) { view.innerHTML = `<div class="card">Couldn't load this: ${esc(e.message)}</div>`; }
+    const o = await P.query('overview');
+    const n = o.waits.length;
+    const badge = document.getElementById('inbox-n');
+    badge.textContent = n; badge.classList.toggle('hidden', !n);
+  }
+
+  // ------------------------------------------------------------------ tasks + approval inbox
+  async function tasks() {
+    const o = await P.query('overview');
+    view.innerHTML = '';
+    view.append(h('<h2>Waiting on you</h2>'));
+    if (!o.waits.length) view.append(h('<div class="empty">No approvals or questions waiting.</div>'));
+    for (const w of o.waits) {
+      const c = h(`<div class="card approval"><div class="title">${esc(w.title || w.question)}</div><div class="lines">${esc((w.lines || []).join('\n'))}${w.heard ? '\nI heard: “' + esc(w.heard) + '”' : ''}</div><div class="row"></div></div>`).firstChild;
+      const row = c.querySelector('.row');
+      if (w.kind === 'approve') {
+        row.append(btn('Allow once', 'primary', () => P.answer(w.id, { allow: true })), btn('Cancel', 'ghost', () => P.answer(w.id, { allow: false })));
+      } else {
+        for (const opt of w.options || []) row.append(btn(opt.label, opt.primary ? 'primary' : '', () => P.answer(w.id, opt.value)));
+        row.append(btn('Never mind', 'ghost', () => P.answer(w.id, null)));
+      }
+      view.append(c);
+    }
+    view.append(h('<h2>Recent requests</h2>'));
+    view.append(table(['When', 'Request', 'State', 'Kind'], o.tasks.slice(0, 25).map(t => [when(t.created), esc(t.text), st(t.state), esc(t.kind || '')])));
+    view.append(h('<h2>Active permissions</h2>'));
+    if (!o.grants.length) view.append(h('<div class="empty">None. Nova asks before anything consequential.</div>'));
+    else view.append(table(['For', 'Allows', 'Until', ''], o.grants.map(g => [esc(g.title || `${g.scope.kind} ${g.scope.id.slice(-6)}`), esc(g.categories.join(', ')), g.expires ? when(g.expires) : '—', `<button data-revoke="${esc(g.id)}" class="danger">Revoke</button>`])));
+    view.querySelectorAll('[data-revoke]').forEach(b => b.addEventListener('click', () => P.query('grants:revoke', { id: b.dataset.revoke }).then(render)));
+    view.append(h('<h2>Conversation</h2>'));
+    const chat = h('<div class="card chat"></div>').firstChild;
+    for (const m of o.history.slice(-20)) chat.append(h(`<div class="${m.who}">${esc(m.text)}</div>`).firstChild);
+    if (!o.history.length) chat.append(h('<div class="empty">Nothing yet. Type above, or press Ctrl+Alt+Space.</div>').firstChild);
+    view.append(chat);
+  }
+
+  // ------------------------------------------------------------------ jobs
+  async function jobs() {
+    if (openJob) return jobDetail(openJob);
+    const list = (await P.query('overview')).jobs;
+    view.innerHTML = '';
+    const top = h(`<div class="row" style="margin-top:0"></div>`).firstChild;
+    top.append(btn('Run the coordination demo (fixtures)', '', async () => { const r = await P.query('job:demo'); openJob = r.id; render(); }),
+      btn('Pause all jobs', '', () => P.query('job:pause').then(render)), btn('Finish current step, then pause', 'ghost', () => P.query('job:finishStep').then(render)));
+    view.append(top);
+    view.append(h('<h2>Jobs</h2>'));
+    if (!list.length) view.append(h('<div class="empty">No jobs yet. Ask Nova to "coordinate ChatGPT and Claude on …", or run the demo.</div>'));
+    else view.append(table(['Goal', 'State', 'Cycles', 'Next', 'Updated'], list.map(j => [`<a href="#" data-job="${esc(j.id)}">${esc(j.goal)}</a>`, st(j.state), j.usage.cycles + ' / ' + j.budgets.maxCycles, esc(j.stopReason || j.nextAction || ''), when(j.updated)])));
+    view.querySelectorAll('[data-job]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); openJob = a.dataset.job; render(); }));
+    view.append(h('<h2>Morning digest</h2>'));
+    view.append(h(`<div class="log">${esc(await P.query('digest'))}</div>`));
+  }
+  async function jobDetail(jid) {
+    const { job: j, events, card, problems } = await P.query('job', { id: jid });
+    view.innerHTML = '';
+    if (!j) { openJob = null; return jobs(); }
+    const back = btn('← All jobs', 'ghost', () => { openJob = null; render(); });
+    view.append(back);
+    view.append(h(`<h2>Job card</h2>`));
+    const c = h(`<div class="card"><div class="title">${esc(j.goal)} ${st(j.state)}</div><div class="lines">${esc(card.lines.join('\n'))}</div><div class="row"></div></div>`).firstChild;
+    const row = c.querySelector('.row');
+    if (j.state === 'draft') {
+      if (problems.length) c.append(h(`<div class="muted" style="margin-top:8px">Before it can start: ${esc(problems.join('; '))}.</div>`));
+      row.append(btn('Choose project folder…', '', async () => { const f = await P.query('job:pickFolder'); if (f) { await P.query('job:update', { id: j.id, patch: { contract: { workspace: f } } }); render(); } }));
+      const crit = h(`<input placeholder="Done when… (e.g. npm test passes)" style="flex:1;min-width:240px">`).firstChild;
+      row.append(crit, btn('Add criterion', '', async () => { if (crit.value.trim()) { await P.query('job:update', { id: j.id, patch: { contract: { criteria: [...j.contract.criteria, crit.value.trim()] } } }); render(); } }));
+      const tc = h(`<input placeholder='Test command, e.g. npm test' style="flex:1;min-width:200px" value="${esc((j.contract.testCommand || []).join(' '))}">`).firstChild;
+      row.append(tc, btn('Set test command', '', async () => { const parts = tc.value.trim().split(/\s+/).filter(Boolean); await P.query('job:update', { id: j.id, patch: { contract: { testCommand: parts.length ? parts : null } } }); render(); }));
+      const parts = await P.query('participants');
+      const sel = (role) => `<select data-role="${role}">${parts.filter(p => !p.id.startsWith('demo-') || j.goal.startsWith('DEMO')).map(p => `<option value="${esc(p.id)}" ${j.contract.participants.some(x => x.role === role && x.id === p.id) ? 'selected' : ''}>${esc(p.id)}${p.live ? '' : ' (fixture)'}${p.ok ? '' : ' — ' + esc(p.reason)}</option>`).join('')}</select>`;
+      const roles = h(`<div class="grid" style="margin-top:10px"><label>Planner</label>${sel('planner')}<label>Implementer</label>${sel('implementer')}<label>Reviewer</label>${sel('reviewer')}<label>Resume after restart</label><select data-rr><option value="0" ${j.contract.restartResume ? '' : 'selected'}>No, wait for me</option><option value="1" ${j.contract.restartResume ? 'selected' : ''}>Yes, until the deadline</option></select></div>`).firstChild;
+      roles.querySelectorAll('select').forEach(s => s.addEventListener('change', async () => {
+        const ps = ['planner', 'implementer', 'reviewer'].map(r => ({ id: roles.querySelector(`[data-role="${r}"]`).value, role: r }));
+        await P.query('job:update', { id: j.id, patch: { contract: { participants: ps, restartResume: roles.querySelector('[data-rr]').value === '1' } } }); render();
+      }));
+      c.append(roles);
+      const go = h('<div class="row"></div>').firstChild;
+      go.append(btn('Approve once and start', 'primary', async () => { try { await P.query('job:approve', { id: j.id }); } catch (e) { alert(e.message); } setTimeout(render, 300); }), btn('Delete draft', 'ghost', () => P.query('job:delete', { id: j.id }).then(() => { openJob = null; render(); })));
+      c.append(go);
+    } else {
+      if (['running', 'queued', 'waiting_on_assistant', 'verifying'].includes(j.state)) row.append(btn('Pause', '', () => P.query('job:pause').then(render)), btn('Finish this step, then pause', 'ghost', () => P.query('job:finishStep').then(render)));
+      if (['paused', 'blocked'].includes(j.state)) row.append(btn('Resume', 'primary', async () => { const r = await P.query('job:resume', { id: j.id }); if (!r.ok) alert(r.reason); render(); }));
+      if (!['completed', 'cancelled', 'failed'].includes(j.state)) row.append(btn('Cancel job', 'danger', () => P.query('job:cancel', { id: j.id }).then(render)));
+      row.append(btn('Refresh', 'ghost', render));
+    }
+    view.append(c);
+    view.append(h(`<h2>Status</h2>`));
+    view.append(h(`<div class="card"><div class="grid"><label>Next</label><div>${esc(j.nextAction || '')}</div><label>Stopped because</label><div>${esc(j.stopReason || '—')}</div><label>Cycles</label><div>${j.usage.cycles} of ${j.budgets.maxCycles} (no-progress streak ${j.usage.noProgress})</div><label>Plan version</label><div>${j.plan.version}</div><label>Spend</label><div>$${(j.usage.spendUsd || 0).toFixed(2)}${j.budgets.maxSpendUsd ? ' of $' + j.budgets.maxSpendUsd : ''}; ${j.usage.tokens || 0} tokens</div><label>Last check</label><div>${j.checkpoint && j.checkpoint.finalCheck ? (j.checkpoint.finalCheck.passed ? 'passed' : 'failed') + ' on revision ' + esc(j.checkpoint.finalCheck.revision) : '—'}</div></div></div>`));
+    view.append(h(`<h2>Events</h2>`));
+    view.append(h(`<div class="card events">${events.slice(-80).map(e => `${new Date(e.t).toLocaleTimeString()}  ${esc(e.kind)}  ${esc(JSON.stringify(e.data || {})).slice(0, 220)}`).join('<br>')}</div>`));
+  }
+
+  // ------------------------------------------------------------------ memory
+  async function memory() {
+    const m = await P.query('memory');
+    view.innerHTML = '';
+    view.append(h('<h2>What Nova remembers</h2><div class="muted">Only things you confirmed (places, targets, settings). Delete anything.</div>'));
+    if (!m.items.length) view.append(h('<div class="empty" style="margin-top:8px">Nothing saved.</div>'));
+    else view.append(table(['Kind', 'Item', ''], m.items.map(x => [esc(x.kind), `<span class="mono">${esc(JSON.stringify(x.value)).slice(0, 160)}</span>`, `<button class="danger" data-forget="${esc(x.key)}">Forget</button>`])));
+    view.querySelectorAll('[data-forget]').forEach(b => b.addEventListener('click', () => P.query('memory:forget', { key: b.dataset.forget }).then(render)));
+    view.append(h('<h2>This conversation</h2>'));
+    view.append(h(`<div class="card chat">${m.conversation.map(x => `<div class="${x.role === 'user' ? 'you' : 'nova'}">${esc(x.content)}</div>`).join('') || '<div class="empty">Empty.</div>'}</div>`));
+    view.append(btn('Forget this conversation', 'danger', () => P.query('memory:forgetConversation').then(render)));
+  }
+
+  // ------------------------------------------------------------------ settings, keys, Discord, Roblox
+  async function settings() {
+    const [s, keys, targets] = await Promise.all([P.query('settings'), P.query('keys'), P.query('discord:targets')]);
+    view.innerHTML = '';
+    view.append(h('<h2>Brains (optional)</h2><div class="muted">Keys are encrypted on this PC, never shown again, and never sent to Nova\'s page or to a model.</div>'));
+    const kc = h('<div class="card grid"></div>').firstChild;
+    for (const [name, label] of [['anthropic', 'Anthropic (Claude) API key'], ['openai', 'OpenAI API key'], ['discord-bot', 'Nova\'s Discord bot token']]) {
+      kc.append(h(`<label>${label}</label>`).firstChild);
+      const cell = h(`<div class="row" style="margin:0">${keys[name] ? '<span class="state live">saved</span>' : '<span class="muted">not set</span>'}</div>`).firstChild;
+      const inp = h(`<input type="password" placeholder="paste to ${keys[name] ? 'replace' : 'save'}" style="flex:1;min-width:180px">`).firstChild;
+      cell.append(inp, btn('Save', '', async () => { if (inp.value.trim()) { await P.query('keys:save', { name, value: inp.value.trim() }); inp.value = ''; render(); } }));
+      if (keys[name]) cell.append(btn('Remove', 'ghost', () => P.query('keys:forget', { name }).then(render)));
+      kc.append(cell);
+    }
+    kc.append(h('<label>Which brain first</label>').firstChild);
+    const order = h(`<select><option value="anthropic,openai,local">Claude, then ChatGPT, then on-device</option><option value="openai,anthropic,local">ChatGPT, then Claude, then on-device</option><option value="local,anthropic,openai">On-device first (private, free)</option></select>`).firstChild;
+    order.value = (s.brainOrder || ['anthropic', 'openai', 'local']).join(',');
+    order.addEventListener('change', () => P.query('settings:set', { brainOrder: order.value.split(',') }));
+    kc.append(order);
+    view.append(kc);
+
+    view.append(h('<h2>Privacy</h2>'));
+    const pv = h(`<div class="card grid"><label>Screen reading</label><div class="row" style="margin:0">${s.screenConsent ? '<span class="state live">allowed</span>' : '<span class="muted">asks each time</span>'}</div><label>Quiet hours</label><div class="row" style="margin:0"><input type="time" data-q="from" value="${esc((s.quietHours || {}).from || '')}"> to <input type="time" data-q="to" value="${esc((s.quietHours || {}).to || '')}"><span class="muted">no pop-ups; approvals wait in this panel</span></div></div>`).firstChild;
+    if (s.screenConsent) pv.children[1].append(btn('Revoke', 'danger', () => P.query('settings:set', { screenConsent: false }).then(render)));
+    pv.querySelectorAll('[data-q]').forEach(i => i.addEventListener('change', () => P.query('settings:set', { quietHours: { from: pv.querySelector('[data-q=from]').value, to: pv.querySelector('[data-q=to]').value } })));
+    view.append(pv);
+
+    view.append(h('<h2>Discord places</h2><div class="muted">Nova only uses places you add here. IDs: Discord Settings > Advanced > Developer Mode, then right-click > Copy ID.</div>'));
+    if (targets.length) view.append(table(['Name', 'Server / channel', 'Type', ''], targets.map(t => [esc(t.alias), `<span class="mono">${esc(t.guildId)} / ${esc(t.channelId)}${t.textChannelId ? ' (text ' + esc(t.textChannelId) + ')' : ''}</span>`, esc(t.kind), `<button class="danger" data-dt="${esc(t.key)}">Remove</button>`])));
+    view.querySelectorAll('[data-dt]').forEach(b => b.addEventListener('click', () => P.query('discord:remove', { key: b.dataset.dt }).then(render)));
+    const df = h(`<div class="card row"><input data-f="alias" placeholder="Name (e.g. Afterparty)"><input data-f="guildId" placeholder="Server ID"><input data-f="channelId" placeholder="Channel ID"><input data-f="textChannelId" placeholder="Text channel ID (for bot posts)"><select data-f="kind"><option value="voice">Voice</option><option value="text">Text</option></select></div>`).firstChild;
+    df.append(btn('Add', 'primary', async () => { const v = Object.fromEntries([...df.querySelectorAll('[data-f]')].map(i => [i.dataset.f, i.value.trim()])); try { await P.query('discord:add', v); render(); } catch (e) { alert(e.message); } }));
+    view.append(df);
+
+    view.append(h('<h2>Roblox experiences</h2><div class="muted">Nova opens these through roblox.com. She won\'t play or press keys in Roblox.</div>'));
+    const rf = h(`<div class="card row"><input data-r="alias" placeholder="Name you'll say"><input data-r="placeId" placeholder="Place ID (number in the roblox.com/games/ link)"></div>`).firstChild;
+    rf.append(btn('Save', 'primary', async () => { try { await P.query('roblox:add', { alias: rf.querySelector('[data-r=alias]').value.trim(), placeId: rf.querySelector('[data-r=placeId]').value.trim() }); render(); } catch (e) { alert(e.message); } }));
+    view.append(rf);
+  }
+
+  // ------------------------------------------------------------------ capability + diagnostics
+  async function capability() {
+    const c = await P.query('capability');
+    view.innerHTML = '<h2>What works on this PC right now</h2>';
+    view.append(table(['Ability', 'State', 'Notes'], c.map(x => [esc(x.what), st(x.state.replace(/ /g, '_')), esc(x.why)])));
+  }
+  async function diagnostics() {
+    const d = await P.query('diagnostics');
+    view.innerHTML = '';
+    const top = h('<div class="row" style="margin-top:0"></div>').firstChild;
+    top.append(btn('Export diagnostics…', '', async () => { const f = await P.query('diagnostics:export'); if (f) alert('Saved to ' + f); }), btn('Refresh', 'ghost', render));
+    view.append(top);
+    view.append(h(`<h2>System</h2><div class="card grid"><label>Platform</label><div>${esc(d.platform)}</div><label>Versions</label><div class="mono">Nova ${esc(d.versions.nova)} · Electron ${esc(d.versions.electron)} · Node ${esc(d.versions.node)}</div><label>Windows helper</label><div>${d.winHelper ? 'available' : 'not available'}</div><label>Database schema</label><div>v${esc(d.db)}</div></div>`));
+    const by = {};
+    for (const t of d.timings) (by[t.what] = by[t.what] || []).push(t.ms);
+    for (const e of d.log.filter(e => e.type === 'timing' || e.type === 'stop.latency')) { const k = e.type === 'stop.latency' ? 'stop' : e.what; if (k && e.ms != null) (by[k] = by[k] || []).push(e.ms); }
+    const stat = (a) => { const s = a.slice().sort((x, y) => x - y); return [s.length, s[Math.floor(s.length / 2)], s[Math.min(s.length - 1, Math.floor(s.length * 0.95))]]; };
+    view.append(h('<h2>Measured responsiveness (this session)</h2>'));
+    const rows = Object.entries(by).map(([k, a]) => { const [n, med, p95] = stat(a); return [esc(k), n, med + ' ms', p95 + ' ms']; });
+    view.append(rows.length ? table(['What', 'Samples', 'Median', 'p95'], rows) : h('<div class="empty">No measurements yet. Ask Nova something, press Ctrl+Alt+V, or press Stop.</div>'));
+    view.append(h('<h2>Recent events (secrets removed)</h2>'));
+    view.append(h(`<div class="log">${d.log.slice(-120).reverse().map(e => esc(`${new Date(e.t).toLocaleTimeString()} ${e.type} ${JSON.stringify(Object.fromEntries(Object.entries(e).filter(([k]) => !['t', 'type'].includes(k))))}`)).join('\n')}</div>`));
+  }
+
+  function btn(label, cls, fn) { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); return b; }
+  function table(head, rows) {
+    const t = document.createElement('table');
+    t.innerHTML = `<tr>${head.map(x => `<th>${x}</th>`).join('')}</tr>` + rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+    const wrap = document.createElement('div'); wrap.className = 'card'; wrap.style.overflowX = 'auto'; wrap.append(t); return wrap;
+  }
+  setInterval(() => { if (['tasks', 'jobs'].includes(tab) && !document.activeElement.matches('input,select')) render(); }, 3000);
+  show('tasks');
+})();

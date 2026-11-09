@@ -64,7 +64,8 @@ function createPermissions({ store, log, now = () => Date.now() } = {}) {
   }
   // everything bound to a task or job ends with it
   function endScope(kind, sid, why = 'ended') { for (const g of grants.values()) if (g.scope.kind === kind && g.scope.id === sid) revoke(g, why); }
-  function revokeAll(why = 'stop') { for (const g of grants.values()) if (!g.persistent) revoke(g, why); }
+  // Stop ends every task's approval. Job approvals survive (the job is paused instead) so it can be resumed.
+  function revokeAll(why = 'stop', { keepKinds = [] } = {}) { for (const g of grants.values()) if (!g.persistent && !keepKinds.includes(g.scope.kind)) revoke(g, why); }
 
   // is this exact action allowed? action: { category, scope:{kind,id}, target:{kind,value}, effects:{...} }
   // Returns { ok, reason, needs, grant }. Silence, time passing or a denied request are never approval.
