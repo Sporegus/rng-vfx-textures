@@ -14,7 +14,7 @@ Seen working in the real running app (Linux virtual display):
 - **Honest answers when nothing is set up.** With no brain configured she says so and offers a web search; she doesn't pretend.
 - **Playing her test game** in a window she opens: one approval, then 5/5 coins from what she sees on screen, verified by the game's own counter.
 - **The coordination demo** in the Jobs tab: plan → build → review **rejects** → fix → **Nova runs the tests herself** → completed.
-- **Tasks panel**: approval inbox, recent requests, active permissions (revocable), conversation, jobs, memory (deletable), settings, What works, Diagnostics (measured timings, redacted log, export).
+- **Tasks panel**: approval inbox, recent requests, active permissions (revocable), conversation, jobs (presets, scheduled resumes), memory (deletable), settings, What works, Diagnostics (measured timings, resource use, redacted log, export).
 - **Research with sources** (Wikipedia/DuckDuckGo, no account), when the network allows.
 
 Built and tested with fakes, but **not run live** (needs your PC): opening and verifying apps, moving windows between monitors, reading the screen (UI text/OCR), typing and pressing buttons, microphone input, Claude/ChatGPT answers (need keys), Discord bot posts (need your bot).
@@ -47,7 +47,7 @@ npm start
 
 - **Mocked (tests only):** Discord (mock adapter), assistants in the coordinator tests (scripted), the PC in the pipeline/desktop/screen tests.
 - **Not run here:** everything Windows (helper, UIA, OCR, input), the microphone, live model APIs, Discord bot, Claude Code against a real project, multi-monitor/DPI. Exact reasons are in `docs/TEST_REPORT.md`.
-- **Not built:** scheduling (only the table exists), resource monitoring, a "record routine" button (the engine is tested), Discord voice calls, TTS (by request).
+- **Not built:** a "record routine" button (the engine is tested), Discord voice calls, TTS (by request).
 - Full list: `docs/CHECKLIST.md`.
 
 ## 6. Setup you might want (all optional, all in Tasks panel > Settings)
@@ -95,7 +95,7 @@ Known defects:
 
 ## 10. Next useful improvement
 
-Run the Windows check and the acceptance list on your PC. Those are the parts I couldn't run, and they're what makes her "fully functional" on your desktop. After that: pass utterance IDs from the voice service, add a preset picker and a routine "record" button in the panel, and build scheduling.
+Run the Windows check and the acceptance list on your PC. Those are the parts I couldn't run, and they're what makes her "fully functional" on your desktop. After that: pass utterance IDs from the voice service, and add a routine "record" button to the panel.
 
 ## 11. Assistant routes
 

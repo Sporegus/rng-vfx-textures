@@ -24,6 +24,7 @@ Some things Nova never does: install software, buy things, or change security or
 3. **Approve once.** Nova then runs plan → implement → **her own check** (files and your test command, on the current revision) → review → fix, until it's verified done or a limit stops it: 8 hours, 20 cycles, 2 retries, 3 cycles with no progress (then one new approach, then it stops), and a spend cap if you set one.
 4. Controls: **Pause all**, **Finish the current step, then pause**, **Resume**, **Cancel**. You can also say "pause everything", "finish the current step" or "resume the last job".
 5. Morning: Jobs tab > Morning digest, or ask "what finished while I was away?".
+6. Presets: Jobs tab > "New job from a preset…". Scheduling: on a paused job, set **Resume at** a time, once or daily. It still needs the job's approval to be valid when it fires; if it isn't, the job stays paused and says why.
 
 What a job will never do: share secrets, buy anything, deploy or publish, post publicly, message people, touch files outside the project folder, or change its own goal. A handoff that tries any of these is stopped before it is sent, and the job is marked **blocked** with the reason.
 

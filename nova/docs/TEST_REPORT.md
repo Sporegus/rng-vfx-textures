@@ -2,7 +2,7 @@
 
 Run on 2026-11-09 in a Linux cloud container (no Windows, no microphone, no GPU, no API keys).
 
-**Automated:** `npm run test:core` → **79 passed, 0 failed** (8 files). The existing suites (`npm test`: brain + voice) still pass; their one `✗` line ("passport photo" → wallpaper) predates this work and the suite allows it.
+**Automated:** `npm run test:core` → **82 passed, 0 failed** (9 files). The existing suites (`npm test`: brain + voice) still pass; their one `✗` line ("passport photo" → wallpaper) predates this work and the suite allows it.
 **Real app:** Nova (Electron 45) was launched under a virtual display and driven with Playwright. The screenshots in `docs/screenshots/` come from those runs.
 
 What the words mean:
@@ -53,7 +53,7 @@ What the words mean:
 | 37 | Focus loss, cancel, stalled perception, menus release keys | PASS (browser) for focus loss, cancel and takeover; **PARTIAL** for the rest | The stalled-perception stop ("my moves stopped changing anything") is implemented but not exercised. Unexpected menus are handled only as a focus or pause state. |
 | 38 | Recorded routine: scope, stop condition, credentials | PASS (fixture + browser) | "recording keeps only the game's keys" (typed text and passwords are dropped); the routine replays only in its own game until `coins ≥ 1`. **No recording button in the app yet.** |
 | 39 | Prohibited automation blocked, coaching still offered | PASS (fixture) | policy test; Roblox test (link only, "won't play", exploit refused) |
-| 40 | Scheduled/recovered jobs don't duplicate; dashboard truthful | **PARTIAL** | Recovery: PASS. **Scheduling is not built** (a table exists, no scheduler). The Tasks panel shows the real stored state (live). |
+| 40 | Scheduled/recovered jobs don't duplicate; dashboard truthful | PASS (fixture) + PASS (live app) | `schedule.test.js`: one run per due time across ticks and a restart; no permission without a valid job approval; missed times skipped. Recovery test in `jobs.test.js`. The Tasks panel shows the real stored state. |
 
 ## Not run here, and how to run them on your PC
 

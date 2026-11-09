@@ -55,8 +55,9 @@
 ## J. Dashboard and everyday
 - ✅ Tasks panel: approval inbox, requests, active permissions (revocable), conversation, jobs, memory (delete), settings (keys, brain order, screen consent, quiet hours, Discord, Roblox), What works, Diagnostics
 - ✅ Quiet hours: she sits still and doesn't pop up on her own
-- 🟡 Presets: `docs/jobs/presets.json` to copy from; no preset picker in the panel
-- ❌ Scheduling (table only, no scheduler), resource monitoring
+- ✅ Presets: "New job from a preset…" in the Jobs tab (`core/presets.json`, copy in `docs/jobs/presets.json`)
+- ✅ Scheduling: "Resume at HH:MM, once or daily" on paused/blocked jobs. Each due time fires at most once, even after a restart. Missed times are skipped. A schedule never grants permission.
+- ✅ Resource monitoring: Nova's CPU and memory per process in Diagnostics
 
 ## Known defects
 - Under the Linux test harness the app doesn't exit on quit. The pre-brain version (6112ee0) does the same there, so it predates tonight. Not checked on Windows.

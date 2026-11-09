@@ -79,7 +79,19 @@
     const top = h(`<div class="row" style="margin-top:0"></div>`).firstChild;
     top.append(btn('Run the coordination demo (fixtures)', '', async () => { const r = await P.query('job:demo'); openJob = r.id; render(); }),
       btn('Pause all jobs', '', () => P.query('job:pause').then(render)), btn('Finish current step, then pause', 'ghost', () => P.query('job:finishStep').then(render)));
+    const presets = await P.query('presets');
+    if (presets.length) {
+      const sel = h(`<select><option value="">New job from a preset…</option>${presets.map(p => `<option>${esc(p.name)}</option>`).join('')}</select>`).firstChild;
+      sel.addEventListener('change', async () => { if (!sel.value) return; const r = await P.query('job:fromPreset', { name: sel.value }); if (r) { openJob = r.id; render(); } });
+      top.append(sel);
+    }
     view.append(top);
+    const sch = await P.query('schedules');
+    if (sch.length) {
+      view.append(h('<h2>Scheduled</h2>'));
+      view.append(table(['Job', 'At', 'Repeat', 'Next', 'Last run', ''], sch.map(x => [esc(x.goal || x.jobId), esc(x.at), esc(x.repeat), x.enabled && x.due ? when(x.due) : '—', x.lastRun ? when(x.lastRun) : '—', `<button class="danger" data-unsched="${esc(x.id)}">Remove</button>`])));
+      view.querySelectorAll('[data-unsched]').forEach(b => b.addEventListener('click', () => P.query('schedule:remove', { id: b.dataset.unsched }).then(render)));
+    }
     view.append(h('<h2>Jobs</h2>'));
     if (!list.length) view.append(h('<div class="empty">No jobs yet. Ask Nova to "coordinate ChatGPT and Claude on …", or run the demo.</div>'));
     else view.append(table(['Goal', 'State', 'Cycles', 'Next', 'Updated'], list.map(j => [`<a href="#" data-job="${esc(j.id)}">${esc(j.goal)}</a>`, st(j.state), j.usage.cycles + ' / ' + j.budgets.maxCycles, esc(j.stopReason || j.nextAction || ''), when(j.updated)])));
@@ -118,6 +130,10 @@
       if (['running', 'queued', 'waiting_on_assistant', 'verifying'].includes(j.state)) row.append(btn('Pause', '', () => P.query('job:pause').then(render)), btn('Finish this step, then pause', 'ghost', () => P.query('job:finishStep').then(render)));
       if (['paused', 'blocked'].includes(j.state)) row.append(btn('Resume', 'primary', async () => { const r = await P.query('job:resume', { id: j.id }); if (!r.ok) alert(r.reason); render(); }));
       if (!['completed', 'cancelled', 'failed'].includes(j.state)) row.append(btn('Cancel job', 'danger', () => P.query('job:cancel', { id: j.id }).then(render)));
+      if (['paused', 'blocked'].includes(j.state)) {
+        const t = h('<input type="time" value="02:00">').firstChild, rpt = h('<select><option value="once">once</option><option value="daily">daily</option></select>').firstChild;
+        row.append(h('<span class="muted">Resume at</span>').firstChild, t, rpt, btn('Schedule', '', async () => { try { await P.query('schedule:add', { jobId: j.id, at: t.value, repeat: rpt.value }); alert('Scheduled. It still needs a valid job approval when it fires.'); } catch (e) { alert(e.message); } }));
+      }
       row.append(btn('Refresh', 'ghost', render));
     }
     view.append(c);
@@ -192,7 +208,7 @@
     const top = h('<div class="row" style="margin-top:0"></div>').firstChild;
     top.append(btn('Export diagnostics…', '', async () => { const f = await P.query('diagnostics:export'); if (f) alert('Saved to ' + f); }), btn('Refresh', 'ghost', render));
     view.append(top);
-    view.append(h(`<h2>System</h2><div class="card grid"><label>Platform</label><div>${esc(d.platform)}</div><label>Versions</label><div class="mono">Nova ${esc(d.versions.nova)} · Electron ${esc(d.versions.electron)} · Node ${esc(d.versions.node)}</div><label>Windows helper</label><div>${d.winHelper ? 'available' : 'not available'}</div><label>Database schema</label><div>v${esc(d.db)}</div></div>`));
+    view.append(h(`<h2>System</h2><div class="card grid"><label>Platform</label><div>${esc(d.platform)}</div><label>Versions</label><div class="mono">Nova ${esc(d.versions.nova)} · Electron ${esc(d.versions.electron)} · Node ${esc(d.versions.node)}</div><label>Windows helper</label><div>${d.winHelper ? 'available' : 'not available'}</div><label>Database schema</label><div>v${esc(d.db)}</div><label>Nova's resource use</label><div>${d.resources.cpuPercent}% CPU · ${d.resources.memoryMB} MB across ${d.resources.processes} processes <span class="muted">(${d.resources.byType.map(p => esc(p.type + (p.name ? ' ' + p.name : '')) + ' ' + p.mb + ' MB').join(', ')})</span></div></div>`));
     const by = {};
     for (const t of d.timings) (by[t.what] = by[t.what] || []).push(t.ms);
     for (const e of d.log.filter(e => e.type === 'timing' || e.type === 'stop.latency')) { const k = e.type === 'stop.latency' ? 'stop' : e.what; if (k && e.ms != null) (by[k] = by[k] || []).push(e.ms); }

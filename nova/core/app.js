@@ -18,6 +18,7 @@ const { createScreen } = require('./screen');
 const { createDiscord, botAdapter } = require('./discord');
 const { createResearch } = require('./research');
 const { createJobs } = require('./jobs');
+const { createScheduler } = require('./schedule');
 const { createGames, electronAdapter } = require('./games');
 const participantsMod = require('./participants');
 const llm = require('./llm');
@@ -128,6 +129,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
   participants['claude-cli'].probe().catch(() => {});
   const jobs = createJobs({ store, permissions, log, participants });
   jobs.on((j) => toPanel('job', { job: j }));
+  const scheduler = createScheduler({ store, jobs, log });
+  scheduler.start();
 
   let fixtureWin = null;
   const games = createGames({
@@ -226,12 +229,28 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
       case 'job:cancel': return jobs.cancel(arg.id);
       case 'job:delete': store.deleteJob(arg.id); return { ok: true };
       case 'job:demo': return startDemoJob();
+      case 'presets': return require('./presets.json').jobs.filter(p => p.contract);
+      case 'job:fromPreset': {
+        const p = require('./presets.json').jobs.find(x => x.name === arg.name && x.contract);
+        if (!p) return null;
+        const j = jobs.draft(p.goal, { ...p.contract, budgets: p.budgets });
+        return { id: j.id };
+      }
+      case 'schedules': return scheduler.list().map(x => ({ ...x, goal: (jobs.job(x.jobId) || {}).goal }));
+      case 'schedule:add': return scheduler.add(arg);
+      case 'schedule:remove': scheduler.remove(arg.id); return { ok: true };
       case 'digest': return jobs.digest();
       case 'participants': return Object.entries(participants).map(([k, p]) => ({ id: k, kind: p.kind, live: p.live, ...p.available() }));
       case 'diagnostics': return {
         timings: pipeline.timings(), log: log.recent(200), capability: capability(), providers: chooser.status(),
         platform: `${process.platform} ${os.release()}`, versions: { electron: process.versions.electron, node: process.versions.node, nova: app.getVersion() },
         winHelper: win.available(), db: store.version && store.version(),
+        resources: (() => {
+          const m = app.getAppMetrics();
+          const cpu = m.reduce((a, p) => a + (p.cpu ? p.cpu.percentCPUUsage : 0), 0);
+          const mem = m.reduce((a, p) => a + (p.memory ? p.memory.workingSetSize : 0), 0);   // KB
+          return { processes: m.length, cpuPercent: Math.round(cpu * 10) / 10, memoryMB: Math.round(mem / 1024), byType: m.map(p => ({ type: p.type, name: p.name || p.serviceName || '', cpu: p.cpu ? Math.round(p.cpu.percentCPUUsage * 10) / 10 : 0, mb: p.memory ? Math.round(p.memory.workingSetSize / 1024) : 0 })) };
+        })(),
       };
       case 'diagnostics:export': {
         const r = await dialog.showSaveDialog(panel, { defaultPath: path.join(app.getPath('documents'), `nova-diagnostics-${Date.now()}.json`) });
@@ -291,7 +310,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice }) {
   jobs.recover().then((r) => { if (r.length) log.event('jobs.recovered', { count: r.length, resumed: r.filter(x => x.resumed).length }); }).catch(() => {});
   log.event('core.started', { platform: process.platform, winHelper: win.available() });
 
-  return { pipeline, store, log, jobs, games, stop, openPanel, close() { try { win.stop(); } catch {} try { store.close(); } catch {} } };
+  return { pipeline, store, log, jobs, games, stop, openPanel, close() { try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
 }
 
 module.exports = { startCore, secrets };

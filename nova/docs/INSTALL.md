@@ -52,6 +52,6 @@ Keys are encrypted with Windows DPAPI in `%APPDATA%\Nova\keys`. They never appea
 ## Tests
 
 ```
-npm run test:core     # the brain: 79 tests (the game ones run only if Playwright is installed)
+npm run test:core     # the brain: 82 tests (the game ones run only if Playwright is installed)
 npm test              # everything, including the older brain and voice suites
 ```
