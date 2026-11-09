@@ -84,14 +84,15 @@ module.exports = function createActions(ctx) {
 
     // ---- apps, music and power
     'apps.open': ({ name }) => apps.open(name),
+    'apps.warm': () => apps.warm(),
     'apps.close': ({ name }) => apps.close(name),
     'media.key': ({ cmd }) => apps.media(cmd),
     'volume': (args) => apps.volume(args || {}),
     'music.play': ({ query, kind }) => apps.music({ query, kind }),
     'power': ({ kind, delay }) => apps.power({ kind, delay }),
-    'web.open': async ({ url }) => {
-      if (!/^https:\/\/[a-z0-9.-]+(\/.*)?$/i.test(String(url))) throw new Error("That doesn't look like a website.");
-      await shell.openExternal(url); return {};
+    'web.open': async ({ url, browser }) => {
+      if (!/^https:\/\/[a-z0-9.-]+(\/\S*)?$/i.test(String(url))) throw new Error("That doesn't look like a website.");
+      return apps.openUrl(url, browser);
     },
 
     // ---- weather (uses the city you told her; °F in the US)
@@ -103,11 +104,11 @@ module.exports = function createActions(ctx) {
     },
 
     // ---- tools
-    'web.search': async ({ q, site }) => {
+    'web.search': async ({ q, site, browser }) => {
       const url = site === 'youtube'
         ? 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q)
         : 'https://www.google.com/search?q=' + encodeURIComponent(q);
-      await shell.openExternal(url); return {};
+      return apps.openUrl(url, browser);
     },
     'notes.add': async ({ text }) => {
       const line = `[${new Date().toLocaleString()}] ${String(text).trim()}${os.EOL}`;

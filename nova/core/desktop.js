@@ -40,26 +40,22 @@ function registerDesktop({ tools, win, apps, log, refs }) {
 
   // ---- apps
   tools.register({
-    name: 'app.open', purpose: 'Open an installed app by name', category: 'launch', effect: 'local', timeoutMs: 15000, retrySafe: false,
+    name: 'app.open', purpose: 'Open an installed app by name', category: 'launch', effect: 'local', timeoutMs: 30000, retrySafe: false,   // (a cold Start-menu lookup can take a while on first use)
     args: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 80 } }, required: ['name'], additionalProperties: false },
     target: (a) => ({ kind: 'app', value: a.name }),
     describe: (a) => `Open ${a.name}`,
-    run: async ({ name }) => {
-      const before = win.available() ? await win.windows().catch(() => []) : [];
-      const r = await apps.open(name);
-      return { ...r, before: before.map(w => w.hwnd) };
-    },
+    run: async ({ name }) => apps.open(name),   // (launch first; the window check comes after)
     verify: async ({ name }, r, { signal }) => {
       if (r.notFound) return { ok: true, evidence: 'not installed' };
       if (!win.available()) return { ok: false, evidence: 'cannot check windows on this OS' };
-      // wait up to ~10 s for its window (new or already open, now in front)
-      for (let i = 0; i < 20; i++) {
+      // wait up to ~14 s for its window (new or already open, now in front); slow starters like Discord update first
+      for (const end = Date.now() + 14000; Date.now() < end;) {
         const ws = await win.windows().catch(() => []);
         const hit = ws.find(w => windowMatches(w, r.opened || name));
         if (hit) { refs && refs.saw(hit); return { ok: true, evidence: `window "${hit.title}" (${hit.process}) is open` }; }
         await sleep(500, signal);
       }
-      return { ok: false, evidence: 'no matching window appeared within 10 seconds' };
+      return { ok: false, evidence: 'no matching window appeared within 14 seconds' };
     },
   });
 

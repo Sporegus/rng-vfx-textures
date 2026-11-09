@@ -228,6 +228,15 @@
     instagram: 'https://www.instagram.com', facebook: 'https://www.facebook.com', tiktok: 'https://www.tiktok.com', 'google docs': 'https://docs.google.com',
     google: 'https://www.google.com', 'chat gpt': 'https://chatgpt.com', chatgpt: 'https://chatgpt.com', pinterest: 'https://www.pinterest.com',
     wikipedia: 'https://www.wikipedia.org', ebay: 'https://www.ebay.com', 'disney plus': 'https://www.disneyplus.com', hulu: 'https://www.hulu.com', crunchyroll: 'https://www.crunchyroll.com' };
+  // apps that also have a website, for "open spotify in chrome" (plain "open spotify" still launches the app)
+  const WEB_APPS = { spotify: 'https://open.spotify.com', discord: 'https://discord.com/app', steam: 'https://store.steampowered.com', roblox: 'https://www.roblox.com',
+    whatsapp: 'https://web.whatsapp.com', outlook: 'https://outlook.live.com', teams: 'https://teams.microsoft.com', 'microsoft teams': 'https://teams.microsoft.com',
+    soundcloud: 'https://soundcloud.com', 'youtube music': 'https://music.youtube.com', 'apple music': 'https://music.apple.com', 'google drive': 'https://drive.google.com',
+    drive: 'https://drive.google.com', 'google maps': 'https://maps.google.com', maps: 'https://maps.google.com', canva: 'https://www.canva.com', notion: 'https://www.notion.so',
+    slack: 'https://app.slack.com', zoom: 'https://app.zoom.us', word: 'https://www.office.com/launch/word', excel: 'https://www.office.com/launch/excel', 'chat gpt': 'https://chatgpt.com', claude: 'https://claude.ai' };
+  // "… on chrome", "… in edge", "… in the browser": which browser (null = your default)
+  const BROWSER_TAIL = /\s+(?:on|in|with|using|through|via)\s+(?:(?:the|my|a)\s+)?(google chrome|chrome|microsoft edge|edge|firefox|mozilla firefox|brave|opera(?: gx)?|(?:web )?browser|internet|web)$/;
+  const BROWSERS = { 'google chrome': 'chrome', chrome: 'chrome', 'microsoft edge': 'edge', edge: 'edge', firefox: 'firefox', 'mozilla firefox': 'firefox', brave: 'brave', opera: 'opera', 'opera gx': 'opera' };
   const siteOf = (s) => SITES[s] ? { name: s, url: SITES[s] } : /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) ? { name: s, url: 'https://' + s } : null;
 
   const OPEN_LEADS = ['open up', 'open', 'launch', 'start up', 'start', 'run', 'fire up', 'boot up', 'boot', 'pull up', 'bring up', 'load', 'get', 'go to', 'take me to', 'visit', 'show me', 'show', 'i want to use', 'use'];
@@ -315,7 +324,7 @@
     'clean.junk': () => 'Scanning for junk… 🧹',
     'app.open': (s) => `Opening ${s.apps.map(nice).join(' and ')}! 🚀`,
     'app.close': (s) => `Close ${s.apps.map(nice).join(' and ')}? Anything unsaved could be lost.`,
-    'web.open': (s) => `Opening ${s.apps.map(nice).join(' and ')}! 🌐`,
+    'web.open': (s) => `Opening ${s.apps.map(a => a.includes('.') ? a : nice(a)).join(' and ')}${s.browser ? ' in ' + nice(s.browser) : ''}! 🌐`,
     'web.search': (s) => `Searching ${s.engine === 'youtube' ? 'YouTube' : 'Google'} for "${s.query}"…`,
     'music.play': (s) => s.song ? pick([`Playing ${s.song} 🎶`, `Ooh, ${s.song}! 🎧`, `One ${s.song} coming up 🎵`]) : 'Music time! 🎶',
     'media.control': (s) => ({ next: 'Skipping ⏭️', prev: 'Going back a song ⏮️', pause: 'Paused ⏸️', play: 'Playing ▶️' })[s.cmd],
@@ -368,6 +377,20 @@
     let slots = SLOTS[intent] ? SLOTS[intent](text) : {};
     // "open X": a folder, a website or an app?
     if (intent === 'app.open' || intent === 'web.open' || intent === 'folder.open') {
+      const tail = text.match(BROWSER_TAIL);
+      if (tail) {   // "open spotify on chrome": the website, in that browser
+        const bare = text.slice(0, tail.index), browser = BROWSERS[tail[1]] || null;
+        const names = SLOTS['app.open'](bare).apps;
+        const sites = names.map(n => siteOf(n) || (WEB_APPS[n] ? { name: n, url: WEB_APPS[n] } : null));
+        if (names.length && sites.every(Boolean)) {
+          const d = INTENTS['web.open'];
+          return { intent: 'web.open', slots: { apps: names, sites, ...(browser ? { browser } : {}) }, confidence: +confidence.toFixed(3), risk: d.risk, ready: true, missing: [] };
+        }
+        if (names.length === 1 && names[0]) {   // a site I don't know by name: search for it in that browser
+          const d = INTENTS['web.search'];
+          return { intent: 'web.search', slots: { query: names[0], engine: 'google', ...(browser ? { browser } : {}) }, confidence: +confidence.toFixed(3), risk: d.risk, ready: true, missing: [] };
+        }
+      }
       const apps = SLOTS['app.open'](text).apps, name = apps.join(' ');
       const f = folder(text);
       if (/^(?:my )?notes?$/.test(name)) { intent = 'notes.open'; slots = {}; }
@@ -376,8 +399,12 @@
       else if (/\b(recent|latest|newest)\b/.test(name)) { intent = 'files.recent'; slots = {}; }
       else if (/^(?:a |your )?dance$|^(?:your )?moves$/.test(name)) { intent = 'fun.dance'; slots = {}; }
       else if (f && f !== 'pick' && (!name || FOLDERS[name.replace(/ folder$/, '')] || /\bfolder\b/.test(text))) { intent = 'folder.open'; slots = { folder: f }; }
-      else if (apps.length && apps.every(siteOf)) { intent = 'web.open'; slots = { apps, sites: apps.map(siteOf) }; }
-      else { intent = 'app.open'; slots = { apps }; }
+      else if (apps.length && apps.every(siteOf)) { intent = 'web.open'; slots = { apps, sites: apps.map(siteOf) }; if (apps.every(a => a.includes('.'))) confidence = Math.max(confidence, 0.95); }   // (a web address is unmistakable)
+      else {
+        intent = 'app.open'; slots = { apps };
+        // "open up to me", "show me something cool", "open your mind": not an app name
+        if (!apps.length || apps.some(a => /\b(?:me|you|your|yourself|myself|something|anything|everything|nothing|us|it|this|that|them|stuff|things?|mind|heart)\b/.test(a))) return { intent, slots, confidence: Math.min(confidence, 0.3), risk: INTENTS[intent].risk, ready: true, missing: [], fallback: true };
+      }
     }
     // "search for cheap flights" is a web search, not a file on your PC
     if (intent === 'files.find' && slots.query && WEBBY.test(slots.query)) { intent = 'web.search'; slots = { query: slots.query, engine: 'google' }; }
@@ -485,7 +512,7 @@
     return { steps: [next], reply: replyFor(next) };
   }
 
-  const api = { understand, answer, replyFor, calc, normalize, classify, duration, clock, folder, siteOf, SITES, INTENTS };
+  const api = { understand, answer, replyFor, calc, normalize, classify, duration, clock, folder, siteOf, SITES, WEB_APPS, INTENTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NovaBrain = api;
 })(typeof window !== 'undefined' ? window : globalThis);

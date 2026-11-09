@@ -105,3 +105,29 @@ test('window tools say clearly they need Windows elsewhere', async () => {
   const { tools } = setup(win);
   assert.equal(tools.get('window.move').available(), false);
 });
+
+test('opening an app launches it before listing windows (a cold window helper can\'t make it time out)', async () => {
+  const win = fakeWin();
+  win.state.windows = win.state.windows.filter(w => w.process !== 'notepad');
+  let launchedBeforeFirstList = null;
+  const list = win.windows;
+  win.windows = async () => { if (launchedBeforeFirstList === null) launchedBeforeFirstList = win.state.windows.some(w => w.process === 'notepad'); return list(); };
+  const { tasks, tools } = setup(win);
+  const r = await tools.run(tasks.create({ text: 'open notepad' }), { tool: 'app.open', args: { name: 'notepad' }, direct: true });
+  assert.equal(launchedBeforeFirstList, true);
+  assert.equal(r.verified, true);
+});
+
+test('a check that takes too long leaves the action unconfirmed, not failed', async () => {
+  const store = openStore(':memory:'), log = createLog();
+  const tasks = createTasks({ store, log }), permissions = createPermissions({ store, log });
+  const tools = createTools({ permissions, log, store, locks: store });
+  let runs = 0;
+  tools.register({ name: 'slow.check', purpose: 'test', category: 'launch', effect: 'local', timeoutMs: 200, retrySafe: false,
+    args: { type: 'object', properties: {}, additionalProperties: false },
+    run: async () => { runs++; return { opened: 'Discord' }; }, verify: () => new Promise(() => {}) });
+  const r = await tools.run(tasks.create({ text: 'open discord' }), { tool: 'slow.check', args: {}, direct: true });
+  assert.equal(runs, 1);
+  assert.equal(r.verified, false);
+  assert.match(r.evidence, /took too long/);
+});

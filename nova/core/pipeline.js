@@ -4,6 +4,7 @@
 // Corrections cancel the work they replace. A final transcript runs once.
 'use strict';
 const { route } = require('./router');
+const talk = require('../brain/talk');
 const { NovaError, CATEGORY_TEXT, id } = require('./util');
 
 // the permission category for each of the older command brain's intents
@@ -106,7 +107,29 @@ function createPipeline(deps) {
   }
 
   // ------------------------------------------------------------------ routing
+  // everyday chat ("hi", "I'm bored", "you're cute", "lol") is talked to, never turned into a command
+  function chatTurn(task, text) {
+    const low = String(text).toLowerCase().replace(/[?!.,]+/g, '').trim();
+    if (QUICK.some(([re]) => re.test(low))) return null;   // (mic checks have their own answers)
+    const own = talk.reply(text);
+    if (!own && !talk.isChatty(text)) return null;
+    // her own chat moves (a wave for "hi", a happy hop for "thanks") still play when she's sure
+    const b = brain.understand(text);
+    if (b.steps && b.steps.length && b.steps.every(s => /^chat\./.test(s.intent) && s.confidence >= 0.85)) return null;
+    log && log.event('chat.small', { text: String(text).slice(0, 80) });
+    if (llm && llm.pick()) return answer(task, text);   // a chat brain talks properly
+    history.push({ role: 'user', content: String(text).slice(0, 500) });
+    return reply(task, own || talk.generic() + noBrainHint());
+  }
+  let hinted = false;
+  const noBrainHint = () => { if (hinted) return ''; hinted = true; return '\n(I can only do simple chat right now. Turn on my chat brain in Tasks panel > Settings > Brains and I can really talk.)'; };
+
   async function handle(task, r, source) {
+    if (r.kind === 'question' || r.kind === 'command') {
+      const sp = talk.split(r.text);   // "I'm bored, play some music": do the music part
+      if (sp) { log && log.event('chat.split', { request: sp.request.slice(0, 80) }); const r2 = route(sp.request, ctx); if (r2.kind !== 'stop') return handle(task, r2, source); }
+      const c = chatTurn(task, r.text); if (c) return c;
+    }
     switch (r.kind) {
       case 'status': if (r.what === 'finished' && deps.notifications) { const d = await deps.notifications.digest(); return reply(task, d.text + (d.unavailable.length ? `\n(Not included: ${d.unavailable.join('; ')})` : '')); } return status(task, r.what);
       case 'jobs': return deps.jobs ? deps.jobs.control(r.op, { task, ui }) : reply(task, 'No long-running jobs are set up yet.');
@@ -277,7 +300,7 @@ function createPipeline(deps) {
   const COMMUNICATE = /^(send|post|share|upload|forward|reply|message)$/i;
   function describe(step) {
     const s = step.slots || {}, apps = (s.apps || []).join(', ');
-    const d = { volume: s.cmd === 'mute' ? 'mute the sound' : s.cmd === 'up' ? 'turn the volume up' : s.cmd === 'down' ? 'turn the volume down' : 'change the volume', 'media.control': `${s.cmd || 'control'} the music`, 'app.close': `close ${apps || 'an app'}`, 'app.open': `open ${apps || 'an app'}`, 'note.add': `write down "${s.text || ''}"`, reminder: `set a reminder${s.text ? ` to ${s.text}` : ''}`, timer: 'start a timer', 'files.find': `search your files for "${s.query || ''}"`, 'fun.dance': 'dance', 'web.search': `search the web for "${s.query || ''}"`, 'folder.open': `open your ${s.folder || ''} folder`, organize: `organize ${s.folder || 'a folder'}`, power: `${s.kind || 'change power'}` };
+    const d = { volume: s.cmd === 'mute' ? 'mute the sound' : s.cmd === 'up' ? 'turn the volume up' : s.cmd === 'down' ? 'turn the volume down' : 'change the volume', 'media.control': `${s.cmd || 'control'} the music`, 'app.close': `close ${apps || 'an app'}`, 'app.open': `open ${apps || 'an app'}`, 'music.play': `play ${s.song || 'some music'}`, 'note.add': `write down "${s.text || ''}"`, reminder: `set a reminder${s.text ? ` to ${s.text}` : ''}`, timer: 'start a timer', 'files.find': `search your files for "${s.query || ''}"`, 'fun.dance': 'dance', 'web.search': `search the web for "${s.query || ''}"`, 'folder.open': `open your ${s.folder || ''} folder`, organize: `organize ${s.folder || 'a folder'}`, power: `${s.kind || 'change power'}` };
     return d[step.intent] || (((brain.INTENTS[step.intent] || {}).examples || [])[0] || step.intent).replace('{app}', apps || 'it');
   }
   async function command(task, text, source) {
@@ -318,8 +341,12 @@ function createPipeline(deps) {
         const v = await choose(task, `Did you mean: ${guess}?`, [{ label: 'Yes', value: 'yes', primary: true }, { label: 'No', value: 'no' }]);
         if (v !== 'yes') return reply(task, 'Okay, I didn\'t do anything. Try saying it another way.');
         r.steps = r.steps.slice(0, 1);
+      } else if (!/^(?:(?:can|could|would|will) you |please )?(?:open|close|play|start|launch|run|find|search|look|turn|set|show|put|move|go|make|take|get|delete|remove|organi[sz]e|clean|mute|pause|skip|remind|switch|change|download|install|type|click|send)\b/i.test(text)) {
+        // not an instruction at all: just chat back
+        history.push({ role: 'user', content: String(text).slice(0, 500) });
+        return reply(task, talk.generic() + noBrainHint());
       } else {
-        return reply(task, "I'm not sure what you mean. Try saying it another way, or set up a chat brain (Settings > Brain) so I can understand more.", { suggestions: r.suggestions });
+        return reply(task, "I'm not sure what you mean. Try saying it another way, or turn on my chat brain (Tasks panel > Settings > Brains) so I understand more.", { suggestions: r.suggestions });
       }
     }
     tasks.move(task, 'executing');

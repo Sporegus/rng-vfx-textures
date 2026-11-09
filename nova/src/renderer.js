@@ -1158,8 +1158,8 @@
       return r;
     });
   }
-  function webSearch(q, site) {
-    return task(async () => { play('search', 800); await act('web.search', { q, site }); closeBubble(); });
+  function webSearch(q, site, browser) {
+    return task(async () => { play('search', 800); await act('web.search', { q, site, browser }); closeBubble(); });
   }
 
   // ---------------------------------------------------------------- fun
@@ -1359,8 +1359,10 @@
       });
       case 'web.open': return task(async () => {
         play('wave', 700);
-        for (const site of s.sites) await act('web.open', { url: site.url });
-        await sayStep(step, { ms: 2000 });
+        let missing = null;
+        for (const site of s.sites) { const w = await act('web.open', { url: site.url, browser: s.browser }); if (w.browserMissing) missing = w.browserMissing; }
+        if (missing) await say(`I couldn't start ${missing[0].toUpperCase() + missing.slice(1)}, so I used your default browser.`, { ms: 3500 });
+        else await sayStep(step, { ms: 2000 });
       });
       case 'web.search':
         // a guess from something you said: check before opening the browser
@@ -1368,7 +1370,7 @@
           const v = await ask(`Want me to Google "${s.query}"?`, [{ icon: '🔍', label: 'Yes', value: 'go', primary: true }, { label: 'No', value: 'no', ghost: true }], { ms: 12000 });
           if (v !== 'go') return v && closeBubble();
         }
-        return webSearch(s.query, s.engine);
+        return webSearch(s.query, s.engine, s.browser);
 
       // ---- music and sound
       case 'music.play': return task(async () => {

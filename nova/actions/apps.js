@@ -140,4 +140,19 @@ async function power({ kind, delay = 0 }) {
   return { kind, delay: +t };
 }
 
-module.exports = { open, close, media, volume, music, power, fit };
+// opens a web address in a browser you named ("in chrome"); falls back to your default browser
+const BROWSER_EXE = { chrome: 'chrome', edge: 'msedge', firefox: 'firefox', brave: 'brave', opera: 'opera' };
+async function openUrl(url, browser) {
+  const exe = BROWSER_EXE[browser];
+  if (exe && process.platform === 'win32') {
+    // (the address goes in through an environment variable, never pasted into the script)
+    const ok = await ps.run('Start-Process -FilePath $env:NOVA_ARG0 -ArgumentList (\'"\' + $env:NOVA_ARG1 + \'"\')', [exe, url], 15000).then(() => true, () => false);
+    if (ok) return { browser };
+    await shell.openExternal(url);
+    return { browser: null, browserMissing: browser };
+  }
+  await shell.openExternal(url);
+  return { browser: null };
+}
+
+module.exports = { openUrl, open, close, media, volume, music, power, fit, warm: () => startApps().then((a) => ({ apps: a.length })) };

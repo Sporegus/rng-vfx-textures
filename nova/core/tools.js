@@ -80,7 +80,9 @@ function createTools({ permissions, log, store, locks }) {
         try {
           const result = await withTimeout(tool.timeoutMs, task.ac.signal, (signal) => tool.run(args, { signal, task, log, ...extra }));
           let check = { ok: true, evidence: 'no postcondition for this tool' };
-          if (tool.verify) check = await withTimeout(Math.min(tool.timeoutMs, 15000), task.ac.signal, (signal) => tool.verify(args, result, { signal, task, log, ...extra }));
+          // the action already ran: a slow or broken check makes it unconfirmed, never an error (and never a repeat)
+          if (tool.verify) check = await withTimeout(Math.min(tool.timeoutMs, 15000), task.ac.signal, (signal) => tool.verify(args, result, { signal, task, log, ...extra }))
+            .catch((e) => { if (e.category === 'cancelled') throw e; return { ok: false, evidence: e.category === 'timeout' ? 'the check took too long' : 'the check failed: ' + e.message }; });
           log && log.event('tool.result', { task: task.id, tool: tool.name, ms: Date.now() - started, verified: check.ok, evidence: check.evidence, attempt });
           return { tool: tool.name, result, verified: !!check.ok, evidence: check.evidence };
         } catch (e) {

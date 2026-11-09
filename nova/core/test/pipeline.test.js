@@ -270,7 +270,7 @@ test('mic checks get a straight answer; questions about her never turn into a we
   await h.pipeline.input({ text: 'are you there?' });
   assert.ok(h.replies().some(r => /I'm here/.test(r)));
   await h.pipeline.input({ text: 'what do you think about pizza?' });
-  assert.ok(h.replies().some(r => /can't really chat yet/.test(r)));
+  assert.ok(h.replies().some(r => /Pizza\? I'm a fan/.test(r)));
   assert.ok(!h.events.some(e => e.type === 'choose'), 'no "search the web?" offer');
 });
 
@@ -322,4 +322,33 @@ test('with a chat brain, messy speech is interpreted into a command she knows (t
   await h2.pipeline.input({ text: 'deal with that thing over there' });
   assert.ok(h2.replies().some(r => /close the window or move it/.test(r)));
   assert.equal(h2.pageRuns.length, 0);
+});
+
+test('everyday chat gets a reply and never runs a command', async () => {
+  for (const [text, re] of [['i am bored', /bored/i], ['you are cute', /blush|thank you|stop it/i], ['i love you', /love you too|right back/i], ['im tired', /break|rest|rough/i],
+    ['lets talk', /mind|ears/i], ['i feel sad', /sorry|here for you|hug/i], ['what is your favorite color', /Blue/], ['im good wbu', /great too|awesome/i], ['my mom is annoying', /./], ['lol', /./]]) {
+    const h = harness();
+    await h.pipeline.input({ text });
+    assert.equal(h.pageRuns.length, 0, `"${text}" ran ${h.pageRuns.map(s => s.intent)}`);
+    assert.ok(!h.events.some(e => e.type === 'choose' || e.type === 'approve'), `"${text}" asked something`);
+    assert.ok(h.replies().some(r => re.test(r)), `"${text}" → ${h.replies()}`);
+  }
+});
+
+test('chat with a request in it does the request; real commands are unchanged', async () => {
+  let h = harness();
+  await h.pipeline.input({ text: "i'm bored, play some music" });
+  assert.deepEqual(h.pageRuns.map(s => s.intent), ['music.play']);
+  for (const [text, intent] of [['open up spotify on chrome', 'web.open'], ['openroblox.com', 'web.open'], ['turn the volume down', 'volume'], ['tell me a joke', 'fun.joke'], ['i want to listen to drake', 'music.play']]) {
+    h = harness();
+    await h.pipeline.input({ text });
+    assert.deepEqual(h.pageRuns.map(s => s.intent), [intent], text);
+  }
+  h = harness();
+  await h.pipeline.input({ text: 'open up spotify on chrome' });
+  assert.equal(h.pageRuns[0].slots.browser, 'chrome');
+  assert.equal(h.pageRuns[0].slots.sites[0].url, 'https://open.spotify.com');
+  h = harness();
+  await h.pipeline.input({ text: 'open up to me' });
+  assert.equal(h.pageRuns.length, 0, '"open up to me" is not an app');
 });

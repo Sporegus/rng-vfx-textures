@@ -65,6 +65,9 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const win = createWin({ log });
   const refs = createWindowRefs({ win, selfPid: process.pid });
   registerDesktop({ tools, win, log, refs, apps: { open: (name) => actions.run('apps.open', { name }) } });
+  // warm up the Start-menu app list and the window helper in the background, so the first
+  // "open X" doesn't wait on PowerShell starting cold
+  if (win.available()) { const t = setTimeout(() => { actions.run('apps.warm').catch(() => {}); win.call('windows', {}, 30000).catch(() => {}); }, 4000); if (t.unref) t.unref(); }
 
   // ---- brains (each optional; Nova says plainly when none is set up)
   const providers = {

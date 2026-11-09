@@ -23,8 +23,18 @@ const QUESTION = /^(what|whats|what's|why|how|who|whos|who's|when|where|which|ex
 const AUX_QUESTION = /^(is|are|was|were|can|could|does|do|did|should|would|will|has|have)\s+(you|i|we|they|it|he|she|there|this|that|these|those)\b/i;
 const CURRENT = /\b(today|tonight|now|current|currently|latest|newest|recent|this week|this year|news|price|prices|cost|score|scores|weather|stock|release date|patch|update|version|202\d)\b/i;
 
+// names she knows as apps or sites, for spotting a missing space ("openroblox.com", "opendiscord")
+const KNOWN_NAMES = new Set(['chrome', 'discord', 'steam', 'spotify', 'word', 'excel', 'notepad', 'calculator', 'obs', 'minecraft', 'roblox', 'firefox', 'photoshop', 'zoom', 'teams', 'outlook', 'paint', 'edge', 'youtube', 'netflix', 'gmail', 'reddit', 'twitter', 'amazon', 'twitch', 'github', 'instagram', 'facebook', 'tiktok', 'google', 'whatsapp', 'soundcloud', 'pinterest', 'wikipedia', 'ebay', 'hulu', 'crunchyroll', 'chatgpt', 'canva', 'notion', 'slack', 'fortnite', 'epic', 'valorant', 'telegram', 'snapchat']);
+const DOMAIN = /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:\/\S*)?$/i;
+function unglue(text) {
+  const g = text.match(/^(open|launch|start|close)([a-z0-9][\w.-]*)(.*)$/i);
+  if (g && KNOWN_NAMES.has(g[2].toLowerCase().split('.')[0])) return `${g[1]} ${g[2]}${g[3]}`;
+  if (DOMAIN.test(text)) return `go to ${text}`;   // a bare web address: open it
+  return text;
+}
+
 function route(raw, ctx = {}) {
-  const text = clean(raw);
+  const text = unglue(clean(raw));
   const low = text.toLowerCase();
   if (!text) return { kind: 'empty' };
   if (STOP.test(low)) return { kind: 'stop' };
@@ -137,8 +147,9 @@ function route(raw, ctx = {}) {
 
   // ---- games
   if (/^(?:my goal (?:in|for)|track (?:a |my )?goal (?:in|for)|set (?:a |my )?goal (?:in|for))\s+.+?\s+(?:is|:|to)\s+.+$/i.test(text) || /^(?:what are|show|list) my (?:game )?goals(?: (?:in|for) .+)?\??$/i.test(low)) return { kind: 'game', text };
+  const webby = /\broblox\.com\b|\b(?:website|site|browser)\b|\b(?:on|in) (?:google )?(?:chrome|edge|firefox|brave|opera)\b/i.test(low);   // (the website is just a website)
   if (/\broblox\b/i.test(low) && /\b(join|experience|game|play)\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
-  if (/\broblox\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
+  if (!webby && /\broblox\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
   if (/\b(aim ?bot|executor|anti-?afk|wall ?hack|cheat engine|speed ?hack|dupe glitch)\b/i.test(low)) return { kind: 'game', text };
   if (/\broutines?\b/i.test(low) && /\b(record|replay|run|play|do|repeat)\b/i.test(low)) return { kind: 'game', text };
   if (/\b(test|fixture|coin) game\b/i.test(low)) return { kind: 'game', text };
