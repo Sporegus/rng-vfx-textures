@@ -64,16 +64,16 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const tools = createTools({ permissions, log, store, locks: store });
   const win = createWin({ log });
   const refs = createWindowRefs({ win, selfPid: process.pid });
-  registerDesktop({ tools, win, log, refs, apps: { open: (name) => actions.run('apps.open', { name }) } });
+  registerDesktop({ tools, win, log, refs, apps: { open: (name) => actions.run('apps.open', { name }), confirm: (name, result) => actions.run('apps.confirm', { name, result }).catch(() => {}), forget: (name) => actions.run('apps.forget', { name }).catch(() => {}) } });
   // warm up the Start-menu app list and the window helper in the background, so the first
   // "open X" doesn't wait on PowerShell starting cold
-  if (win.available()) { const t = setTimeout(() => { actions.run('apps.warm').catch(() => {}); win.call('windows', {}, 30000).catch(() => {}); }, 4000); if (t.unref) t.unref(); }
+  { const t = setTimeout(() => { actions.run('apps.warm').catch(() => {}); if (win.canList()) win.call('windows', {}, 30000).catch(() => {}); }, 1500); if (t.unref) t.unref(); }
 
   // ---- brains (each optional; Nova says plainly when none is set up)
   const providers = {
     anthropic: llm.anthropic({ key: () => keys.read('anthropic'), model: settings().anthropicModel || undefined }),
     openai: llm.openai({ key: () => keys.read('openai'), model: settings().openaiModel || undefined }),
-    local: llm.local({ ask: (t, onText, sig) => voice.ask(t, onText, sig), ready: () => voice.chatReady() }),
+    local: llm.local({ ask: (t, onText, sig) => voice.ask(t, onText, sig), decide: voice.decide ? (t, h, sig) => voice.decide(t, h, sig) : null, ready: () => voice.chatReady() }),
   };
   const chooser = llm.chooser(providers, settings().brainOrder || ['anthropic', 'openai', 'local']);
 
@@ -227,7 +227,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const workflows = createWorkflows({ store, log, settings, saveSettings });
   workflows.ensurePresets();
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder, content, troubleshoot, readers: require('./readers'),
+  const pipeline = createPipeline({ isApp: (n) => { try { return require('../actions/apps').known(n); } catch { return false; } }, tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder, content, troubleshoot, readers: require('./readers'),
     canRead: (p) => files.inside(p),
     clipboardFile: () => { try { if (process.platform === 'win32') { const b = clipboard.readBuffer('FileNameW'); if (b && b.length) return b.toString('ucs2').replace(/\0+$/, ''); } const t = clipboard.readText().trim(); return /^([a-zA-Z]:\\|\/)\S/.test(t) && fs.existsSync(t) ? t : null; } catch { return null; } }, openFile: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); },
     rememberAlias: (alias, app2, provenance) => store.remember('alias:' + String(alias).toLowerCase().trim(), 'app_alias', { alias: String(alias).toLowerCase().trim(), app: app2, provenance: { ...provenance, at: Date.now() } }) });
@@ -238,7 +238,10 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
 
   // ---- input from the page (typed, or voice after the wake word / push-to-talk)
   ipcMain.handle('core:input', async (_, msg) => {
-    const m = { text: String(msg.text || '').slice(0, 2000), source: msg.source === 'voice' ? 'voice' : 'typed', final: msg.final !== false, utteranceId: msg.utteranceId || null };
+    const tm = msg.timing && typeof msg.timing === 'object' ? msg.timing : {};
+    const num = (v) => (Number.isFinite(v) && Math.abs(Date.now() - v) < 120000 ? v : null);   // (only sane wall-clock marks)
+    const m = { text: String(msg.text || '').slice(0, 2000), source: msg.source === 'voice' ? 'voice' : 'typed', final: msg.final !== false, utteranceId: msg.utteranceId || null,
+      timing: { speechEndAt: num(tm.speechEndAt), finalAt: num(tm.finalAt), typedAt: num(tm.typedAt) } };
     if (m.final) remember('you', m.text);
     const r = await pipeline.input(m);
     return { ok: !r.error, error: r.error || null };

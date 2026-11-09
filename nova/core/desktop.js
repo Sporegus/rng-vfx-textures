@@ -6,12 +6,17 @@
 const { NovaError, sleep } = require('./util');
 
 const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-// does this window belong to the app we opened?
+// does this window belong to the app we opened? Its process name counts; its title counts
+// too, except in browsers and Explorer, where "Discord" in a tab title isn't the Discord app
+const HOSTS = /^(?:chrome|msedge|firefox|brave|opera|vivaldi|iexplore|explorer|chromium|code)$/i;
 function windowMatches(w, appName) {
   const want = words(appName);
   if (!want.length) return false;
-  const hay = (w.process + ' ' + w.title).toLowerCase();
-  return want.some(x => hay.includes(x));
+  const proc = String(w.process || '').toLowerCase().replace(/\.exe$/, '');
+  if (want.some(x => proc.includes(x))) return true;
+  if (HOSTS.test(proc)) return false;
+  const title = String(w.title || '').toLowerCase();
+  return want.some(x => title.includes(x));
 }
 
 // keyboard/mouse guard: pauses automation when you take over
@@ -44,17 +49,39 @@ function registerDesktop({ tools, win, apps, log, refs }) {
     args: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 80 } }, required: ['name'], additionalProperties: false },
     target: (a) => ({ kind: 'app', value: a.name }),
     describe: (a) => `Open ${a.name}`,
-    run: async ({ name }) => apps.open(name),   // (launch first; the window check comes after)
+    run: async ({ name }) => {
+      const t = Date.now();
+      // already open? bring it to the front instead of starting a second copy
+      // (only when the window helper is already running, and never waiting more than 400 ms on it)
+      if (win.canList() && win.warm && win.warm()) {
+        const ws = await Promise.race([win.windows().catch(() => []), sleep(400).then(() => [])]);
+        const hit = ws.find(w => windowMatches(w, name));
+        if (hit) {
+          await win.focus(hit.hwnd).catch(() => {});
+          refs && refs.saw(hit);
+          return { opened: name, already: true, window: hit.title, timing: { launchCallMs: Date.now() - t, launchedAt: Date.now(), windowMs: 0, focused: true } };
+        }
+      }
+      const r = await apps.open(name);   // (launch first; the window check comes after)
+      return { ...r, timing: { launchCallMs: Date.now() - t, launchedAt: Date.now() } };
+    },
     verify: async ({ name }, r, { signal }) => {
       if (r.notFound) return { ok: true, evidence: 'not installed' };
-      if (!win.available()) return { ok: false, evidence: 'cannot check windows on this OS' };
+      if (r.already) return { ok: true, evidence: `window "${r.window}" was already open; brought it to the front` };
+      if (!win.canList()) return { ok: false, evidence: 'cannot check windows on this OS' };
       // wait up to ~14 s for its window (new or already open, now in front); slow starters like Discord update first
       for (const end = Date.now() + 14000; Date.now() < end;) {
         const ws = await win.windows().catch(() => []);
         const hit = ws.find(w => windowMatches(w, r.opened || name));
-        if (hit) { refs && refs.saw(hit); return { ok: true, evidence: `window "${hit.title}" (${hit.process}) is open` }; }
-        await sleep(500, signal);
+        if (hit) {
+          refs && refs.saw(hit);
+          if (r.timing) r.timing.windowMs = Date.now() - r.timing.launchedAt;   // (the app's own startup time)
+          if (apps.confirm) apps.confirm(name, r);   // (now Nova knows exactly which app that name means)
+          return { ok: true, evidence: `window "${hit.title}" (${hit.process}) is open` };
+        }
+        await sleep(Date.now() - (r.timing ? r.timing.launchedAt : 0) < 3000 ? 120 : 400, signal);   // (look often at first: most apps show within a few seconds)
       }
+      if (r.fromCache && apps.forget) apps.forget(name);   // (a remembered app that didn't show: look it up fresh next time)
       return { ok: false, evidence: 'no matching window appeared within 14 seconds' };
     },
   });

@@ -6,10 +6,34 @@ const { spawn } = require('child_process');
 const path = require('path');
 const { NovaError } = require('../util');
 
+// Linux (X11, e.g. a test machine): listing and focusing windows only, via xwininfo/xdotool
+function linuxWindows({ execFileImpl = require('child_process').execFile } = {}) {
+  const run = (cmd, args, ms = 3000) => new Promise((resolve, reject) => execFileImpl(cmd, args, { timeout: ms }, (e, out) => e ? reject(new NovaError('failed', e.message)) : resolve(String(out))));
+  let has = null;
+  const ok = () => { if (has === null) { const fs = require('fs'); has = !!process.env.DISPLAY && ['/usr/bin/xwininfo', '/usr/bin/xdotool'].every(f => fs.existsSync(f)); } return has; };
+  return {
+    ok,
+    async windows() {
+      const out = await run('xwininfo', ['-root', '-children']);
+      const list = [];
+      for (const line of out.split('\n')) {
+        const m = line.match(/^\s*(0x[0-9a-f]+) "(.*)": \("([^"]*)" "([^"]*)"\)\s+(\d+)x(\d+)\+(-?\d+)\+(-?\d+)/);
+        if (m && +m[5] > 50 && +m[6] > 50) list.push({ hwnd: parseInt(m[1], 16), title: m[2], process: (m[3] || m[4]).toLowerCase(), x: +m[7], y: +m[8], w: +m[5], h: +m[6] });
+      }
+      return list;
+    },
+    async foreground() { const id = parseInt(await run('xdotool', ['getwindowfocus']), 10); return (await this.windows()).find(w => w.hwnd === id) || null; },
+    async focus(hwnd) { await run('xdotool', ['windowraise', String(hwnd)]); await run('xdotool', ['windowfocus', String(hwnd)]).catch(() => {}); return { focused: true }; },
+  };
+}
+
 function createWin({ log, platform = process.platform, spawnImpl = spawn } = {}) {
   let child = null, buf = '', nextId = 1;
   const waiting = new Map();
   const available = () => platform === 'win32';
+  const lx = platform === 'linux' ? linuxWindows() : null;
+  // can list and focus windows (Windows, or Linux with X tools): enough to verify a launch
+  const canList = () => available() || !!(lx && lx.ok());
 
   function start() {
     child = spawnImpl('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'helper.ps1')],
@@ -38,6 +62,7 @@ function createWin({ log, platform = process.platform, spawnImpl = spawn } = {})
   }
 
   function call(cmd, args = {}, timeoutMs = 8000) {
+    if (lx && lx.ok() && ['windows', 'foreground', 'focus'].includes(cmd)) return cmd === 'focus' ? lx.focus(args.hwnd) : lx[cmd]();
     if (!available()) return Promise.reject(new NovaError('unavailable', 'That only works on Windows.'));
     if (!child) start();
     const id = nextId++;
@@ -49,7 +74,8 @@ function createWin({ log, platform = process.platform, spawnImpl = spawn } = {})
   }
 
   return {
-    available, call,
+    available, canList, call,
+    warm: () => !!child || !!(lx && lx.ok()),   // (the helper is already running: listing is quick)
     foreground: () => call('foreground'),
     windows: () => call('windows'),
     monitors: () => call('monitors'),

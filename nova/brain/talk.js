@@ -6,7 +6,7 @@
 
 const norm = (t) => String(t || '').toLowerCase()
   .replace(/[’`]/g, "'").replace(/[^a-z0-9' ]+/g, ' ')
-  .replace(/^(?:(?:hey|hi|ok|okay|yo) )?nova\b ?/, '').replace(/ nova$/, '')
+  .replace(/^(?:(?:hey|hi|ok|okay|yo) )?nova\b ?(?=\S)/, '').replace(/ nova$/, '')
   .replace(/\bim\b/g, "i'm").replace(/\bi am\b/g, "i'm").replace(/\bu\b/g, 'you').replace(/\bur\b/g, "you're").replace(/\byoure\b/g, "you're").replace(/\byou are\b/g, "you're")
   .replace(/\blets\b/g, "let's").replace(/\bwhat is\b/g, "what's").replace(/\bwbu\b|\bhbu\b|\bwhat about you\b|\band you\b/g, 'how about you').replace(/\bthats\b/g, "that's").replace(/\bits\b/g, "it's").replace(/\bwhats\b/g, "what's").replace(/\bhows\b/g, "how's").replace(/\bdont\b/g, "don't")
   .replace(/\s+/g, ' ').trim();

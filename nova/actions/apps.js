@@ -46,15 +46,57 @@ function fit(want, name) {
   return sw.length >= 5 && editDistance(sw, sn) <= 1 ? 66 : 0;
 }
 
-let appCache = null, appCacheAt = 0;
-async function startApps() {
-  if (appCache && Date.now() - appCacheAt < 10 * 60000) return appCache;
-  const out = await ps.run('Get-StartApps | Select-Object Name, AppID | ConvertTo-Json -Compress');
+// ---------------------------------------------------------------- the app index
+// Every installed app (Windows: the Start menu, via Get-StartApps; Linux: .desktop files).
+// Saved to disk so a fresh start never waits on a cold PowerShell; refreshed in the
+// background when it's a day old, and at once when a remembered app fails to launch.
+// Names you launched successfully are remembered exactly ("discord" -> its AppID), so
+// the next "open discord" skips the search.
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+let cacheFile = null, appCache = null, appCacheAt = 0, refreshing = null;
+let picks = {};   // norm(name) -> { Name, AppID } that launched and showed a window
+const DAY = 24 * 3600 * 1000;
+function configure({ dir }) {
+  cacheFile = path.join(dir, 'app-index.json');
+  try { const j = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); if (Array.isArray(j.apps)) { appCache = j.apps; appCacheAt = j.at || 0; } picks = j.picks || {}; } catch {}
+}
+function save() { if (!cacheFile) return; try { fs.writeFileSync(cacheFile, JSON.stringify({ at: appCacheAt, apps: appCache || [], picks })); } catch {} }
+
+// Linux: the desktop's app list (.desktop files)
+function linuxApps() {
+  const dirs = ['/usr/share/applications', '/usr/local/share/applications', path.join(os.homedir(), '.local/share/applications')];
+  const out = [];
+  for (const d of dirs) {
+    let names = []; try { names = fs.readdirSync(d).filter(f => f.endsWith('.desktop')); } catch { continue; }
+    for (const f of names) {
+      try {
+        const t = fs.readFileSync(path.join(d, f), 'utf8').split(/\n\[/)[0];
+        if (/^NoDisplay=true$/m.test(t) || /^Hidden=true$/m.test(t) || !/^Type=Application$/m.test(t)) continue;
+        const name = (t.match(/^Name=(.+)$/m) || [])[1], exec = (t.match(/^Exec=(.+)$/m) || [])[1];
+        if (name && exec) out.push({ Name: name.trim(), AppID: path.join(d, f), Exec: exec.replace(/\s%[a-zA-Z]/g, '').trim() });
+      } catch {}
+    }
+  }
+  return out;
+}
+async function loadIndex() {
   let list = [];
-  try { list = JSON.parse(out || '[]'); } catch {}
-  appCache = (Array.isArray(list) ? list : [list]).filter(a => a && a.Name && a.AppID);
+  if (process.platform === 'win32') {
+    const out = await ps.run('Get-StartApps | Select-Object Name, AppID | ConvertTo-Json -Compress');
+    try { list = JSON.parse(out || '[]'); } catch {}
+    list = Array.isArray(list) ? list : [list];
+  } else if (process.platform === 'linux') list = linuxApps();
+  appCache = list.filter(a => a && a.Name && a.AppID);
   appCacheAt = Date.now();
+  save();
   return appCache;
+}
+function refresh() { if (!refreshing) refreshing = loadIndex().finally(() => { refreshing = null; }); return refreshing; }
+async function startApps() {
+  if (appCache && appCache.length) { if (Date.now() - appCacheAt > DAY) refresh().catch(() => {}); return appCache; }   // (stale: use it now, refresh behind)
+  return refresh();
 }
 async function findApp(name) {
   const want = ALIASES[norm(name)] || norm(name);
@@ -64,14 +106,25 @@ async function findApp(name) {
   const ranked = apps.map(a => ({ a, s: fit(want, a.Name) - extra(a.Name) })).filter(x => x.s >= 60).sort((x, y) => y.s - x.s || x.a.Name.length - y.a.Name.length);
   return { best: ranked[0] && ranked[0].s >= 65 ? ranked[0].a : null, suggestions: ranked.slice(0, 3).map(x => x.a.Name), want };
 }
+function launch(app) {
+  if (process.platform === 'win32') { spawn('explorer.exe', ['shell:AppsFolder\\' + app.AppID], { detached: true, stdio: 'ignore' }).unref(); return; }
+  const exec = app.Exec || ((appCache || []).find(a => a.AppID === app.AppID) || {}).Exec;
+  if (!exec) throw new Error('No way to start ' + app.Name);
+  const [cmd, ...args] = exec.match(/"[^"]*"|\S+/g).map(x => x.replace(/^"|"$/g, ''));
+  spawn(cmd, args, { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+}
 
 async function open(name) {
-  const { best, suggestions, want } = await findApp(name).catch(() => ({ best: null, suggestions: [], want: norm(name) }));
-  if (best) {
-    spawn('explorer.exe', ['shell:AppsFolder\\' + best.AppID], { detached: true, stdio: 'ignore' }).unref();
-    return { opened: best.Name };
+  const key = norm(name);
+  // launched (and verified) before: go straight to it
+  const known = picks[key];
+  if (known) {
+    try { launch(known); return { opened: known.Name, appId: known.AppID, fromCache: true }; }
+    catch { delete picks[key]; save(); refresh().catch(() => {}); }
   }
-  const builtin = BUILTIN[want];
+  const { best, suggestions, want } = await findApp(name).catch(() => ({ best: null, suggestions: [], want: key }));
+  if (best) { launch(best); return { opened: best.Name, appId: best.AppID }; }
+  const builtin = process.platform === 'win32' && BUILTIN[want];
   if (builtin) {
     if (builtin.includes(':')) await shell.openExternal(builtin);
     else spawn(builtin, [], { detached: true, stdio: 'ignore' }).unref();
@@ -79,6 +132,26 @@ async function open(name) {
   }
   return { notFound: true, suggestions };
 }
+// is this the name of an installed app? (instant: the saved index and remembered names only)
+const KNOWN_COMMON = new Set(['discord', 'spotify', 'steam', 'chrome', 'google chrome', 'firefox', 'edge', 'notepad', 'calculator', 'paint', 'word', 'excel', 'powerpoint', 'outlook', 'teams', 'zoom', 'obs', 'vs code', 'roblox', 'minecraft', 'epic games', 'file explorer', 'task manager', 'settings', 'photoshop', 'slack', 'telegram', 'whatsapp', 'vlc', 'itunes']);
+function known(name) {
+  const key = norm(name);
+  if (!key || key.split(' ').length > 4) return false;
+  if (picks[key] || KNOWN_COMMON.has(key) || BUILTIN[ALIASES[key] || key]) return true;
+  const want = ALIASES[key] || key;
+  return !!(appCache && appCache.some(a => fit(want, a.Name) >= 85));
+}
+
+// the launch showed its window: remember exactly which app that name means
+function confirm(name, r) {
+  if (!r || !r.appId || !r.opened) return;
+  const key = norm(name);
+  if (picks[key] && picks[key].AppID === r.appId) return;
+  picks[key] = { Name: r.opened, AppID: r.appId, ...(r.exec ? { Exec: r.exec } : {}) };
+  save();
+}
+// the remembered app didn't show up: forget it and look again
+function forget(name) { const key = norm(name); if (picks[key]) { delete picks[key]; save(); refresh().catch(() => {}); } }
 
 // closes an app's windows politely (like clicking X), so it can ask to save
 async function close(name) {
@@ -155,4 +228,4 @@ async function openUrl(url, browser) {
   return { browser: null };
 }
 
-module.exports = { openUrl, open, close, media, volume, music, power, fit, warm: () => startApps().then((a) => ({ apps: a.length })) };
+module.exports = { openUrl, open, close, media, volume, music, power, fit, configure, confirm, forget, known, warm: () => startApps().then((a) => ({ apps: a.length, at: appCacheAt })) };

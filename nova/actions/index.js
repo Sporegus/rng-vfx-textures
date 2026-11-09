@@ -14,6 +14,7 @@ const apps = require('./apps');
 const weather = require('./weather');
 
 module.exports = function createActions(ctx) {
+  try { apps.configure({ dir: ctx.app.getPath('userData') }); } catch {}
   const undoDir = () => path.join(ctx.app.getPath('userData'), 'undo');
   const notesFile = () => path.join(ctx.app.getPath('documents'), 'Nova Notes.txt');
   const plans = new Map(); // organize plans waiting for a yes
@@ -85,6 +86,8 @@ module.exports = function createActions(ctx) {
     // ---- apps, music and power
     'apps.open': ({ name }) => apps.open(name),
     'apps.warm': () => apps.warm(),
+    'apps.confirm': ({ name, result }) => { apps.confirm(name, result); return {}; },
+    'apps.forget': ({ name }) => { apps.forget(name); return {}; },
     'apps.close': ({ name }) => apps.close(name),
     'media.key': ({ cmd }) => apps.media(cmd),
     'volume': (args) => apps.volume(args || {}),

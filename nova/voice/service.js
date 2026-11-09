@@ -177,7 +177,7 @@ async function chat(id, text, opts) {
       if (ac.signal.aborted) return;
       send({ type: 'sentence', id, text: s, mood });
       if (mouth) speaking = speaking.then(() => mouth.say(s, { ...opts, mood }, (samples, how) => send({ type: 'audio', id, samples, sampleRate: mouth.sampleRate, ...how })).catch(() => {}));
-    }, ac.signal);
+    }, ac.signal, { tools: !(opts && opts.tools === false) });   // (the core's chats only talk: actions go through the core's checks)
     await speaking;
     send({ type: 'replied', id, text: ac.signal.aborted ? null : reply });
   } catch (e) { send({ type: 'replied', id, text: null, error: e.message }); }
@@ -207,7 +207,7 @@ port.on('message', async ({ data: m }) => {
       if (!ears || !listening) break;
       ears.feed(m.samples, {
         onSpeech: (on) => send({ type: 'speaking', on }),
-        onText: (text, seconds) => send({ type: 'heard', text, seconds, utteranceId: `u${process.pid}-${++utterances}` }),   // one id per final phrase, so it runs once
+        onText: (text, seconds, timing) => send({ type: 'heard', text, seconds, timing, utteranceId: `u${process.pid}-${++utterances}` }),   // one id per final phrase, so it runs once
       });
       break;
     // the microphone test in her Voice menu: transcribe a short recording once (nothing is kept)
@@ -219,6 +219,12 @@ port.on('message', async ({ data: m }) => {
     case 'eleven': elevenCreds = m.creds || null; delete mouths.eleven; break;
     case 'hush': hushAll(); if (chatAbort) chatAbort.abort(); break;
     case 'chat': chat(m.id, m.text, m.opts); break;
+    case 'decide': {
+      if (!mind || !mind.ready) { send({ type: 'decided', id: m.id, error: 'not ready' }); break; }
+      const t0 = Date.now();
+      mind.decide(m.text, { history: m.history || [] }).then((d) => send({ type: 'decided', id: m.id, decision: d, ms: Date.now() - t0 }), (e) => send({ type: 'decided', id: m.id, error: e.message }));
+      break;
+    }
     case 'fix': send({ type: 'fixed', id: m.id, text: mind && mind.ready ? await mind.fixName(m.kind, m.text) : m.text }); break;
     case 'rpc-reply': { const r = waiting.get(m.id); if (r) { waiting.delete(m.id); r(m.result); } break; }
   }

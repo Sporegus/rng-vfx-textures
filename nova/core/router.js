@@ -8,6 +8,7 @@
 //   questions                -> answered by the language model (or research), not by opening Google
 // Everything else goes to the existing command brain (brain/brain.js).
 'use strict';
+const acts = require('./acts');
 
 // swearing used for emphasis ("get the fuck out of the way") isn't part of what you want done
 const CURSE = /\b(?:the )?(?:fuck(?:ing|in'?)?|f\*+k(?:ing)?|freaking|frickin'?|friggin'?|bloody|goddamn|damn(?:ed)?|the hell|the heck)\b/gi;
@@ -41,6 +42,10 @@ function route(raw, ctx = {}) {
   // "wait": drop what's pending right now (an open question or approval), but don't pause background jobs
   if (/^(?:wait|hold on|hang on|one sec(?:ond)?|wait a (?:sec(?:ond)?|minute|moment))[.!]?$/i.test(low)) return { kind: 'hold' };
 
+  // ---- "open discord, actually don't": taking it back, not a correction to "don't"
+  const back = acts.takeBack(text);
+  if (back) return { kind: 'negated', what: back.what, text };
+
   // ---- corrections
   const mid = text.match(MID_CORRECTION);
   if (mid && mid[2].split(' ').length <= 8) return { kind: 'correction', replaces: mid[1], text: rebuild(mid[1], mid[2], ctx), raw: text };
@@ -58,6 +63,23 @@ function route(raw, ctx = {}) {
   if (/^(show|open) (the )?(tasks?|task panel|dashboard|jobs?)( panel)?$/i.test(low)) return { kind: 'panel', tab: 'tasks' };
   if (/^(show|open) (the )?(diagnostics|settings|capabilities)$/i.test(low)) return { kind: 'panel', tab: /settings|capab/i.test(low) ? 'settings' : 'diagnostics' };
   if (/^(what do you (remember|know) about me|show (my )?memory)$/i.test(low)) return { kind: 'panel', tab: 'memory' };
+
+  // ---- what kind of sentence is it? (instruction, "don't", question, chat, or a mix)
+  let inform = false;
+  if (!ctx._inner && !/^my goals? (?:in|for)\b/i.test(low)) {   // (statement-shaped commands keep their own routes)
+    const isApp = ctx.isApp || ((n) => KNOWN_NAMES.has(String(n).toLowerCase()));
+    const act = acts.analyze(text, { isApp });
+    if (act && act.kind === 'negated') return { kind: 'negated', what: act.what, text };
+    if (act && act.kind === 'chat') return { kind: 'chat', text };
+    if (act && (act.kind === 'command' || act.kind === 'other') && act.text && act.text !== low) {
+      // the instruction itself, without the filler, politeness or chat around it
+      const r = route(act.text, { ...ctx, _inner: true });
+      return { ...r, ...(act.skipped && act.skipped.length ? { skipped: act.skipped } : {}), said: text };
+    }
+    if (act && act.kind === 'question') inform = true;
+    // a request in words the command brain may not know ("could you deal with that"): a command, read whole
+    if (act && act.kind === 'request') return { kind: 'command', text };
+  }
 
   // ---- coordination jobs
   if (/\bcoordinate\b.*\b(chatgpt|claude|gpt|assistants?)\b/i.test(low) || /\b(relay|hand off|handoff)\b.*\b(chatgpt|claude)\b/i.test(low)) return { kind: 'job', template: 'coordination', text };
@@ -157,8 +179,10 @@ function route(raw, ctx = {}) {
 
   // ---- questions: answered, not googled
   if ((QUESTION.test(low) || AUX_QUESTION.test(low) || /\?$/.test(text)) && !/^(can you|could you|would you|will you) (open|launch|start|play|find|close|turn|set|organi[sz]e|clean|show|move|put)\b/i.test(low)) {
-    return { kind: 'question', text, current: CURRENT.test(low) };
+    return { kind: 'question', text, current: CURRENT.test(low), ...(inform ? { inform } : {}) };
   }
+  // a question without a question word ("is spotify running") is still a question
+  if (inform) return { kind: 'question', text, current: CURRENT.test(low), inform };
   return { kind: 'command', text };
 }
 

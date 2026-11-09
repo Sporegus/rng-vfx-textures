@@ -72,6 +72,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
     proc = utilityProcess.fork(path.join(__dirname, 'service.js'), [], { serviceName: 'Nova voice', stdio: 'ignore' });
     proc.on('message', async (m) => {
       // Nova's core asked the local chat brain something: its answer comes back here, not to the page
+      if (m.type === 'decided') { const w = coreChats.get(m.id); if (w) { coreChats.delete(m.id); m.error ? w.reject(new Error(m.error)) : w.resolve(m.decision); } return; }
       if (typeof m.id === 'string' && m.id.startsWith('core-') && (m.type === 'sentence' || m.type === 'replied')) {
         const w = coreChats.get(m.id);
         if (w && m.type === 'sentence') w.onText && w.onText(m.text);
@@ -123,7 +124,17 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
         const id = 'core-' + (++coreId);
         coreChats.set(id, { resolve, onText });
         if (signal) signal.addEventListener('abort', () => { coreChats.delete(id); proc && proc.postMessage({ type: 'hush' }); reject(Object.assign(new Error('Stopped.'), { category: 'cancelled' })); }, { once: true });
-        proc.postMessage({ type: 'chat', id, text, opts: { voice: settings().voiceName, mood: 'cute', speed: 1, speak: false } });
+        proc.postMessage({ type: 'chat', id, text, opts: { voice: settings().voiceName, mood: 'cute', speed: 1, speak: false, tools: false } });
+      });
+    },
+    // one call: { kind: command|chat|ask, command, reply }
+    decide(text, history, signal) {
+      return new Promise((resolve, reject) => {
+        if (!proc) return reject(new Error('The voice service isn\'t running.'));
+        const id = 'core-d' + (++coreId);
+        coreChats.set(id, { resolve, reject });
+        if (signal) signal.addEventListener('abort', () => { coreChats.delete(id); reject(Object.assign(new Error('Stopped.'), { category: 'cancelled' })); }, { once: true });
+        proc.postMessage({ type: 'decide', id, text, history });
       });
     },
   };

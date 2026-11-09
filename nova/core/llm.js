@@ -99,9 +99,11 @@ function toOpenAI(m) {
 }
 
 // the voice service's local model: ask(text, onText, signal) -> text
-function local({ ask, ready }) {
+function local({ ask, ready, decide }) {
   return {
     name: 'local', model: 'on-device', vision: false,
+    // interpretation and the choice of action in one call (JSON-constrained on the device)
+    ...(decide ? { decide: ({ text, history = [], signal, timeoutMs = 60000 }) => withTimeout(timeoutMs, signal, (sig) => decide(text, history, sig)) } : {}),
     available: () => ready() ? { ok: true } : { ok: false, reason: 'The free on-device chat brain is off or still loading (tray > Voice > Chat brain).' },
     async chat({ messages, onText, signal, timeoutMs = 90000 }) {
       const last = [...messages].reverse().find(m => m.role === 'user');

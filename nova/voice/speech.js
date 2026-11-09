@@ -56,7 +56,9 @@ class Ears {
       const audio = new Float32Array(pre + seg.samples.length);
       for (let k = 0; k < pre; k++) audio[k] = this.hist[(seg.start - pre + k) % this.hist.length];
       audio.set(seg.samples, pre);
-      this.queue = this.queue.then(() => this.transcribe(audio)).then((t) => { if (t && onText) onText(t, audio.length / RATE); }).catch(() => {});
+      // when you actually stopped talking: the audio fed since the end of this bit of speech
+      const speechEndAt = Date.now() - Math.round((this.fed - (seg.start + seg.samples.length)) / RATE * 1000);
+      this.queue = this.queue.then(() => this.transcribe(audio)).then((t) => { if (t && onText) onText(t, audio.length / RATE, { speechEndAt, finalAt: Date.now() }); }).catch(() => {});
     }
   }
 

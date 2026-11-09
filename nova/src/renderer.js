@@ -1286,7 +1286,8 @@
     if (api.core) {
       lastAsked = { text, voice: !!opts.voice };
       busyChip(true);
-      const r = await api.core.input({ text, source: opts.voice ? 'voice' : 'typed', utteranceId: opts.utteranceId || null, final: true });
+      const timing = opts.voice ? (opts.timing || {}) : { typedAt: opts.typedAt || Date.now() };
+      const r = await api.core.input({ text, source: opts.voice ? 'voice' : 'typed', utteranceId: opts.utteranceId || null, final: true, timing });
       return r;
     }
     const r = B.understand(text, { last: lastStep });
@@ -1504,7 +1505,7 @@
     }
   };
 
-  function onHeard(text, utteranceId) {
+  function onHeard(text, utteranceId, timing) {
     const h = Wake.hear(text);
     const open = Date.now() < voice.follow || Date.now() < voice.ptt;
     if (!h.wake && !open) return; // not talking to her
@@ -1520,7 +1521,7 @@
     // a stray word or a cough while she was listening isn't a request
     if (!h.wake && said.split(' ').length < 2 && !/^(yes|yeah|yep|no|nope|stop|next|skip|pause|play|thanks|cancel|louder|quieter)$/.test(said)) return;
     voice.follow = 0; voice.ptt = 0; syncMic();
-    command(said, { voice: true, utteranceId });
+    command(said, { voice: true, utteranceId, timing });
   }
 
   function answerAloud(said) {
@@ -1785,7 +1786,7 @@
         say(`I couldn't set up my ${m.what === 'chat' ? 'chat brain' : 'voice'}: ${m.message}. Check your internet and try again? 😔`, { ms: 7000 });
         break;
       case 'audio': if (settings.voice) VIO.play(m.samples, m.sampleRate, pitch() * (m.pitch || 1), m.gain || 1); break;
-      case 'heard': if (statusEl.dataset.state === 'transcribing') showStatus(null); onHeard(m.text, m.utteranceId); break;
+      case 'heard': if (statusEl.dataset.state === 'transcribing') showStatus(null); onHeard(m.text, m.utteranceId, m.timing); break;
       case 'speaking': if (m.on && (settings.listen || Date.now() < voice.ptt)) showStatus('transcribing'); break;
       case 'sentence': { const c = voice.chats.get(m.id); if (c) c.sentence(m.text, m.mood); break; }
       case 'replied': { const c = voice.chats.get(m.id); if (c) c.done(m.text); break; }

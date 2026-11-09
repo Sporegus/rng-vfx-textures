@@ -26,6 +26,17 @@ You can't send or delete emails, delete files for good, buy things, install soft
 ${name ? `The user's name is ${name}.\n` : ''}${facts.length ? 'Things you remember about the user:\n' + facts.map(f => '- ' + f).join('\n') + '\n' : ''}Today is ${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}.`;
 }
 
+// Reading what you meant, in ONE call: a command for her command path, a chat reply, or a
+// question back. The instructions never change, so the model processes them once and reuses
+// them (llama.cpp keeps the shared start of the prompt); output is forced to valid JSON.
+const DECIDE_SYSTEM = `You read what the user just said to Nova, a desktop assistant on their Windows PC, and decide what it is. Answer with JSON only.
+kind "command": they want something done on the PC now. Put it in "command" as one short plain instruction in the style of the list below.
+kind "chat": conversation, or a question you can answer. Put a short, warm reply (one or two sentences, no emoji) in "reply".
+kind "ask": they want something done but you can't tell what. Put one short question in "reply".
+Only make a command when they ask for it. Something they mention, ask about, or tell you not to do is not a command ("don't open discord", "why is discord slow", "i love spotify" are not commands). Ignore swearing and filler.
+Instructions Nova understands: open <app>; close <app>; open <website>; open <app> in chrome; play <song, artist or genre>; pause the music; next song; turn the volume up; turn the volume down; mute; set a timer for <time>; remind me at <time> to <thing>; search google for <thing>; open my <folder> folder; find <file name>; take a screenshot; organize my downloads; clean up junk files; dark mode; light mode; lock my pc; what's the weather; what time is it; get out of the way; go away; tell me a joke; stop.`;
+const DECIDE_SCHEMA = { type: 'object', properties: { kind: { enum: ['command', 'chat', 'ask'] }, command: { type: 'string' }, reply: { type: 'string' } }, required: ['kind', 'command', 'reply'] };
+
 class Mind {
   // host: { task(command), weather(place), remember(fact), memory() } — all async
   // uris: which models to try (defaults to the best fit for this PC's memory)
@@ -54,6 +65,8 @@ class Mind {
     this.sequence = this.context.getSequence();
     await this.fresh();
     this.ready = true;
+    // get the decision prompt processed now, so the first real request doesn't wait for it
+    this.warming = this.decide('hello').catch(() => {});
     return { file, gpu: this.llama.gpu, size: this.chosen, vramGB: Math.round(vram * 10) / 10 };
   }
 
@@ -92,7 +105,7 @@ class Mind {
 
   // onSentence(text) is called as each sentence is ready, so she can start
   // speaking before the whole reply is written
-  async chat(text, onSentence, signal) {
+  async chat(text, onSentence, signal, { tools = true } = {}) {
     if (!this.ready) throw new Error('not ready');
     // a new conversation after a long break, or on a new day
     if (Date.now() - this.lastAt > 20 * 60000 || this.day !== new Date().toDateString()) await this.fresh();
@@ -118,13 +131,31 @@ class Mind {
     let reply = '';
     try {
       reply = await this.session.prompt(text, {
-        functions: this.functions(), maxTokens: 220, temperature: 0.7, signal, stopOnAbortSignal: true,
+        ...(tools ? { functions: this.functions() } : {}), maxTokens: 220, temperature: 0.7, signal, stopOnAbortSignal: true,
         onTextChunk: (c) => { buf += c; flush(false); },
       });
     } catch (e) { if (!(signal && signal.aborted)) throw e; } // stopped: you started talking again
     if (signal && signal.aborted) return '';
     flush(true);
     return reply.replace(/\[\w+\]\s*/g, '').trim();
+  }
+
+  // { kind, command, reply } for what was said; history: [{ role: 'user'|'assistant', content }]
+  async decide(text, { history = [] } = {}, signal) {
+    if (!this.ready) throw new Error('not ready');
+    if (!this.dctx) {
+      this.dctx = await this.model.createContext({ contextSize: 2048 });
+      this.dseq = this.dctx.getSequence();
+      this.dgrammar = await this.llama.createGrammarForJsonSchema(DECIDE_SCHEMA);
+    }
+    // (the sequence keeps what it already processed: a new session over it reuses the shared start)
+    const session = new L.LlamaChatSession({ contextSequence: this.dseq, systemPrompt: DECIDE_SYSTEM });
+    try {
+      const past = history.slice(-6).map(h => h.role === 'user' ? { type: 'user', text: String(h.content).slice(0, 400) } : { type: 'model', response: [String(h.content).slice(0, 400)] });
+      if (past.length) session.setChatHistory([{ type: 'system', text: DECIDE_SYSTEM }, ...past]);
+      const out = await session.prompt(String(text).slice(0, 500), { grammar: this.dgrammar, maxTokens: 160, temperature: 0.2, signal, stopOnAbortSignal: true });
+      return this.dgrammar.parse(out);
+    } finally { session.dispose({ disposeSequence: false }); }
   }
 
   // fixes a misheard song or app name ("god did by dj cald" -> "God Did by DJ Khaled")

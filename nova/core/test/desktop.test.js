@@ -18,7 +18,7 @@ function fakeWin() {
     fg: 11, idleMs: 5000, locked: false, typed: '', focusedPassword: false, now: () => Date.now(),
   };
   const win = {
-    state, available: () => true,
+    state, available: () => true, canList: () => true, warm: () => !!state.warm,
     windows: async () => state.windows.map(w => ({ ...w })),
     monitors: async () => state.monitors,
     foreground: async () => ({ ...state.windows.find(w => w.hwnd === state.fg) }),
@@ -130,4 +130,21 @@ test('a check that takes too long leaves the action unconfirmed, not failed', as
   assert.equal(runs, 1);
   assert.equal(r.verified, false);
   assert.match(r.evidence, /took too long/);
+});
+
+test('an app that is already open is brought to the front, not started again', async () => {
+  const win = fakeWin();
+  win.state.warm = true;   // (the window helper is running)
+  const { tasks, tools } = setup(win);
+  let launches = 0;
+  const realOpen = tools.get('app.open');
+  const r = await tools.run(tasks.create({ text: 'open discord' }), { tool: 'app.open', args: { name: 'discord' }, direct: true });
+  assert.equal(r.result.already, true);
+  assert.equal(win.state.fg, 22, 'Discord is now in front');
+  assert.equal(r.verified, true);
+  assert.equal(launches, 0);
+  // a browser tab titled "Discord" isn't the Discord app
+  win.state.windows = [{ hwnd: 44, title: 'Discord | Friends - Google Chrome', process: 'chrome', pid: 400, x: 0, y: 0, w: 900, h: 700 }];
+  const r2 = await tools.run(tasks.create({ text: 'open discord' }), { tool: 'app.open', args: { name: 'discord' }, direct: true });
+  assert.ok(!r2.result.already, 'did not mistake the Chrome tab for Discord');
 });

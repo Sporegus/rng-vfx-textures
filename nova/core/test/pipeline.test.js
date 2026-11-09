@@ -352,3 +352,18 @@ test('chat with a request in it does the request; real commands are unchanged', 
   await h.pipeline.input({ text: 'open up to me' });
   assert.equal(h.pageRuns.length, 0, '"open up to me" is not an app');
 });
+
+test('an on-device brain that can decide does it in one call, with the conversation so far', async () => {
+  const calls = [];
+  const fake = { name: 'local', model: 'on-device', vision: false, available: () => ({ ok: true }),
+    decide: async (req) => { calls.push(req); return /talked about/.test(req.text) ? { kind: 'command', command: 'organize my downloads', reply: '' } : { kind: 'chat', command: '', reply: 'Sounds fun!' }; },
+    chat: async () => { throw new Error('chat should not be called for an interpretation'); } };
+  const { createPipeline } = require('../pipeline');
+  const brain = require('../../brain/brain');
+  const h = harness();
+  const p = createPipeline({ tasks: h.tasks, permissions: h.permissions, tools: h.tools, log: h.log, brain, ui: h.ui, page: { run: async (s) => { h.pageRuns.push(s); return {}; } }, llm: llm.chooser({ local: fake }, ['local']) });
+  await p.input({ text: 'could you deal with the stuff we talked about earlier' });
+  assert.equal(calls.length, 1, 'one model call');
+  assert.match(calls[0].text, /talked about earlier/, 'the model saw the whole sentence');
+  assert.deepEqual(h.pageRuns.map(s => s.intent), ['organize']);
+});
