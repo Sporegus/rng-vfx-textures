@@ -74,6 +74,14 @@ function route(raw, ctx = {}) {
   const nth = low.match(/^(?:(?:do|pick|choose|take|go with|use|select)\s+)?(?:the\s+)?(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:one|option|choice)$/);
   if (nth) return { kind: 'pick', index: { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3, last: -1 }[nth[1]], text };
 
+  // ---- routines / modes ("start gaming mode", "end study mode", "save that as my stream setup")
+  const wfRun = text.match(/^(?:start|run|begin|enter|switch to|activate|turn on|go into)\s+(?:my\s+|the\s+)?(.+?)\s+(?:mode|preset|workflow|routine)[.!]?$/i);
+  if (wfRun && !/\b(until|record|replay)\b/i.test(low)) return { kind: 'workflow', op: 'run', name: wfRun[1].trim(), text };
+  const wfEnd = text.match(/^(?:end|stop|exit|leave|undo|turn off|finish)\s+(?:my\s+|the\s+)?(.+?)\s+(?:mode|preset|workflow|routine)[.!]?$/i);
+  if (wfEnd) return { kind: 'workflow', op: 'end', name: wfEnd[1].trim(), text };
+  const wfSave = text.match(/^save (?:that|this|it|what you (?:just )?did) as (?:a |my |the )?(.+?)(?:\s+(?:routine|workflow|mode|preset))?[.!]?$/i);
+  if (wfSave) return { kind: 'workflow', op: 'save', name: wfSave[1].trim(), text };
+
   // ---- projects and saved references
   const proj = text.match(/^(?:let'?s|lets|i want to|time to|can we)\s+(?:work on|open|continue(?: with)?|get back to|switch to)\s+(?:the\s+|my\s+)?(.+?)(?:\s+project)?[.!]?$/i) || text.match(/^(?:open|switch to|load)\s+(?:the\s+|my\s+)?project\s+(.+?)[.!]?$/i) || text.match(/^(?:open|switch to|load)\s+(?:the\s+|my\s+)?(.+?)\s+project[.!]?$/i);
   if (proj) return { kind: 'project', name: proj[1].trim(), text };

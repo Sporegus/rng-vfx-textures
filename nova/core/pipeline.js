@@ -114,6 +114,11 @@ function createPipeline(deps) {
         return { picked: o.label };
       }
       case 'compose': return answer(task, r.text, { compose: true });
+      case 'workflow': return deps.workflows ? deps.workflows.handle(task, r, { approve, reply, choose, lastSteps: ctx.lastSteps, run: {
+        app: async (t, name) => { const res = await tools.run(t, { tool: 'app.open', args: { name: (deps.appAlias && deps.appAlias(name)) || name }, direct: true }); return { ok: !!(res.result && !res.result.notFound && res.verified !== false), note: res.result && res.result.notFound ? 'not installed' : res.verified === false ? 'couldn\'t confirm its window' : '' }; },
+        intent: async (t, s) => { const res = await pageStep(t, { intent: s.intent, slots: s.slots || {}, ready: true, missing: [], confidence: 1 }, 'routine'); return { ok: !(res && (res.error || res.cancelled)) }; },
+        window: async (t, s) => { const res = await tools.run(t, { tool: s.op === 'arrange' ? 'window.arrange' : 'window.move', args: { which: s.which || 'that', ...(s.op === 'arrange' ? { op: s.arrange || 'maximize' } : { to: s.to || 'other' }) }, direct: true }); return { ok: !!res.verified }; },
+      } }) : blocked('Routines aren\'t set up.');
       case 'project': return deps.projects ? deps.projects.handle(task, r, { ui, approve, reply, choose }) : blocked('Project profiles aren\'t set up yet.');
       case 'reference': return deps.references ? deps.references.handle(task, r, { ui, approve, reply, choose }) : blocked('The reference inbox isn\'t set up yet.');
       case 'troubleshoot': return deps.troubleshoot ? deps.troubleshoot.handle(task, r, { ui, approve, reply, choose, answer }) : answer(task, r.text);
@@ -132,6 +137,14 @@ function createPipeline(deps) {
     history.push({ role: 'assistant', content: String(text).slice(0, 2000) });
     while (history.length > 16) history.shift();
     return { said: text };
+  }
+
+  // what you just had her do (for "save that as …"): her own abilities and app launches, last 2 minutes
+  function remember(step) {
+    const now = Date.now();
+    if (!ctx.lastStepsAt || now - ctx.lastStepsAt > 120000) ctx.lastSteps = [];
+    ctx.lastSteps = [...(ctx.lastSteps || []), step].slice(-10);
+    ctx.lastStepsAt = now;
   }
 
   // ------------------------------------------------------------------ the older command brain
@@ -189,6 +202,7 @@ function createPipeline(deps) {
         continue;
       }
       results.push(await pageStep(task, step, source));
+      remember({ type: 'intent', intent: step.intent, slots: step.slots || {} });
     }
     return results;
   }
@@ -206,12 +220,19 @@ function createPipeline(deps) {
       // the app name was uncertain: ask, don't guess
       const v = await choose(task, `I couldn't find "${name}". Did you mean:`, sugg.map(s => ({ label: s, value: s })));
       if (!v) return reply(task, 'Okay, I didn\'t open anything.');
-      return openApp(task, v);
+      const res = await openApp(task, v);
+      // your correction can become a name she remembers, but only if you say so
+      if (deps.rememberAlias && res && res.verified) {
+        const keep = await choose(task, `Remember that "${name}" means ${v}?`, [{ label: 'Yes, remember', value: 'yes' }, { label: 'Just this once', value: 'no' }]);
+        if (keep === 'yes') { deps.rememberAlias(name, v, { from: 'correction', task: task.id }); reply(task, `Got it: "${name}" opens ${v} from now on (change it in Settings > App names).`); }
+      }
+      return res;
     }
     tasks.move(task, 'verifying');
     const ok = r.verified;
+    if (ok) remember({ type: 'app', name: r.result.opened });
     tasks.move(task, 'executing');
-    return reply(task, ok ? `Opened ${r.result.opened}. ✅` : `I asked Windows to open ${r.result.opened}, but I couldn't confirm its window appeared yet.`, { verified: ok, evidence: r.evidence });
+    return { ...reply(task, ok ? `Opened ${r.result.opened}. ✅` : `I asked Windows to open ${r.result.opened}, but I couldn't confirm its window appeared yet.`, { verified: ok, evidence: r.evidence }), verified: ok, opened: r.result.opened };
   }
 
   // the page's own abilities (organize, clean, music, timers...), after the core's permission check

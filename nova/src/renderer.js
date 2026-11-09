@@ -1785,6 +1785,7 @@
   // ================================================================ idle brain
   // quiet hours (Tasks panel > Settings): she doesn't wander or pop up on her own; your requests and reminders still work
   function isQuiet() {
+    if (settings.dnd) return true;   // do-not-disturb (e.g. from a Gaming or Study routine)
     const q = settings.quietHours;
     if (!q || !q.from || !q.to) return false;
     const m = (t) => { const [h, mi] = t.split(':').map(Number); return h * 60 + mi; };

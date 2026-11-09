@@ -197,8 +197,12 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const references = createReferences({ store, dir: path.join(dir, 'references'), log, projects,
     clipboard: { image: () => { const img = clipboard.readImage(); return img.isEmpty() ? null : { png: img.toPNG(), size: img.getSize() }; }, text: () => clipboard.readText() },
     open: { path: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); }, url: (u) => shell.openExternal(u) } });
+  const { createWorkflows } = require('./workflows');
+  const workflows = createWorkflows({ store, log, settings, saveSettings });
+  workflows.ensurePresets();
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references });
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows,
+    rememberAlias: (alias, app2, provenance) => store.remember('alias:' + String(alias).toLowerCase().trim(), 'app_alias', { alias: String(alias).toLowerCase().trim(), app: app2, provenance: { ...provenance, at: Date.now() } }) });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });
   pipeline.onStop(() => { speechOut.stop('stop');  win.releaseAll(); games.stop(); for (const [wid, w] of waits) { waits.delete(wid); both('closed', { id: wid }); w.resolve(w.kind === 'approve' ? { allow: false, cancelled: true } : null); } toPage('stopped', {}); });
@@ -285,6 +289,11 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'job:cancel': return jobs.cancel(arg.id);
       case 'job:delete': store.deleteJob(arg.id); return { ok: true };
       case 'job:demo': return startDemoJob();
+      case 'workflows': return workflows.list().map(w => ({ ...w, plan: w.steps.map(workflows.describeStep) }));
+      case 'workflow:edit': return workflows.edit(arg.name, { steps: arg.steps, why: 'edited in the panel' });
+      case 'workflow:revert': return workflows.revert(arg.name);
+      case 'workflow:remove': return workflows.remove(arg.name);
+      case 'workflow:forgetApproval': { const w = workflows.get(arg.name); if (w) { w.approvedHash = null; store.remember('workflow:' + w.id, 'workflow', w); } return { ok: true }; }
       case 'projects': return projects.list().map(p => ({ ...p, active: projects.active() === p.id }));
       case 'project:save': return projects.upsert(arg);
       case 'project:remove': projects.remove(arg.id); return { ok: true };
