@@ -49,7 +49,9 @@
       const c = h(`<div class="card approval"><div class="title">${esc(w.title || w.question)}</div><div class="lines">${esc((w.lines || []).join('\n'))}${w.heard ? '\nI heard: “' + esc(w.heard) + '”' : ''}</div><div class="row"></div></div>`).firstChild;
       const row = c.querySelector('.row');
       if (w.kind === 'approve') {
-        row.append(btn('Allow once', 'primary', () => P.answer(w.id, { allow: true })), btn('Cancel', 'ghost', () => P.answer(w.id, { allow: false })));
+        row.append(btn('Allow once', 'primary', () => P.answer(w.id, { allow: true })));
+        if (w.remember) row.append(btn(typeof w.remember === 'string' ? w.remember : 'Always for this', '', () => P.answer(w.id, { allow: true, remember: true })));
+        row.append(btn('Cancel', 'ghost', () => P.answer(w.id, { allow: false })));
       } else {
         for (const opt of w.options || []) row.append(btn(opt.label, opt.primary ? 'primary' : '', () => P.answer(w.id, opt.value)));
         row.append(btn('Never mind', 'ghost', () => P.answer(w.id, null)));
@@ -160,7 +162,7 @@
     view.append(kc);
 
     view.append(h('<h2>Privacy</h2>'));
-    const pv = h(`<div class="card grid"><label>Screen reading</label><div class="row" style="margin:0">${s.screenConsent ? '<span class="state live">allowed</span>' : '<span class="muted">asks each time</span>'}</div><label>Quiet hours</label><div class="row" style="margin:0"><input type="time" data-q="from" value="${esc((s.quietHours || {}).from || '')}"> to <input type="time" data-q="to" value="${esc((s.quietHours || {}).to || '')}"><span class="muted">no pop-ups; approvals wait in this panel</span></div></div>`).firstChild;
+    const pv = h(`<div class="card grid"><label>Screen reading</label><div class="row" style="margin:0">${s.screenConsent ? '<span class="state live">allowed</span>' : '<span class="muted">asks each time</span>'}</div><label>Quiet hours</label><div class="row" style="margin:0"><input type="time" data-q="from" value="${esc((s.quietHours || {}).from || '')}"> to <input type="time" data-q="to" value="${esc((s.quietHours || {}).to || '')}"><span class="muted">she sits still and won't pop up on her own; your requests and reminders still work</span></div></div>`).firstChild;
     if (s.screenConsent) pv.children[1].append(btn('Revoke', 'danger', () => P.query('settings:set', { screenConsent: false }).then(render)));
     pv.querySelectorAll('[data-q]').forEach(i => i.addEventListener('change', () => P.query('settings:set', { quietHours: { from: pv.querySelector('[data-q=from]').value, to: pv.querySelector('[data-q=to]').value } })));
     view.append(pv);

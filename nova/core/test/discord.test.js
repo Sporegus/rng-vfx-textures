@@ -108,3 +108,12 @@ test('a timed-out send that actually arrived is recognized by its nonce', async 
   assert.ok(r.reconciled);
   assert.equal(delivered.length, 1);
 });
+
+test('"open Afterparty on Discord" just opens it for you', async () => {
+  const s = setup();
+  afterparty(s.discord);
+  await s.pipeline.input({ text: 'open Afterparty on Discord' });
+  assert.deepEqual(s.launched, ['discord://-/channels/111111111111/222222222222']);
+  assert.ok(s.h.replies().some(r => /Opened Afterparty in Discord/.test(r)));
+  assert.equal(s.sent.length, 0);
+});

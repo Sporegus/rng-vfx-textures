@@ -1,0 +1,16 @@
+{
+  "_comment": "Example %APPDATA%\\Nova\\settings.json. No secrets belong here: API keys and the Discord bot token are saved encrypted from Tasks panel > Settings.",
+  "skin": "idle",
+  "size": 3,
+  "sound": true,
+  "wander": true,
+  "followWindows": true,
+  "startWithWindows": false,
+  "voice": false,
+  "listen": false,
+  "chat": false,
+  "brainOrder": ["anthropic", "openai", "local"],
+  "screenConsent": false,
+  "quietHours": { "from": "23:00", "to": "07:30" },
+  "introDone": true
+}

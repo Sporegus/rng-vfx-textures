@@ -150,7 +150,60 @@ function createController({ adapter, profile, guard, log, now = () => Date.now()
       await releaseAll();
     }
   }
-  return { run, look, plan, releaseAll, held: () => [...held.keys()] };
+  // A recorded routine: only this game's own keys, replayed in bounded holds, until a
+  // condition read from the game's HUD is met (or a limit/Stop). Never text, never other apps.
+  async function routine(r, { signal, maxMs = 120000 } = {}) {
+    const t0 = now(), stats = { loops: 0, actions: 0 };
+    const allowed = new Set(Object.values(profile.keys));
+    if (!r || !Array.isArray(r.steps) || !r.steps.length) throw new NovaError('invalid', 'That routine is empty.');
+    if (r.game !== profile.id) throw new NovaError('blocked', `That routine was recorded for ${r.game}, not ${profile.name}.`);
+    for (const st of r.steps) if (st.key && !allowed.has(st.key)) throw new NovaError('blocked', `The routine uses a key (${st.key}) that isn't one of this game's controls.`);
+    const until = r.until || {};
+    const done = (hud) => until.field && Number(hud[until.field]) >= Number(until.atLeast);
+    const out = (status, reason, hud) => ({ status, reason, stats: { ...stats, ms: now() - t0, [until.field || 'value']: hud && hud[until.field] } });
+    try {
+      for (;;) {
+        const obs = await look();
+        if (done(obs.hud)) return out('completed', `Stopped when ${until.field} reached ${obs.hud[until.field]} (goal ${until.atLeast}).`, obs.hud);
+        if (!obs.focused || obs.hud.state === 'paused') { await releaseAll(); return out('paused', 'The game lost focus, so I let go of the keys and paused.', obs.hud); }
+        if (stats.loops >= (r.maxLoops || 10)) return out('paused', `Ran the routine ${stats.loops} times without reaching the goal.`, obs.hud);
+        for (const st of r.steps) {
+          if (signal && signal.aborted) return out('stopped', 'You stopped it.', obs.hud);
+          if (now() - t0 > maxMs) return out('paused', 'Reached the time limit.', obs.hud);
+          if (guard) { try { const g = (await guard.check(signal)) || { ok: true }; if (g.ok === false) { await releaseAll(); return out('paused', g.reason, obs.hud); } } catch (e) { if (e.category === 'cancelled') throw e; await releaseAll(); return out('paused', e.message, obs.hud); } }
+          if (st.key) { await down(st.key); try { await sleep(Math.min(profile.maxHoldMs, Math.max(20, st.ms || 100)), signal); } finally { await up(st.key); } stats.actions++; }
+          else await sleep(Math.min(2000, st.ms || 100), signal);
+          const mid = await look();
+          if (done(mid.hud)) return out('completed', `Stopped when ${until.field} reached ${mid.hud[until.field]} (goal ${until.atLeast}).`, mid.hud);
+        }
+        stats.loops++;
+      }
+    } catch (e) {
+      if (e.category === 'cancelled') return out('stopped', 'You stopped it.');
+      throw e;
+    } finally { await releaseAll(); }
+  }
+  return { run, routine, look, plan, releaseAll, held: () => [...held.keys()] };
+}
+
+// Turn what you did in the game (key down/up events with times) into a routine.
+// Only the game's own controls are kept: typed text, shortcuts and anything else
+// (passwords, chat) are dropped, so a routine can never replay them.
+function recordRoutine(events, profile, { until, maxLoops = 10 } = {}) {
+  const allowed = new Set(Object.values(profile.keys));
+  const steps = [], downAt = new Map();
+  let last = null, dropped = 0;
+  for (const e of events) {
+    if (!allowed.has(e.key)) { dropped++; continue; }
+    if (e.type === 'down' && !downAt.has(e.key)) {
+      if (last != null && e.t - last > 30) steps.push({ wait: true, ms: Math.min(2000, e.t - last) });
+      downAt.set(e.key, e.t);
+    } else if (e.type === 'up' && downAt.has(e.key)) {
+      steps.push({ key: e.key, ms: Math.min(profile.maxHoldMs, e.t - downAt.get(e.key)) });
+      downAt.delete(e.key); last = e.t;
+    }
+  }
+  return { game: profile.id, steps, until, maxLoops, dropped, recorded: new Date().toISOString() };
 }
 
 // ------------------------------------------------------------------ requests
@@ -254,4 +307,4 @@ function electronAdapter(win, { hud = '#hud' } = {}) {
   };
 }
 
-module.exports = { createGames, createController, policy, PROFILES, PROHIBITED, playwrightAdapter, electronAdapter };
+module.exports = { createGames, createController, recordRoutine, policy, PROFILES, PROHIBITED, playwrightAdapter, electronAdapter };

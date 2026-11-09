@@ -18,6 +18,12 @@ Nova teleports in at the bottom-right of your screen and introduces herself.
 
 To make a real installer (`.exe`), run `npm run dist`. The output lands in `nova/dist`.
 
+## Nova's brain (new)
+
+Everything you type or say now goes through one pipeline: what she understood, an approval when it matters, the action, a check that it worked, and the answer in her bubble. Press **Ctrl+Alt+X** (or ■ STOP in the bubble) to stop anything. The **Tasks panel** (tray > Tasks, approvals & settings) holds approvals, long-running assistant jobs, memory, settings, what works on this PC, and diagnostics.
+
+Start with **[NOVA_MORNING_REPORT.md](NOVA_MORNING_REPORT.md)**, then `docs/USER_GUIDE.md`, `docs/INSTALL.md` and `docs/ARCHITECTURE.md`. Check the Windows parts with `npm run check-windows` (it only looks, never clicks).
+
 ## Using Nova
 
 | Do this | What happens |

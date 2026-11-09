@@ -1,0 +1,20 @@
+{
+  "_comment": "An unattended job: ChatGPT plans and reviews, Claude Code implements, and Nova checks the work herself. Create it in Tasks panel > Jobs (or say 'coordinate ChatGPT and Claude on …'), fill in the folder and criteria, then approve the job card once.",
+  "goal": "Make the inventory sort in my tool work for empty stacks, with a test",
+  "contract": {
+    "workspace": "C:\\Users\\you\\projects\\inventory-tool",
+    "criteria": ["Sorting an inventory with empty stacks doesn't crash", "There is a test for it", "npm test passes"],
+    "files": ["src/sort.js", "test/sort.test.js"],
+    "testCommand": ["npm", "test"],
+    "participants": [
+      { "id": "openai-api", "role": "planner" },
+      { "id": "claude-cli", "role": "implementer" },
+      { "id": "openai-api", "role": "reviewer" }
+    ],
+    "constraints": ["Don't change the public API", "No new dependencies"],
+    "restartResume": false,
+    "sharing": "project files and test output only"
+  },
+  "budgets": { "maxHours": 8, "maxCycles": 20, "maxRetries": 2, "noProgressCycles": 3, "maxSpendUsd": 5 },
+  "never": ["secrets or keys", "purchases", "deploying or publishing", "public posts", "messages to people", "files outside the project folder", "your existing ChatGPT/Claude chats"]
+}

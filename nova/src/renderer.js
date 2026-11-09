@@ -434,7 +434,8 @@
     const r = cv.getBoundingClientRect();
     const x = Math.floor(cx - r.left), y = Math.floor(cy - r.top);
     if (x < 0 || y < 0 || x >= r.width || y >= r.height) return false;
-    try { return ctx.getImageData(x, y, 1, 1).data[3] > 0; } catch { return true; }
+    const k = cv.width / r.width;   // her hologram look draws at the screen's real pixels (125%/150% scaling)
+    try { return ctx.getImageData(Math.floor(x * k), Math.floor(y * k), 1, 1).data[3] > 0; } catch { return true; }
   }
   let drag = null, press = null, clickTimer = null;
   const samples = [];
@@ -1719,7 +1720,16 @@
   }
 
   // ================================================================ idle brain
+  // quiet hours (Tasks panel > Settings): she doesn't wander or pop up on her own; your requests and reminders still work
+  function isQuiet() {
+    const q = settings.quietHours;
+    if (!q || !q.from || !q.to) return false;
+    const m = (t) => { const [h, mi] = t.split(':').map(Number); return h * 60 + mi; };
+    const d = new Date(), cur = d.getHours() * 60 + d.getMinutes(), a = m(q.from), b = m(q.to);
+    return a <= b ? cur >= a && cur < b : cur >= a || cur < b;
+  }
   function brain() {
+    if (isQuiet()) { if (!z.asleep && !busy && bubble.classList.contains('hidden')) z.sitting = true; return; }
     if (busy || z.mode !== 'stand' || z.walk || z.hold || z.chase || z.hiding || drag || press) return;
     if (!bubble.classList.contains('hidden')) { lastInteraction = now; return; }
     if (!z.asleep && now - lastInteraction > 180000) { z.asleep = true; z.sitting = false; return; }
@@ -1865,7 +1875,7 @@
         coreWait = m.id;
         const buttons = [{ icon: '✓', label: 'Allow once', value: 'allow', primary: true }, { label: 'Cancel', value: 'cancel', ghost: true }];
         if (m.heard) buttons.splice(1, 0, { icon: '✎', label: 'Fix what I heard', value: 'edit' });
-        if (m.rememberable) buttons.splice(1, 0, { label: 'Always for this', value: 'remember' });
+        if (m.remember) buttons.splice(1, 0, { label: typeof m.remember === 'string' ? m.remember : 'Always for this', value: 'remember' });
         const v = await ask(m.title || 'OK to do this?', buttons, { quiet: true, content: card, wide: true, cols: 1 });
         if (coreWait !== m.id) return;   // answered somewhere else (the Tasks panel) or expired
         coreWait = null;
@@ -1903,9 +1913,9 @@
 
   requestAnimationFrame(tick);
   if (!settings.introDone) setTimeout(intro, 600);
-  else if (voice.service && !settings.voiceOffered) setTimeout(() => { if (!busy && bubble.classList.contains('hidden')) setupVoice(); }, 5000);
+  else if (voice.service && !settings.voiceOffered) setTimeout(() => { if (!busy && !isQuiet() && bubble.classList.contains('hidden')) setupVoice(); }, 5000);
   else teleportTo(z.x, H);
 
   // handy for the demo page / dev tools
-  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, makeWallpaper, intro, showStatus, hist };
+  window.novaDebug = { z, mainMenu, command, say, play, jumpTo, teleportTo, makeWallpaper, intro, showStatus, hist, overNova };
 })();

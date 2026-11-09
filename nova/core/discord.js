@@ -102,6 +102,11 @@ function createDiscord({ store, adapter, launch, log, permissions }) {
       matches = [matches[Number(v)]];
     }
     const t = matches[0];
+    // just "open Afterparty on Discord": open it for you, nothing else
+    if (r.open && !r.join && !r.call && !r.question) {
+      await launch(`discord://-/channels/${t.guildId}/${t.channelId}`);
+      return reply(task, `Opened ${t.label} in Discord.`);
+    }
     // 2. what's possible, said plainly
     const lines = [`You asked me to ${means.join(' and ') || 'go to Discord'} in ${t.label}.`];
     const opts = [];

@@ -1,0 +1,35 @@
+{
+  "_comment": "Editable starting points for jobs and everyday requests. Copy one into a new job in Tasks panel > Jobs, then set the folder and criteria for your project. Nothing here runs by itself.",
+  "jobs": [
+    {
+      "name": "Fix failing tests",
+      "goal": "Make the failing tests in this project pass without weakening them",
+      "contract": { "criteria": ["npm test passes", "No test was skipped or deleted"], "testCommand": ["npm", "test"],
+        "participants": [{ "id": "openai-api", "role": "planner" }, { "id": "claude-cli", "role": "implementer" }, { "id": "openai-api", "role": "reviewer" }] },
+      "budgets": { "maxHours": 4, "maxCycles": 12, "maxSpendUsd": 3 }
+    },
+    {
+      "name": "Small feature with review",
+      "goal": "Add <feature> with a test, reviewed before it's done",
+      "contract": { "criteria": ["The feature works as described", "It has a test", "npm test passes"], "testCommand": ["npm", "test"],
+        "participants": [{ "id": "anthropic-api", "role": "planner" }, { "id": "claude-cli", "role": "implementer" }, { "id": "openai-api", "role": "reviewer" }] },
+      "budgets": { "maxHours": 8, "maxCycles": 20, "maxSpendUsd": 5 }
+    },
+    {
+      "name": "Coordination demo (fixtures)",
+      "goal": "Watch a full plan → build → review → fix → verify cycle with scripted assistants",
+      "howTo": "Tasks panel > Jobs > Run the coordination demo"
+    }
+  ],
+  "requests": [
+    "what are you doing",
+    "what finished while I was away",
+    "pause everything",
+    "finish the current step",
+    "look up <topic> and cite sources",
+    "explain what's on my screen",
+    "put that window on my other monitor",
+    "play the test game for 2 minutes",
+    "open Afterparty on Discord"
+  ]
+}

@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { createController, createGames, policy, PROFILES, playwrightAdapter } = require('../games');
+const { createController, createGames, policy, PROFILES, playwrightAdapter, recordRoutine } = require('../games');
 const { openStore } = require('../store');
 const { harness } = require('./harness');
 const { createPipeline } = require('../pipeline');
@@ -138,6 +138,37 @@ browserTest('"play the test game" goes through one game approval, then plays (pi
     assert.match(card.title, /Let Nova play Nova coin fixture/);
     assert.ok(card.categories.includes('game'));
     assert.ok(h.replies().some(r => /^Done\. Collected 5\/5 coins/.test(r)), h.replies().join(' | '));
+  } finally { await g.browser.close(); }
+});
+
+test('recording keeps only the game\'s keys: typed text and passwords are never recorded (test 38)', () => {
+  const ev = [
+    { type: 'down', key: 'ArrowRight', t: 0 }, { type: 'up', key: 'ArrowRight', t: 300 },
+    ...'hunter2'.split('').flatMap((k, i) => [{ type: 'down', key: k, t: 400 + i * 10 }, { type: 'up', key: k, t: 405 + i * 10 }]),
+    { type: 'down', key: 'Enter', t: 500 }, { type: 'up', key: 'Enter', t: 510 },
+    { type: 'down', key: 'ArrowDown', t: 600 }, { type: 'up', key: 'ArrowDown', t: 900 },
+  ];
+  const r = recordRoutine(ev, PROFILES['nova-fixture'], { until: { field: 'coins', atLeast: 1 } });
+  assert.deepEqual(r.steps.filter(s => s.key).map(s => s.key), ['ArrowRight', 'ArrowDown']);
+  assert.equal(r.dropped, 16);
+  assert.ok(!JSON.stringify(r).includes('hunter2'.slice(0, 3)) || !r.steps.some(s => /^[a-z0-9]$/.test(s.key || '')));
+});
+
+browserTest('a recorded routine replays in its own game only, until its stop condition (test 38)', async () => {
+  const g = await game(7);
+  try {
+    const ctl = createController({ adapter: g.adapter, profile: PROFILES['nova-fixture'] });
+    // a routine that sweeps right and back along the top row, which passes the first coin for seed 7
+    const before = await ctl.look();
+    const coin = before.coins.sort((a, b) => a.cy - b.cy)[0];
+    const routine = { game: 'nova-fixture', steps: [{ key: 'ArrowDown', ms: Math.round(Math.max(0, coin.cy - 32 - 52) / 220 * 1000) }, { key: 'ArrowRight', ms: 400 }, { key: 'ArrowRight', ms: 400 }, { key: 'ArrowLeft', ms: 400 }, { key: 'ArrowLeft', ms: 400 }], until: { field: 'coins', atLeast: 1 }, maxLoops: 4 };
+    const res = await ctl.routine(routine, { maxMs: 30000 });
+    results.push({ case: 'routine', ...res });
+    assert.ok(['completed', 'paused'].includes(res.status), res.reason);
+    if (res.status === 'completed') assert.match(res.reason, /coins reached [1-5]/);
+    assert.deepEqual(g.adapter.held(), []);
+    await assert.rejects(ctl.routine({ ...routine, game: 'roblox' }), /recorded for roblox/);
+    await assert.rejects(ctl.routine({ ...routine, steps: [{ key: 'Enter', ms: 50 }] }), /isn't one of this game's controls/);
   } finally { await g.browser.close(); }
 });
 

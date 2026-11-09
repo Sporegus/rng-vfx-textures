@@ -37,9 +37,9 @@ function route(raw, ctx = {}) {
 
   // ---- status and job control
   if (/^(what are you doing|what're you doing|what are you working on|status|what's going on|whats going on|are you busy)\b/i.test(low)) return { kind: 'status', what: 'doing' };
-  if (/^(what have you (finished|done|completed)|what did you (finish|do|get done)|morning (digest|report)|any updates)\b/i.test(low)) return { kind: 'status', what: 'finished' };
+  if (/^(what have you (finished|done|completed)|what did you (finish|do|get done)|what (finished|got done|happened) (while|when) i was (away|gone|asleep|out)|what did i miss|morning (digest|report)|any updates)\b/i.test(low)) return { kind: 'status', what: 'finished' };
   if (/^(pause|pause everything|pause all|pause all tasks|pause the task|hold everything)$/i.test(low)) return { kind: 'jobs', op: 'pause_all' };
-  if (/^(resume|resume (that|the|it|my|this) ?(task|job)?|continue (that|the) (task|job)|keep going)$/i.test(low)) return { kind: 'jobs', op: 'resume_last' };
+  if (/^(resume|resume (that|the|it|my|this) ?(last )?(task|job)?|resume (the )?last (task|job)|continue (that|the|the last) (task|job)|keep going)$/i.test(low)) return { kind: 'jobs', op: 'resume_last' };
   if (/^(finish (the|this) (current )?(safe )?step( and stop)?|wrap up)$/i.test(low)) return { kind: 'jobs', op: 'finish_step' };
   if (/^(show|open) (the )?(tasks?|task panel|dashboard|jobs?)( panel)?$/i.test(low)) return { kind: 'panel', tab: 'tasks' };
   if (/^(show|open) (the )?(diagnostics|settings|capabilities)$/i.test(low)) return { kind: 'panel', tab: /settings|capab/i.test(low) ? 'settings' : 'diagnostics' };
@@ -49,6 +49,8 @@ function route(raw, ctx = {}) {
   if (/\bcoordinate\b.*\b(chatgpt|claude|gpt|assistants?)\b/i.test(low) || /\b(relay|hand off|handoff)\b.*\b(chatgpt|claude)\b/i.test(low)) return { kind: 'job', template: 'coordination', text };
 
   // ---- Discord
+  const openOn = text.match(/^(?:open|go to|take me to|show me)\s+(?:the\s+)?(.+?)\s+(?:on|in)\s+discord$/i);
+  if (openOn) return { kind: 'discord', text, alias: openOn[1].replace(/\s+(channel|server|call|chat)$/i, ''), open: true, join: false, call: false, question: null };
   if (/\bdiscord\b/i.test(low) && /\b(join|call|voice|channel|ask|tell|message|post|say)\b/i.test(low) && !/^open discord$/i.test(low)) {
     return { kind: 'discord', text, ...parseDiscord(text) };
   }
@@ -62,7 +64,7 @@ function route(raw, ctx = {}) {
   }
 
   // ---- the screen (needs your screen permission)
-  if (/^(what am i looking at|what'?s on (my|the) screen|what is on (my|the) screen|describe (my|the|this) screen|what is this( window)?|what'?s this)$/i.test(low)) return { kind: 'screen', ask: 'describe', text };
+  if (/^(?:(?:can you |please )?(?:explain|tell me|describe|look at)\s+)?(what am i looking at|what'?s on (my|the) screen|what is on (my|the) screen|(my|the|this) screen|what is this( window)?|what'?s this)\??$/i.test(low)) return { kind: 'screen', ask: 'describe', text };
   if (/\b(explain|what does|what's|what is)\b.*\b(error|warning|exception|message|popup|pop-up|dialog)\b/i.test(low)) return { kind: 'screen', ask: 'explain', text };
   if (/^(read|read me|read out) (the |this |my )?(selected|selection|highlighted)( text)?$/i.test(low)) return { kind: 'screen', ask: 'selection', text };
   const find = low.match(/^(?:help me )?(?:find|where is|where's|show me) (?:the )?(.+?) (button|menu|tab|option|setting|icon|link)$/);
@@ -76,7 +78,7 @@ function route(raw, ctx = {}) {
   if (/\b(play|beat|grind|farm|repeat)\b.*\b(game|level|objective|until|counter|times)\b/i.test(low)) return { kind: 'game', text };
 
   // ---- research
-  if (/^(research|investigate|look into|find out|compare)\b/i.test(low)) return { kind: 'research', question: text.replace(/^(research|investigate|look into|find out|compare)\s+/i, ''), text };
+  if (/^(research|investigate|look into|find out|compare)\b/i.test(low) || /^look up\b.*\b(cite|sources?)\b/i.test(low)) return { kind: 'research', question: text.replace(/^(research|investigate|look into|look up|find out|compare)\s+/i, '').replace(/\s+(and|with) (cite|give me|show|list) (the |your )?sources\.?$|\s+and cite (them|it|sources)\.?$/i, ''), text };
 
   // ---- questions: answered, not googled
   if ((QUESTION.test(low) || AUX_QUESTION.test(low) || /\?$/.test(text)) && !/^(can you|could you|would you|will you) (open|launch|start|play|find|close|turn|set|organi[sz]e|clean|show|move|put)\b/i.test(low)) {
