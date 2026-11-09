@@ -121,6 +121,20 @@ function createPipeline(deps) {
         return { picked: o.label };
       }
       case 'compose': return answer(task, r.text, { compose: true });
+      case 'readfile': {
+        if (!deps.readers) return blocked('File reading isn\'t set up.');
+        const file = r.path || (deps.clipboardFile && deps.clipboardFile());
+        if (!file) return reply(task, 'Copy the file first (in File Explorer: select it, Ctrl+C), or tell me its full path.');
+        if (deps.canRead && !deps.canRead(file)) return reply(task, `${file} isn't in a folder you've let Nova read (your user folders and project folders).`);
+        const doc = deps.readers.read(file);
+        const facts = (doc.tables || []).map(t => deps.readers.tableFacts(t)).filter(Boolean);
+        const factText = facts.map((f, i) => `Table ${i + 1}: ${f.rows} rows × ${f.columns} columns (${f.header.slice(0, 8).join(', ')})${f.numeric.length ? '; ' + f.numeric.map(c => `${c.column}: total ${c.sum}, average ${c.average}, range ${c.min} to ${c.max}`).join('; ') : ''}`).join('\n');
+        const formulaText = doc.formulas && doc.formulas.length ? `Formulas: ${doc.formulas.slice(0, 8).map(f => `${f.sheet}!${f.cell} = ${f.formula}${f.cached != null ? ` (saved value ${f.cached})` : ''}`).join('; ')}` : '';
+        if (!doc.text && doc.note) return reply(task, `${doc.name}: ${doc.note}`);
+        if (llm && llm.pick()) return answer(task, `Summarize this ${doc.kind} ("${doc.name}") for me: the main points first, then anything I should act on. Use the exact figures given (computed by Nova), don't recalculate them.`, { data: `${factText}\n${formulaText}\n\n${doc.text.slice(0, 11000)}` });
+        const first = doc.text.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 4).join(' / ').slice(0, 300);
+        return reply(task, `${doc.name} (${doc.kind}${doc.pages ? `, ${doc.pages} pages` : ''}, ${doc.words} words).${factText ? '\n' + factText : ''}${formulaText ? '\n' + formulaText : ''}\nStarts: "${first}"\n(A chat brain would write a real summary: Tasks panel > Settings.)`);
+      }
       case 'document': {
         if (!deps.content) return blocked('Document export isn\'t set up.');
         let title, blocks = [], rows = null, chart = null;

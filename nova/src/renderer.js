@@ -40,6 +40,9 @@
   let lastInteraction = now, nextThink = now + 5000;
   const mouse = { x: W / 2, y: H / 2 };
 
+  // bubble text size (Tasks panel > Settings > Appearance)
+  function applyTextSize() { document.documentElement.style.setProperty('--bubble-scale', { small: 0.88, normal: 1, large: 1.18, 'x-large': 1.38 }[settings.textSize] || 1); }
+  applyTextSize();
   function applyTheme() {
     const s = S.skinOf(settings.skin);
     document.documentElement.style.setProperty('--accent', s.body);
@@ -503,11 +506,13 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function placeBubble() {
-    const s = sc(), bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+    // (with a bigger text size the bubble is zoomed: measure its real size, and its own transform is zoomed too)
+    const zm = parseFloat(document.documentElement.style.getPropertyValue('--bubble-scale')) || 1;
+    const s = sc(), r = bubble.getBoundingClientRect(), bw = r.width, bh = r.height;
     const left = clamp(z.x - bw / 2, 8, W - bw - 8);
     let top = z.y - (HEAD + 4) * s - bh;
     if (top < 8) top = clamp(z.y + 8, 8, H - bh - 8);
-    bubble.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    bubble.style.transform = `translate(${Math.round(left / zm)}px, ${Math.round(top / zm)}px)`;
   }
   function busyChip(on) { bChip.textContent = on ? 'WORKING' : 'ONLINE'; bChip.classList.toggle('busy', on); }
   async function typeText(text, from = 0) {
@@ -1851,7 +1856,7 @@
   }
   api.onSettings((s) => {
     const was = settings;
-    settings = s; applyTheme(); lastKey = '';
+    settings = s; applyTheme(); applyTextSize(); lastKey = '';
     if (!voice.service) return;
     if ((s.voice && !was.voice) || (s.listen && !was.listen)) { if (!voice.ready) { voice.announce = true; api.voice.send({ type: 'get', what: 'voice', light: s.earsLight, voiceName: s.voiceName }); } }
     // picked in the tray: say hi in the new voice (the menu does its own hello)

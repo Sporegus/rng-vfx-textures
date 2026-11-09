@@ -76,6 +76,11 @@ function route(raw, ctx = {}) {
   const nth = low.match(/^(?:(?:do|pick|choose|take|go with|use|select)\s+)?(?:the\s+)?(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:one|option|choice)$/);
   if (nth) return { kind: 'pick', index: { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3, last: -1 }[nth[1]], text };
 
+  // ---- reading your own file ("summarize C:\\…\\report.pdf", "summarize the file I copied")
+  const readFile = text.match(/^(?:summari[sz]e|read|open and summari[sz]e|what(?:'s| is) in|tell me about|analy[sz]e)\s+(?:the\s+)?(?:file|document|pdf|spreadsheet|workbook|report)?\s*(?:at|in|called)?\s*["“]?((?:[a-zA-Z]:\\|\/|~\/)[^"”]+?\.(?:pdf|docx|xlsx|csv|txt|md|json|log))["”]?\??$/i);
+  if (readFile) return { kind: 'readfile', path: readFile[1], text };
+  if (/^(?:summari[sz]e|read|analy[sz]e|what(?:'s| is) in)\s+(?:the\s+|this\s+)?(?:file|document|pdf|spreadsheet|workbook)\s+(?:i\s+)?(?:copied|on my clipboard)\??$/i.test(low)) return { kind: 'readfile', path: null, clipboard: true, text };
+
   // ---- documents and tables in a real format
   const fmtWord = '(pdf|word(?: doc(?:ument)?)?|docx|excel(?: (?:file|sheet|spreadsheet))?|spreadsheet|xlsx|csv|markdown|md|chart|bar chart)';
   const docMake = low.match(new RegExp('^(?:please\\s+)?(?:make|create|generate|build|export|save|turn|put|write)\\b.*?\\b(?:as|into|to|in)\\s+(?:a\\s+|an\\s+)?' + fmtWord + '\\b')) || low.match(new RegExp('^(?:please\\s+)?(?:make|create|generate|build)\\s+(?:me\\s+)?(?:a\\s+|an\\s+)?' + fmtWord + '\\b'));

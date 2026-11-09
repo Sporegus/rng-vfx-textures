@@ -65,6 +65,7 @@ html, body {
 #bubble {
   font-family: var(--font);
   position: fixed; left: 0; top: 0; width: 300px; max-width: calc(100vw - 16px);
+  zoom: var(--bubble-scale, 1);
   background: var(--panel);
   border: 2px solid var(--accent2);
   box-shadow: 5px 5px 0 var(--accent2), 0 0 0 1px #000, 0 10px 40px rgba(0,0,0,.45);

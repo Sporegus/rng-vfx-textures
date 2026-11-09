@@ -224,7 +224,9 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const workflows = createWorkflows({ store, log, settings, saveSettings });
   workflows.ensurePresets();
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder, content, troubleshoot, openFile: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); },
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references, workflows, reminders, notifications, files, folders: userFolder, content, troubleshoot, readers: require('./readers'),
+    canRead: (p) => files.inside(p),
+    clipboardFile: () => { try { if (process.platform === 'win32') { const b = clipboard.readBuffer('FileNameW'); if (b && b.length) return b.toString('ucs2').replace(/\0+$/, ''); } const t = clipboard.readText().trim(); return /^([a-zA-Z]:\\|\/)\S/.test(t) && fs.existsSync(t) ? t : null; } catch { return null; } }, openFile: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); },
     rememberAlias: (alias, app2, provenance) => store.remember('alias:' + String(alias).toLowerCase().trim(), 'app_alias', { alias: String(alias).toLowerCase().trim(), app: app2, provenance: { ...provenance, at: Date.now() } }) });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });
@@ -373,6 +375,16 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'capability': return capability();
       case 'memory': return { items: store.recall().filter(m => !['game_profile', 'project', 'reference', 'schedule_meta'].includes(m.kind)), conversation: pipeline.context().history };
       case 'memory:forget': store.forget(arg.key); return { ok: true };
+      case 'memory:export': {
+        // everything Nova keeps about you, as one readable JSON file (no keys or tokens: those are in the encrypted key store)
+        const r = await dialog.showSaveDialog(panel, { defaultPath: path.join(app.getPath('documents'), `nova-memory-${new Date().toISOString().slice(0, 10)}.json`) });
+        if (r.canceled) return null;
+        const kinds = ['app_alias', 'discord_target', 'roblox_place', 'project', 'reference', 'workflow', 'reminder', 'game_goal', 'game_routine', 'trouble', 'notif'];
+        const out = { exported: new Date().toISOString(), note: 'Nova\'s saved memory. API keys and tokens are not included.', settings: { ...settings(), memory: undefined }, items: store.recall().filter(m => kinds.includes(m.kind)).map(m => ({ kind: m.kind, key: m.key, value: m.value, updated: m.updated })), conversation: pipeline.context().history };
+        fs.writeFileSync(r.filePath, JSON.stringify(out, null, 2));
+        log.event('memory.exported', { items: out.items.length });
+        return r.filePath;
+      }
       case 'memory:forgetConversation': pipeline.forgetConversation(); history.length = 0; return { ok: true };
       case 'discord:targets': return store.recall('discord_target').map(r => ({ key: r.key, ...r.value }));
       case 'discord:add': return discord.addTarget(arg);
@@ -387,7 +399,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'settings': return settings();
       case 'shortcuts': return shortcutStatus();
       case 'settings:set': {
-        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance'];
+        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize'];
+        if (arg.textSize && !['small', 'normal', 'large', 'x-large'].includes(arg.textSize)) throw new Error('Text size is small, normal, large or x-large.');
         if (arg.reasoning && !['auto', 'quick', 'think', 'thorough'].includes(arg.reasoning)) throw new Error('Reasoning is auto, quick, think or thorough.');
         if (arg.performance && !['gaming', 'balanced', 'overnight'].includes(arg.performance)) throw new Error('Performance is gaming, balanced or overnight.');
         if (arg.shortcuts) { const ok = /^((Control|Ctrl|Alt|Shift|Super|CommandOrControl)\+)+([A-Z0-9]|F\d{1,2}|Space|Escape|Pause|Insert|Home|End|PageUp|PageDown)$/i; for (const [k, v] of Object.entries(arg.shortcuts)) if (!['menu', 'hide', 'ptt', 'stop'].includes(k) || !ok.test(String(v))) throw new Error(`"${v}" isn't a shortcut Nova can use (try something like Control+Alt+V).`); arg = { ...arg, shortcuts: { ...settings().shortcuts, ...arg.shortcuts } }; }

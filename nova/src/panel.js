@@ -290,7 +290,9 @@
     view.querySelectorAll('[data-forget]').forEach(b => b.addEventListener('click', () => P.query('memory:forget', { key: b.dataset.forget }).then(render)));
     view.append(h('<h2>This conversation</h2>'));
     view.append(h(`<div class="card chat">${m.conversation.map(x => `<div class="${x.role === 'user' ? 'you' : 'nova'}">${esc(x.content)}</div>`).join('') || '<div class="empty">Empty.</div>'}</div>`));
-    view.append(btn('Forget this conversation', 'danger', () => P.query('memory:forgetConversation').then(render)));
+    const mr = h('<div class="row"></div>').firstChild;
+    mr.append(btn('Forget this conversation', 'danger', () => P.query('memory:forgetConversation').then(render)), btn('Export everything Nova remembers…', '', async () => { const f = await P.query('memory:export'); if (f) alert('Saved to ' + f); }));
+    view.append(mr);
   }
 
   // ------------------------------------------------------------------ settings, keys, Discord, Roblox
@@ -314,6 +316,11 @@
     kc.append(order);
     view.append(kc);
 
+    view.append(h('<h2>Appearance</h2>'));
+    const ap = h(`<div class="card grid"><label>Bubble text size</label><select data-ts><option value="small">Small</option><option value="normal">Normal</option><option value="large">Large</option><option value="x-large">Extra large</option></select><label>Her look, size, monitor</label><div class="muted">Tray icon menu (Skin, Size, Monitor) or right-click Nova.</div></div>`).firstChild;
+    ap.querySelector('[data-ts]').value = s.textSize || 'normal';
+    ap.querySelector('[data-ts]').addEventListener('change', (e) => P.query('settings:set', { textSize: e.target.value }));
+    view.append(ap);
     view.append(h('<h2>Privacy</h2>'));
     const pv = h(`<div class="card grid"><label>Screen reading</label><div class="row" style="margin:0">${s.screenConsent ? '<span class="state live">allowed</span>' : '<span class="muted">asks each time</span>'}</div><label>Quiet hours</label><div class="row" style="margin:0"><input type="time" data-q="from" value="${esc((s.quietHours || {}).from || '')}"> to <input type="time" data-q="to" value="${esc((s.quietHours || {}).to || '')}"><span class="muted">she sits still and won't pop up on her own; your requests and reminders still work</span></div></div>`).firstChild;
     if (s.screenConsent) pv.children[1].append(btn('Revoke', 'danger', () => P.query('settings:set', { screenConsent: false }).then(render)));

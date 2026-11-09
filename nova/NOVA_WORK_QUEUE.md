@@ -13,14 +13,16 @@ This file says what is being worked on, in what order, and how to pick it up aft
 - [x] Phase 1 build: commits 7521b62 → 24afa7e on `zinx-desktop-helper` (see NOVA_MORNING_REPORT.md)
 - [x] Phase 1 remaining fixable items (quit crash, mic selection/test, shortcuts, bubble copy/links, speech output interface, game stalls/menus, routine recording, job priority/questions/summary/notes/diff, Discord disconnects, app names)
 - [x] PHASE1_COMPLETION_GATE.md written: PASSED with external blockers recorded; checkpoint = commit "Phase 1 completion gate"
-- [ ] Phase 2: P2-A audit + benchmark baseline
-- [ ] P2-B routing, retrieval, cancellation, caching, resources, performance modes
-- [ ] P2-C right-click menu, settings, unified task/project/reference interfaces
-- [ ] P2-D conversation, project memory, workflows/routines, notifications, file/content tools
-- [ ] P2-E mobile dashboard + secure local pairing
-- [ ] P2-F mobile ↔ jobs, handoff/recovery evidence
-- [ ] P2-G game coaching/research/capability reporting
-- [ ] P2-H acceptance, security, recovery, visual, resource checks; deliverables
+- [x] Phase 2: P2-A audit + benchmark baseline
+- [x] P2-B routing, retrieval, cancellation, caching, resources, performance modes
+- [x] P2-C right-click menu, settings, unified task/project/reference interfaces
+- [x] P2-D conversation, project memory, workflows/routines, notifications, file/content tools
+- [x] P2-E mobile dashboard + secure local pairing
+- [x] P2-F mobile ↔ jobs, handoff/recovery evidence
+- [x] P2-G game coaching/research/capability reporting
+- [x] P2-H acceptance, security, recovery, visual, resource checks; deliverables
+
+Phase 2 delivered: see NOVA_PHASE2_HANDOFF.md, PHASE2_REQUIREMENTS_MATRIX.md, PERFORMANCE_BASELINE_AND_RESULTS.md. What remains is the live checks on the Windows PC and the "Remaining work" list in the handoff.
 
 ## How to resume
 
