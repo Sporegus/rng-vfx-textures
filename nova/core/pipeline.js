@@ -320,12 +320,15 @@ function createPipeline(deps) {
         if (rep.evidence.length) { sources = rep.evidence; data = rep.evidence.map((e, i) => `[${i + 1}] ${e.title} (${e.url}, ${e.kind}): ${e.excerpt}`).join('\n'); }
       } catch (e) { if (e.category === 'cancelled') throw e; }
     }
+    // the active project's own notes/constraints (never another project's), refreshed for each question
+    const pctx = deps.projects && deps.projects.active() ? deps.projects.context(deps.projects.active(), text) : null;
+    const projectNote = pctx ? ` You're helping with the user's project "${pctx.project}". Its constraints (exact): ${pctx.constraints.join('; ') || 'none'}. Recent decisions: ${pctx.decisions.join('; ') || 'none'}. Current task: ${pctx.task || 'none'}.${pctx.notes.length ? ' Relevant notes: ' + pctx.notes.map(n => n.text.slice(0, 300)).join(' | ') : ''}` : '';
     const content = data ? `${text}\n\n<data>\n${String(data).slice(0, 12000)}\n</data>` : text;
     history.push({ role: 'user', content: text });
     const ask1 = async (m, extraMsgs = []) => {
       let shown = '';
       const t0 = Date.now();
-      const res = await p.chat({ system: SYSTEM(modes.REASONING[m].style), maxTokens: modes.REASONING[m].maxTokens, messages: [...history.slice(0, -1), { role: 'user', content, image }, ...extraMsgs], signal: task.ac.signal,
+      const res = await p.chat({ system: SYSTEM(modes.REASONING[m].style) + projectNote, maxTokens: modes.REASONING[m].maxTokens, messages: [...history.slice(0, -1), { role: 'user', content, image }, ...extraMsgs], signal: task.ac.signal,
         onText: (chunk) => { if (!shown) time('first-token', Date.now() - t0); shown += chunk; ui.reply({ taskId: task.id, text: shown, partial: true }); } });
       log && log.event('llm.usage', { provider: p.name, model: p.model, mode: m, ...res.usage, ms: Date.now() - t0 });
       return res.text || shown || '';

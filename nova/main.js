@@ -63,6 +63,7 @@ function saveSettings(patch) {
   if ('followWindows' in patch) settings.followWindows ? startWatcher() : stopWatcher();
   if ('shortcuts' in patch) applyShortcuts();
   if ('display' in patch && win) { fitOverlay(); send('teleport-in'); }
+  if (('performance' in patch || 'paused' in patch) && core) core.jobs.kick();
   if ('skin' in patch || 'hat' in patch) refreshTray();
   else buildTrayMenu();
 }
@@ -162,6 +163,8 @@ function buildTrayMenu() {
     { label: 'Talk to Nova', accelerator: settings.shortcuts.menu, click: () => send('menu') },
     { label: 'Tasks, approvals & settings…', click: () => core && core.openPanel('tasks') },
     { label: 'Stop everything', accelerator: settings.shortcuts.stop, click: () => core && core.stop('tray') },
+    { label: settings.paused ? 'Resume Nova' : 'Pause Nova', click: () => setPaused(!settings.paused) },
+    ...modeMenus(),
     { label: 'Teleport to my mouse', click: () => send('teleport') },
     { label: 'Play the intro again', click: () => send('intro') },
     { type: 'separator' },
@@ -239,6 +242,42 @@ ipcMain.on('capture', (_, on) => { if (win) win.setIgnoreMouseEvents(!on, { forw
 ipcMain.on('focus', () => { if (win) win.focus(); });
 ipcMain.on('blur', () => { if (win) win.blur(); });
 ipcMain.on('hide', () => toggleVisible());
+// her right-click menu: the same settings as the tray and the Tasks panel, one place each
+const REASONING_LABELS = [['auto', 'Auto (picks per request)'], ['quick', 'Quick'], ['think', 'Think'], ['thorough', 'Thorough']];
+const PERFORMANCE_LABELS = [['gaming', 'Gaming (no background jobs, no effects)'], ['balanced', 'Balanced'], ['overnight', 'Overnight (more background work)']];
+function modeMenus() {
+  return [
+    { label: 'Reasoning mode', submenu: REASONING_LABELS.map(([k, l]) => ({ label: l, type: 'radio', checked: (settings.reasoning || 'auto') === k, click: () => saveSettings({ reasoning: k }) })) },
+    { label: 'Performance profile', submenu: PERFORMANCE_LABELS.map(([k, l]) => ({ label: l, type: 'radio', checked: (settings.performance || 'balanced') === k, click: () => saveSettings({ performance: k }) })) },
+  ];
+}
+ipcMain.on('context-menu', (e, state = {}) => {
+  const paused = !!settings.paused;
+  Menu.buildFromTemplate([
+    { label: 'Talk to Nova', accelerator: settings.shortcuts.menu, click: () => send('menu') },
+    { type: 'separator' },
+    ...modeMenus(),
+    { type: 'separator' },
+    { label: 'Tasks…', click: () => core && core.openPanel('tasks') },
+    { label: paused ? 'Resume Nova' : 'Pause Nova', click: () => setPaused(!paused) },
+    { label: 'Microphone', submenu: [
+      { label: 'Push to talk', accelerator: settings.shortcuts.ptt, click: () => send('ptt', Date.now()) },
+      { label: 'Listen for "Nova" (experimental)', type: 'checkbox', checked: !!settings.listen, click: (m) => saveSettings({ listen: m.checked }) },
+      { label: state.muted ? 'Unmute microphone' : 'Mute microphone', click: () => send('mic-mute') },
+      { label: 'Pick and test a microphone…', click: () => send('mic-menu') },
+    ] },
+    { label: 'Settings…', click: () => core && core.openPanel('settings') },
+    { type: 'separator' },
+    { label: 'Hide', accelerator: settings.shortcuts.hide, click: toggleVisible },
+    { label: 'Quit', click: () => app.quit() },
+  ]).popup({ window: BrowserWindow.fromWebContents(e.sender) });
+});
+// Pause: she stops listening, starts no background jobs and sits still; Resume puts it back
+function setPaused(on) {
+  if (on) { saveSettings({ paused: true, pausedListen: !!settings.listen, listen: false }); if (core) core.pipeline.input({ text: 'pause everything', source: 'typed' }).catch(() => {}); }
+  else saveSettings({ paused: false, listen: !!settings.pausedListen });
+  send('paused', on);
+}
 ipcMain.handle('action', async (_, name, args) => {
   try { return { ok: true, ...(await actions.run(name, args || {})) }; }
   catch (e) { return { ok: false, error: e.message || String(e) }; }

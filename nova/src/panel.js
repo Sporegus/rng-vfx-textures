@@ -31,7 +31,7 @@
     render();
   }
   async function render() {
-    const fn = { tasks, jobs, memory, settings, capability, diagnostics }[tab] || tasks;
+    const fn = { tasks, jobs, memory, settings, capability, diagnostics, projects, refs }[tab] || tasks;
     try { await fn(); } catch (e) { view.innerHTML = `<div class="card">Couldn't load this: ${esc(e.message)}</div>`; }
     const o = await P.query('overview');
     const n = o.waits.length;
@@ -166,6 +166,70 @@
     view.append(h(`<h2>Events</h2>`));
     view.append(h(`<div class="card events">${events.slice(-80).map(e => `${new Date(e.t).toLocaleTimeString()}  ${esc(e.kind)}  ${esc(JSON.stringify(e.data || {})).slice(0, 220)}`).join('<br>')}</div>`));
   }
+
+  // ------------------------------------------------------------------ projects
+  let editProject = null;
+  async function projects() {
+    const list = await P.query('projects');
+    view.innerHTML = '';
+    view.append(h('<h2>Projects</h2><div class="muted">Say "let\'s work on &lt;name&gt;". Nova shows where it stands and opens only what\'s listed here. Each project\'s notes and references stay separate.</div>'));
+    if (list.length) view.append(table(['Project', 'Current task', 'Next', 'Opens', ''], list.map(p => [`${esc(p.name)}${p.active ? ' <span class="state live">active</span>' : ''}`, esc(p.task || '—'), esc(p.next || '—'), esc(p.launch.map(t => t.name || t.url || t.path.split(/[\\/]/).pop()).join(', ') || '—'), `<button data-ep="${esc(p.id)}">Edit</button>`])));
+    view.querySelectorAll('[data-ep]').forEach(b => b.addEventListener('click', () => { editProject = list.find(p => p.id === b.dataset.ep); render(); }));
+    const p = editProject || { name: '', aliases: [], folders: [], launch: [], constraints: [], task: '', next: '', blockers: [], checks: [] };
+    view.append(h(`<h2>${editProject ? 'Edit ' + esc(p.name) : 'New project'}</h2>`));
+    const f = h(`<div class="card grid">
+      <label>Name</label><input data-k="name" value="${esc(p.name)}">
+      <label>Also called</label><input data-k="aliases" value="${esc(p.aliases.join(', '))}" placeholder="bs, black sun game">
+      <label>Folders</label><div class="row" style="margin:0"><input data-k="folders" value="${esc(p.folders.join('; '))}" style="flex:1"><button data-pick>Add folder…</button></div>
+      <label>Apps to open</label><input data-k="apps" value="${esc(p.launch.filter(t => t.kind === 'app').map(t => t.name).join(', '))}" placeholder="Roblox Studio, Discord">
+      <label>Links to open</label><input data-k="urls" value="${esc(p.launch.filter(t => t.kind === 'url').map(t => t.url).join(' '))}" placeholder="https://…">
+      <label>Open folders too</label><select data-k="openFolders"><option value="1" ${p.launch.some(t => t.kind === 'folder') ? 'selected' : ''}>Yes</option><option value="0" ${p.launch.some(t => t.kind === 'folder') ? '' : 'selected'}>No</option></select>
+      <label>Constraints (exact)</label><textarea data-k="constraints" rows="2">${esc(p.constraints.join('\n'))}</textarea>
+      <label>Current task</label><input data-k="task" value="${esc(p.task)}">
+      <label>Next action</label><input data-k="next" value="${esc(p.next)}">
+      <label>Blockers</label><input data-k="blockers" value="${esc(p.blockers.join('; '))}">
+      <label>Check command</label><input data-k="check" value="${esc((p.checks[0] || {}).command ? p.checks[0].command.join(' ') : '')}" placeholder="npm test (used by troubleshooting)">
+    </div>`).firstChild;
+    f.querySelector('[data-pick]').addEventListener('click', async () => { const d = await P.query('pickFolder'); if (d) { const i = f.querySelector('[data-k=folders]'); i.value = [i.value, d].filter(Boolean).join('; '); } });
+    view.append(f);
+    const row = h('<div class="row"></div>').firstChild;
+    row.append(btn(editProject ? 'Save changes' : 'Add project', 'primary', async () => {
+      const v = (k) => f.querySelector(`[data-k=${k}]`).value;
+      const folders = v('folders').split(';').map(x => x.trim()).filter(Boolean);
+      const launch = [...v('apps').split(',').map(x => x.trim()).filter(Boolean).map(name => ({ kind: 'app', name })), ...v('urls').split(/\s+/).filter(Boolean).map(url => ({ kind: 'url', url })), ...(v('openFolders') === '1' ? folders.map(p2 => ({ kind: 'folder', path: p2 })) : [])];
+      try { await P.query('project:save', { id: editProject && editProject.id, name: v('name'), aliases: v('aliases').split(',').map(x => x.trim()).filter(Boolean), folders, launch, constraints: v('constraints').split('\n').map(x => x.trim()).filter(Boolean), task: v('task'), next: v('next'), blockers: v('blockers').split(';').map(x => x.trim()).filter(Boolean), checks: v('check').trim() ? [{ name: 'check', command: v('check').trim().split(/\s+/) }] : [] }); editProject = null; render(); }
+      catch (e) { alert(e.message.replace(/^Error invoking remote method[^:]*: (Error: )?/, '')); }
+    }));
+    if (editProject) row.append(btn('Cancel', 'ghost', () => { editProject = null; render(); }), btn('Delete project', 'danger', async () => { await P.query('project:remove', { id: editProject.id }); editProject = null; render(); }));
+    view.append(row);
+    if (editProject) {
+      view.append(h('<h2>Notes and decisions</h2>'));
+      view.append(h(`<div class="card">${(editProject.notes || []).slice(-15).reverse().map(n => `<div><span class="muted">${when(n.at)}</span> ${esc(n.text)}</div>`).join('') || '<div class="empty">None yet.</div>'}</div>`));
+      const nn = h('<input placeholder="Add a note or decision for this project" style="width:100%">').firstChild;
+      nn.addEventListener('change', async () => { if (nn.value.trim()) { await P.query('project:note', { id: editProject.id, text: nn.value.trim() }); editProject = (await P.query('projects')).find(x => x.id === editProject.id); render(); } });
+      view.append(nn);
+    }
+  }
+
+  // ------------------------------------------------------------------ reference inbox
+  async function refs() {
+    const [list, projs] = await Promise.all([P.query('references', { q: refQuery }), P.query('projects')]);
+    const pname = (id) => (projs.find(p => p.id === id) || {}).name || 'Unfiled';
+    view.innerHTML = '';
+    view.append(h('<h2>Reference inbox</h2><div class="muted">Say "save this image as an armour reference" (it saves what\'s on your clipboard) or add a file here. Nova never scans your drive.</div>'));
+    const top = h('<div class="row"></div>').firstChild;
+    const q = h(`<input placeholder="Search tags and notes…" value="${esc(refQuery)}" style="flex:1">`).firstChild;
+    q.addEventListener('change', () => { refQuery = q.value; render(); });
+    const tag = h('<input placeholder="tag (e.g. armour)" style="width:140px">').firstChild;
+    const proj = h(`<select><option value="">Unfiled</option>${projs.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select>`).firstChild;
+    top.append(q, tag, proj, btn('Add a file…', '', async () => { const f = await P.query('pickFile'); if (f) { await P.query('ref:addFile', { file: f, tag: tag.value, project: proj.value }); render(); } }), btn('Add from clipboard', '', async () => { try { await P.query('ref:addClipboard', { tag: tag.value, project: proj.value }); render(); } catch (e) { alert(e.message.replace(/^Error invoking remote method[^:]*: (Error: )?/, '')); } }));
+    view.append(top);
+    if (!list.length) view.append(h('<div class="empty">Nothing saved yet.</div>'));
+    else view.append(table(['Tag', 'What', 'Project', 'Saved', ''], list.map(r => [esc(r.tag || '—'), esc(r.kind + (r.url ? ': ' + r.url : r.file ? ': ' + r.file.split(/[\\/]/).pop() : '')) + (r.note ? `<div class="muted">${esc(r.note.slice(0, 80))}</div>` : ''), esc(pname(r.project)), when(r.saved), `<button data-ro="${esc(r.id)}">Open</button> <button class="danger" data-rd="${esc(r.id)}">Delete</button>`])));
+    view.querySelectorAll('[data-ro]').forEach(b => b.addEventListener('click', () => P.query('ref:open', { id: b.dataset.ro })));
+    view.querySelectorAll('[data-rd]').forEach(b => b.addEventListener('click', () => P.query('ref:remove', { id: b.dataset.rd }).then(render)));
+  }
+  let refQuery = '';
 
   // ------------------------------------------------------------------ memory
   async function memory() {

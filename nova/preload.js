@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('nova', {
   focus: () => ipcRenderer.send('focus'),
   blur: () => ipcRenderer.send('blur'),
   hide: () => ipcRenderer.send('hide'),
+  contextMenu: (state) => ipcRenderer.send('context-menu', state),
   onSettings: (cb) => ipcRenderer.on('settings', (_, s) => cb(s)),
   onCommand: (cb) => ipcRenderer.on('command', (_, cmd, arg) => cb(cmd, arg)),
   onActiveWindow: (cb) => ipcRenderer.on('active-window', (_, w) => cb(w)),

@@ -5,7 +5,9 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { BrowserWindow, ipcMain, globalShortcut, safeStorage, shell, dialog, screen } = require('electron');
+const { BrowserWindow, ipcMain, globalShortcut, safeStorage, shell, dialog, screen, clipboard } = require('electron');
+const { createProjects } = require('./projects');
+const { createReferences } = require('./references');
 const { openStore } = require('./store');
 const { createLog } = require('./log');
 const { createTasks } = require('./tasks');
@@ -141,7 +143,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   // resource pressure and the performance profile decide how many background jobs may run
   const resources = createResources({ log, onChange: (st) => { if (st.level === 'high') toPage('jobnote', { text: `Easing off: ${st.reason}. New background jobs wait until it clears.`, important: false }); else jobs.kick(); } });
   resources.start();
-  const jobs = createJobs({ store, permissions, log, participants, maxConcurrent: () => resources.status().level === 'high' ? 0 : modes.performance(settings().performance).jobsConcurrent });
+  const jobs = createJobs({ store, permissions, log, participants, maxConcurrent: () => settings().paused || resources.status().level === 'high' ? 0 : modes.performance(settings().performance).jobsConcurrent });
   jobs.on((j) => toPanel('job', { job: j }));
   // short job updates in the bubble ("claude-cli is implementing i2"), at most one per job every 20 s, never in quiet hours
   const noted = new Map();
@@ -187,8 +189,16 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
     guardFor: () => (win.available() ? createGuard({ win }) : null),
   });
 
+  const projects = createProjects({ store, log, launch: {
+    app: async (task, name) => { const r = await tools.run(task, { tool: 'app.open', args: { name }, direct: true }); return { ok: !!(r.result && !r.result.notFound) }; },
+    url: (u) => shell.openExternal(u),
+    path: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); },
+  } });
+  const references = createReferences({ store, dir: path.join(dir, 'references'), log, projects,
+    clipboard: { image: () => { const img = clipboard.readImage(); return img.isEmpty() ? null : { png: img.toPNG(), size: img.getSize() }; }, text: () => clipboard.readText() },
+    open: { path: async (p) => { const err = await shell.openPath(p); if (err) throw new Error(err); }, url: (u) => shell.openExternal(u) } });
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings });
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings, projects, references });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });
   pipeline.onStop(() => { speechOut.stop('stop');  win.releaseAll(); games.stop(); for (const [wid, w] of waits) { waits.delete(wid); both('closed', { id: wid }); w.resolve(w.kind === 'approve' ? { allow: false, cancelled: true } : null); } toPage('stopped', {}); });
@@ -275,6 +285,19 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'job:cancel': return jobs.cancel(arg.id);
       case 'job:delete': store.deleteJob(arg.id); return { ok: true };
       case 'job:demo': return startDemoJob();
+      case 'projects': return projects.list().map(p => ({ ...p, active: projects.active() === p.id }));
+      case 'project:save': return projects.upsert(arg);
+      case 'project:remove': projects.remove(arg.id); return { ok: true };
+      case 'project:note': return projects.addNote(arg.id, arg.text);
+      case 'project:git': { const p = projects.get(arg.id); return p ? projects.gitState(p.folders[0]) : null; }
+      case 'pickFolder': { const r = await dialog.showOpenDialog(panel, { properties: ['openDirectory'] }); return r.canceled ? null : r.filePaths[0]; }
+      case 'pickFile': { const r = await dialog.showOpenDialog(panel, { properties: ['openFile'] }); return r.canceled ? null : r.filePaths[0]; }
+      case 'references': return arg.q ? references.find(arg.q) : references.list().sort((a, b) => b.saved - a.saved);
+      case 'ref:addFile': return references.add({ kind: 'file', file: arg.file, tag: arg.tag, note: arg.note, projectId: arg.project || null });
+      case 'ref:addClipboard': { const c = references.current('it'); if (!c) throw new Error('The clipboard has no image, link or text.'); return references.add({ ...c, tag: arg.tag, note: arg.note, projectId: arg.project || null }); }
+      case 'ref:update': return references.update(arg.id, arg.patch || {});
+      case 'ref:remove': return references.remove(arg.id);
+      case 'ref:open': { const r = references.list().find(x => x.id === arg.id); if (!r) return null; if (r.file) await shell.openPath(r.file); else if (r.url) await shell.openExternal(r.url); return { ok: true }; }
       case 'presets': return require('./presets.json').jobs.filter(p => p.contract);
       case 'job:fromPreset': {
         const p = require('./presets.json').jobs.find(x => x.name === arg.name && x.contract);
@@ -312,7 +335,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
         return r.filePath;
       }
       case 'capability': return capability();
-      case 'memory': return { items: store.recall().filter(m => !['game_profile'].includes(m.kind)), conversation: pipeline.context().history };
+      case 'memory': return { items: store.recall().filter(m => !['game_profile', 'project', 'reference', 'schedule_meta'].includes(m.kind)), conversation: pipeline.context().history };
       case 'memory:forget': store.forget(arg.key); return { ok: true };
       case 'memory:forgetConversation': pipeline.forgetConversation(); history.length = 0; return { ok: true };
       case 'discord:targets': return store.recall('discord_target').map(r => ({ key: r.key, ...r.value }));

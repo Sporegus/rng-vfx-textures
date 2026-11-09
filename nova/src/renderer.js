@@ -453,6 +453,12 @@
     press = { x: e.clientX, y: e.clientY };
     e.preventDefault();
   });
+  // right-click Nova: her menu (Talk, Reasoning, Performance, Tasks, Pause, Microphone, Settings, Hide, Quit)
+  cv.addEventListener('contextmenu', (e) => {
+    if (!overNova(e.clientX, e.clientY)) return;
+    e.preventDefault(); interaction();
+    api.contextMenu({ muted: VIO.muted, listening: !!settings.listen });
+  });
   function startDrag() {
     stopMoving();
     z.mode = 'drag'; z.perch = null; z.sitting = false; z.asleep = false; z.hiding = false; z.chase = null;
@@ -1860,6 +1866,9 @@
     if (cmd === 'teleport-in') teleportTo(z.x, z.y);
     if (cmd === 'ptt') pushToTalk(arg);
     if (cmd === 'eleven-setup') setupEleven();
+    if (cmd === 'mic-menu') micMenu();
+    if (cmd === 'mic-mute') { VIO.setMuted(!VIO.muted); micReport(VIO.micOn ? 'on' : 'off'); say(VIO.muted ? 'Mic muted. 🔇' : 'Mic on. 🎙️', { ms: 1500 }); }
+    if (cmd === 'paused') { if (arg) { z.sitting = true; showStatus('waiting', 'Paused'); } else showStatus(null); }
   });
 
   // ================================================================ Nova's core (main process) -> what you see
