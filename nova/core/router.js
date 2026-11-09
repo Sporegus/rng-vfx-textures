@@ -37,6 +37,8 @@ function unglue(text) {
 function route(raw, ctx = {}) {
   const text = unglue(clean(raw));
   const low = text.toLowerCase();
+  // typed "hey nova" on its own: a greeting, not nothing
+  if (!text && /^\s*(?:hey|hi|hello|yo|ok|okay)\s+nova\W*$/i.test(String(raw || ''))) return { kind: 'chat', text: String(raw).trim() };
   if (!text) return { kind: 'empty' };
   if (STOP.test(low)) return { kind: 'stop' };
   // "wait": drop what's pending right now (an open question or approval), but don't pause background jobs
@@ -192,7 +194,9 @@ function rebuild(before, after, ctx) {
   // a full command on its own: use it as is
   if (/^(open|launch|start|close|play|find|search|google|move|put|organi[sz]e|clean|show|turn|set|remind|join|ask|tell)\b/i.test(a)) return a;
   const b = clean(before);
-  const verb = b.match(/^(open|launch|start|close|play|find|search for|google|show me|show)\b/i);
+  // the verb of the request being corrected, even after chat ("lol fine. open xterm, no wait, writer")
+  const verbs = [...b.matchAll(/\b(open|launch|start|close|play|find|search for|google|show me|show)\b/gi)];
+  const verb = verbs.length ? verbs[verbs.length - 1] : null;
   if (verb) return `${verb[1]} ${a}`;
   if (ctx.last && ctx.last.verb) return `${ctx.last.verb} ${a}`;
   return a;

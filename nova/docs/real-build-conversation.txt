@@ -1,0 +1,30 @@
+YOU: hey nova
+NOVA: Hey hey!
+   [direct, understood in 12 ms, done 4 ms after; xterm windows 0->0, LibreOffice windows 0->0]
+YOU: how's it going
+NOVA: Living my best desktop life! How about you?
+   [reply, understood in 12 ms, done 1 ms after; xterm windows 0->0, LibreOffice windows 0->0]
+YOU: pretty good, just got home
+NOVA: I'm listening! 💙 (I can only do simple chat right now. Turn on my chat brai
+   [reply, understood in 14 ms, done 1 ms after; xterm windows 0->0, LibreOffice windows 0->0]
+YOU: could you pull up xterm for me
+NOVA: Opened XTerm. ✅
+   [direct, understood in 6 ms, done 158 ms after, XTerm window after 139 ms; xterm windows 0->1, LibreOffice windows 0->0]
+YOU: thanks! ok close it
+NOVA: Closed xterm. 👋
+   [direct, understood in 4 ms, done 25 ms after; xterm windows 1->0, LibreOffice windows 0->0]
+YOU: don't open it again
+NOVA: Okay, I won't open it again. 👍
+   [reply, understood in 2 ms, done 2 ms after; xterm windows 0->0, LibreOffice windows 0->0]
+YOU: lol fine. open xterm, no wait, libreoffice writer
+NOVA: Opened LibreOffice Writer. ✅
+   [direct, understood in 5 ms, done 286 ms after, LibreOffice Writer window after 268 ms; xterm windows 0->0, LibreOffice windows 0->7]
+YOU: what time is it
+NOVA: It's 8:13 PM ⏰
+   [direct, understood in 15 ms, done 11 ms after; xterm windows 0->0, LibreOffice windows 7->7]
+YOU: thanks nova, you're the best
+NOVA: Anytime! ❤️
+   [direct, understood in 10 ms, done 2 ms after; xterm windows 0->0, LibreOffice windows 7->7]
+YOU: why is xterm so slow though
+NOVA: I don't have a chat brain set up yet (Settings > Brain), so I can't answer that well. Search the web instead?
+   [still waiting on her question card; xterm windows 0->0, LibreOffice windows 7->7]

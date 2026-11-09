@@ -11,6 +11,7 @@ const { createPipeline } = require('../pipeline');
 const llmMod = require('../llm');
 const brain = require('../../brain/brain');
 const { sleep } = require('../util');
+const { fit } = require('../../actions/fit');
 
 function harness({ installed = ['Discord', 'Spotify', 'Notepad', 'Google Chrome'], approveWith = () => ({ allow: true }), chooseWith = () => null, llm = null, page } = {}) {
   const store = openStore(':memory:');
@@ -35,7 +36,9 @@ function harness({ installed = ['Discord', 'Spotify', 'Notepad', 'Google Chrome'
     name: 'app.open', purpose: 'Open an installed app', category: 'launch', effect: 'local', timeoutMs: 2000,
     args: { type: 'object', properties: { name: { type: 'string', maxLength: 80 } }, required: ['name'], additionalProperties: false },
     run: async ({ name }) => {
-      const hit = installed.find(a => a.toLowerCase() === name.toLowerCase() || a.toLowerCase().startsWith(name.toLowerCase()));
+      // (the real app's name matching: sounds-alike, "chrome" -> Google Chrome)
+      const ranked = installed.map(a => ({ a, s: fit(name, a) })).filter(x => x.s >= 65).sort((x, y) => y.s - x.s);
+      const hit = ranked[0] && ranked[0].a;
       if (!hit) return { notFound: true, suggestions: installed.filter(a => a[0].toLowerCase() === name[0].toLowerCase()) };
       running.add(hit); return { opened: hit };
     },

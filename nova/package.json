@@ -17,7 +17,10 @@
     "test:core": "node --test core/test/*.test.js",
     "panel": "electron . --panel",
     "check-windows": "node scripts/check-windows.js",
-    "speech-check": "node scripts/speech-check.js"
+    "speech-check": "node scripts/speech-check.js",
+    "speed-check": "electron . --speed-check",
+    "voice-timing": "node scripts/voice-timing.js",
+    "understanding": "node bench/understanding.js"
   },
   "devDependencies": {
     "electron": "^45.1.0",

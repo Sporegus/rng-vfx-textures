@@ -73,8 +73,11 @@ function pick(arr, rng = Math.random) { return arr[Math.floor(rng() * arr.length
 
 // a reply if this is everyday chat, else null
 function reply(text, rng = Math.random) {
-  const t = norm(text);
-  if (!t) return null;
+  const t0 = norm(text);
+  if (!t0) return null;
+  // "hey, how's it going": the greeting word in front doesn't change what's asked
+  const rest = t0.replace(/^(?:hey|hi|hello|yo|oh|ok|okay|so|well|um+|uh+)(?: there)? (?=\S)/, '');
+  const t = rest !== t0 && RULES.some(([re]) => re.test(rest)) ? rest : t0;
   for (const [re, out] of RULES) {
     const m = t.match(re);
     if (!m) continue;

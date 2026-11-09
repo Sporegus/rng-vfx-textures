@@ -15,9 +15,11 @@ const ttsThreads = () => { const n = os.cpus().length; return Math.max(1, Math.m
 // ---------------------------------------------------------------- ears
 class Ears {
   // vadFile: silero_vad.onnx; asrDir: a Parakeet or Moonshine folder
-  constructor(vadFile, asrDir) {
+  // silence: how long a pause ends what you said (seconds). Shorter answers sooner but can
+  // cut a sentence at a pause; see scripts/voice-timing.js for the measurements.
+  constructor(vadFile, asrDir, { silence = Ears.SILENCE } = {}) {
     this.vad = new so.Vad({
-      sileroVad: { model: vadFile, threshold: 0.5, minSpeechDuration: 0.25, minSilenceDuration: 0.6, maxSpeechDuration: 15, windowSize: 512 },
+      sileroVad: { model: vadFile, threshold: 0.5, minSpeechDuration: 0.25, minSilenceDuration: silence, maxSpeechDuration: 15, windowSize: 512 },
       sampleRate: RATE, numThreads: 1, debug: 0,
     }, 30);
     const f = (n) => path.join(asrDir, n);
@@ -71,6 +73,8 @@ class Ears {
 
   reset() { this.vad.reset(); this.pending = new Float32Array(0); this.talking = false; this.fed = 0; }
 }
+
+Ears.SILENCE = 0.5;   // measured: 0.6 s -> ~880 ms from end of speech to text, 0.45 s -> ~710 ms (scripts/voice-timing.js)
 
 // ---------------------------------------------------------------- mouth
 // Two kinds of voice:

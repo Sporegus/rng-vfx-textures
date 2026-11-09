@@ -367,3 +367,14 @@ test('an on-device brain that can decide does it in one call, with the conversat
   assert.match(calls[0].text, /talked about earlier/, 'the model saw the whole sentence');
   assert.deepEqual(h.pageRuns.map(s => s.intent), ['organize']);
 });
+
+test('"close it" right after opening an app means that app; with nothing to refer to she asks', async () => {
+  const h = harness();
+  await h.pipeline.input({ text: 'open discord' });
+  await h.pipeline.input({ text: 'ok close it' });
+  assert.deepEqual(h.pageRuns.map(s => [s.intent, s.slots.apps.map(a => a.toLowerCase())]), [['app.close', ['discord']]]);
+  const h2 = harness();
+  await h2.pipeline.input({ text: 'close it' });
+  assert.equal(h2.pageRuns.length, 0);
+  assert.ok(h2.replies().some(r => /What should I close/.test(r)));
+});

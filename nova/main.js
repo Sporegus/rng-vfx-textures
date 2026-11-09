@@ -303,6 +303,21 @@ app.whenReady().then(() => {
   // she moved to her approved hologram idle: switch once, then your choice sticks
   if (!settings.idleSkinSet) saveSettings({ skin: 'idle', idleSkinSet: true });
   if (process.argv.includes('--panel') && core) core.openPanel('tasks');
+  // npm run speed-check: time opening apps by hand vs through Nova on this PC, write a report, quit
+  if (process.argv.some(a => a === '--speed-check' || a.startsWith('--speed-check=')) && core) {
+    setTimeout(async () => {
+      const file = path.join(app.getPath('userData'), 'speed-check.json');
+      const say = (t) => { console.log(t); core.note(t); };
+      say('Speed check: I\'ll open and close Notepad and Calculator a few times. Please don\'t use the PC for a minute.');
+      const arg = process.argv.find(a => a.startsWith('--speed-check='));
+      const r = await core.speedCheck({ report: say, ...(arg ? { apps: arg.split('=')[1].split(',').map(s => s.trim()).filter(Boolean) } : {}) }).catch((e) => ({ error: e.message }));
+      require('fs').writeFileSync(file, JSON.stringify(r, null, 2));
+      for (const a of r.apps || []) console.log(a.skipped ? `${a.app}: skipped (${a.skipped})` : `${a.app}: by hand ${a.median.byHandMs} ms · through Nova ${a.median.novaTotalMs} ms (Nova adds ${a.median.novaAddsMs} ms; understanding ${a.median.novaUnderstandMs} ms) · already open: ${a.alreadyOpen.totalMs} ms`);
+      console.log('Full report: ' + file);
+      say('Speed check done. The report is in ' + file);
+      setTimeout(() => app.quit(), 4000);
+    }, 4000);
+  }
   // self-tests: start, then quit on our own after N ms (checks that Nova exits cleanly)
   if (process.env.NOVA_SELFTEST_QUIT_MS) setTimeout(() => app.quit(), Number(process.env.NOVA_SELFTEST_QUIT_MS));
 });

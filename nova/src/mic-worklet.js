@@ -1,11 +1,12 @@
 // Runs on the audio thread: turns microphone sound into 16 kHz pieces of
-// 100 ms for Nova's ears, plus a loudness number for the listening glow.
+// 32 ms (the silence detector's own window) for Nova's ears, plus a loudness
+// number for the listening glow. Bigger pieces only delay noticing you stopped.
 class NovaMic extends AudioWorkletProcessor {
   constructor() {
     super();
     this.step = sampleRate / 16000; // e.g. 3 input samples per output sample at 48 kHz
     this.acc = 0; this.sum = 0; this.cnt = 0;
-    this.out = new Float32Array(1600); this.n = 0; this.loud = 0;
+    this.out = new Float32Array(512); this.n = 0; this.loud = 0;
   }
   process(inputs) {
     const ch = inputs[0] && inputs[0][0];

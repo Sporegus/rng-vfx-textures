@@ -398,6 +398,11 @@
     for (const t of d.timings) (by[t.what] = by[t.what] || []).push(t.ms);
     for (const e of d.log.filter(e => e.type === 'timing' || e.type === 'stop.latency')) { const k = e.type === 'stop.latency' ? 'stop' : e.what; if (k && e.ms != null) (by[k] = by[k] || []).push(e.ms); }
     const stat = (a) => { const s = a.slice().sort((x, y) => x - y); return [s.length, s[Math.floor(s.length / 2)], s[Math.min(s.length - 1, Math.floor(s.length * 0.95))]]; };
+    // each request, split into its stages (the app's own startup is shown on its own)
+    view.append(h('<h2>Speed of recent requests</h2><div class="muted">Speech: from when you stopped talking to the written text. Understand: from the final text to starting the action. Do: from starting it to confirming it worked. App startup is the app itself, after Nova started it.</div>'));
+    const ms = (v) => v == null ? '—' : v + ' ms';
+    const tr = (d.traces || []).slice(-15).reverse();
+    view.append(tr.length ? table(['Request', 'How', 'Speech', 'Understand', 'Do', 'Total', 'App startup'], tr.map(t => [esc(t.text), esc(t.path + (t.modelCalls ? ` · ${t.modelCalls} model call${t.modelCalls > 1 ? 's' : ''}` : '')), ms(t.speechMs), ms(t.toDispatchMs), ms(t.toDoneMs), ms(t.totalMs), t.app ? (t.app.focused ? 'already open' : ms(t.app.windowMs)) : '—'])) : h('<div class="empty">Nothing yet. Ask Nova to do something.</div>'));
     view.append(h('<h2>Measured responsiveness (this session)</h2>'));
     const rows = Object.entries(by).map(([k, a]) => { const [n, med, p95] = stat(a); return [esc(k), n, med + ' ms', p95 + ' ms']; });
     view.append(rows.length ? table(['What', 'Samples', 'Median', 'p95'], rows) : h('<div class="empty">No measurements yet. Ask Nova something, press Ctrl+Alt+V, or press Stop.</div>'));

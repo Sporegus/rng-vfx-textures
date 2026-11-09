@@ -74,7 +74,7 @@ function createPipeline(deps) {
       return { held: n };
     }
 
-    if (r.kind === 'correction') return correct(r, source);
+    if (r.kind === 'correction') return correct(r, source, msg.timing);
     // bounded: a pile-up of unfinished requests means something is stuck; don't add to it
     if (tasks.active().length >= MAX_ACTIVE) { ui.reply({ text: `I'm still working on ${tasks.active().length} things. Say "stop" to clear them, or wait a moment.`, error: 'busy' }); log && log.event('input.busy', { active: tasks.active().length }); return { busy: true }; }
     const task = tasks.create({ source, text: String(text).slice(0, 500), kind: r.kind });
@@ -116,7 +116,7 @@ function createPipeline(deps) {
   }
 
   // ------------------------------------------------------------------ corrections
-  async function correct(r, source) {
+  async function correct(r, source, timing) {
     // cancel what the correction replaces (anything still running from the last request)
     const replaced = tasks.cancelAll('Replaced by your correction.');
     if (replaced) log && log.event('correction.cancelled', { count: replaced });
@@ -124,7 +124,7 @@ function createPipeline(deps) {
     if (/\b(other|that|this|the) window\b/i.test(r.raw || '') && ctx.last && ctx.last.tool && /^window\./.test(ctx.last.tool)) {
       return inputWithRetool({ text: '__retool__', source, _retool: { tool: ctx.last.tool, args: { ...ctx.last.args, which: 'other' } } });
     }
-    return input({ text: r.text, source });
+    return input({ text: r.text, source, timing });
   }
 
   // ------------------------------------------------------------------ routing
@@ -344,7 +344,14 @@ function createPipeline(deps) {
   }
   async function command(task, text, source) {
     if (text === '__retool__') return null;
-    const vague = String(text).trim().match(VAGUE);
+    let vague = String(text).trim().match(VAGUE);
+    // "close it" right after "open discord": "it" is Discord
+    const lastApps = ctx.last && Date.now() - ctx.last.at < 180000 && ctx.last.step && ctx.last.step.slots && ctx.last.step.slots.apps;
+    if (vague && /^(open|close|start|launch|kill|quit|run)$/i.test(vague[1]) && /\b(it|that|this|them)\b/i.test(text) && lastApps && lastApps.length) {
+      text = `${vague[1].toLowerCase()} ${lastApps.join(' and ')}`;
+      log && log.event('context.resolved', { to: text });
+      vague = null;
+    }
     if (vague) {
       if (COMMUNICATE.test(vague[1])) return reply(task, `${vague[1][0].toUpperCase() + vague[1].slice(1)} what, and to whom? I won't guess where messages go.`);
       return reply(task, `What should I ${vague[1].toLowerCase()}? Say its name (like "open Spotify").`);

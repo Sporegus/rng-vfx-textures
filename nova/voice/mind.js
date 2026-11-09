@@ -153,8 +153,10 @@ class Mind {
     try {
       const past = history.slice(-6).map(h => h.role === 'user' ? { type: 'user', text: String(h.content).slice(0, 400) } : { type: 'model', response: [String(h.content).slice(0, 400)] });
       if (past.length) session.setChatHistory([{ type: 'system', text: DECIDE_SYSTEM }, ...past]);
-      const out = await session.prompt(String(text).slice(0, 500), { grammar: this.dgrammar, maxTokens: 160, temperature: 0.2, signal, stopOnAbortSignal: true });
-      return this.dgrammar.parse(out);
+      const before = this.dseq.tokenMeter ? this.dseq.tokenMeter.usedInputTokens : 0;
+      const out = await session.prompt(String(text).slice(0, 500), { grammar: this.dgrammar, maxTokens: 200, temperature: 0.2, signal, stopOnAbortSignal: true });
+      this.lastInputTokens = this.dseq.tokenMeter ? this.dseq.tokenMeter.usedInputTokens - before : null;   // (how much it had to read this time)
+      try { return this.dgrammar.parse(out); } catch { return null; }   // (cut off mid-answer: treated as "not sure")
     } finally { session.dispose({ disposeSequence: false }); }
   }
 

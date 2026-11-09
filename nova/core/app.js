@@ -355,7 +355,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'digest': return jobs.digest();
       case 'participants': return Object.entries(participants).map(([k, p]) => ({ id: k, kind: p.kind, live: p.live, ...p.available() }));
       case 'diagnostics': return {
-        timings: pipeline.timings(), log: log.recent(200), capability: capability(), providers: chooser.status(),
+        timings: pipeline.timings(), traces: pipeline.traces(), log: log.recent(200), capability: capability(), providers: chooser.status(),
         platform: `${process.platform} ${os.release()}`, versions: { electron: process.versions.electron, node: process.versions.node, nova: app.getVersion() },
         winHelper: win.available(), db: store.version && store.version(),
         mic: micStatus,
@@ -490,7 +490,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
 
   log.event('core.started', { platform: process.platform, winHelper: win.available() });
 
-  return { pipeline, store, log, jobs, games, stop, openPanel, close() { clearInterval(remTimer); clearInterval(digestTimer); try { remote.stop(); } catch {} try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
+  const speedCheck = (opts = {}) => require('./speedcheck').speedCheck({ pipeline, win, actions, log, ...opts });
+  return { pipeline, store, log, jobs, games, stop, openPanel, speedCheck, note: (text) => toPage('jobnote', { text, important: true }), close() { clearInterval(remTimer); clearInterval(digestTimer); try { remote.stop(); } catch {} try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
 }
 
 module.exports = { startCore, secrets };

@@ -16,35 +16,7 @@ const ALIASES = {
 const BUILTIN = { calculator: 'calc.exe', notepad: 'notepad.exe', paint: 'mspaint.exe', 'file explorer': 'explorer.exe', 'task manager': 'taskmgr.exe',
   settings: 'ms-settings:', 'snipping tool': 'ms-screenclip:', 'microsoft store': 'ms-windows-store:', camera: 'microsoft.windows.camera:', clock: 'ms-clock:' };
 
-const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-function editDistance(a, b) {
-  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-  for (let j = 1; j <= b.length; j++) d[0][j] = j;
-  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-  return d[a.length][b.length];
-}
-// roughly how a name sounds, so a misheard "raw blocks" still finds "Roblox"
-const sound = (s) => norm(s).replace(/ /g, '').replace(/ph/g, 'f').replace(/ck|q|c(?=[aoukrl])/g, 'k').replace(/x/g, 'ks')
-  .replace(/ight/g, 'ite').replace(/aw|au|ow|oa/g, 'o').replace(/ee|ea|ie/g, 'i').replace(/z/g, 's').replace(/(.)\1+/g, '$1');
-// how well a typed name fits an app's name, 0..100
-function fit(want, name) {
-  const w = norm(want), n = norm(name);
-  if (!w || !n) return 0;
-  if (n === w) return 100;
-  const sw = sound(w), sn = sound(n);
-  if (sw === sn && sw.length >= 4) return 88;
-  const parts = n.split(' ');
-  if (sw.length >= 4 && parts.some((_, k) => sound(parts.slice(0, k + 1).join(' ')) === sw)) return 84;
-  if (n.startsWith(w + ' ') || n.endsWith(' ' + w)) return 90;
-  if (n.split(' ').includes(w)) return 85;
-  if (n.startsWith(w)) return 80;
-  if (n.includes(w)) return 70;
-  const words = w.split(' ');
-  if (words.length > 1 && words.every(x => n.includes(x))) return 75;
-  const dist = Math.min(editDistance(w, n), ...n.split(' ').map(p => editDistance(w, p)));
-  if (dist <= Math.max(1, Math.floor(w.length / 5))) return 65 - dist * 5;
-  return sw.length >= 5 && editDistance(sw, sn) <= 1 ? 66 : 0;
-}
+const { norm, fit } = require('./fit');
 
 // ---------------------------------------------------------------- the app index
 // Every installed app (Windows: the Start menu, via Get-StartApps; Linux: .desktop files).
@@ -72,7 +44,7 @@ function linuxApps() {
     let names = []; try { names = fs.readdirSync(d).filter(f => f.endsWith('.desktop')); } catch { continue; }
     for (const f of names) {
       try {
-        const t = fs.readFileSync(path.join(d, f), 'utf8').split(/\n\[/)[0];
+        const t = (fs.readFileSync(path.join(d, f), 'utf8').split(/^\[Desktop Entry\]\s*$/m)[1] || '').split(/^\[/m)[0];   // (just the main section)
         if (/^NoDisplay=true$/m.test(t) || /^Hidden=true$/m.test(t) || !/^Type=Application$/m.test(t)) continue;
         const name = (t.match(/^Name=(.+)$/m) || [])[1], exec = (t.match(/^Exec=(.+)$/m) || [])[1];
         if (name && exec) out.push({ Name: name.trim(), AppID: path.join(d, f), Exec: exec.replace(/\s%[a-zA-Z]/g, '').trim() });
@@ -155,6 +127,13 @@ function forget(name) { const key = norm(name); if (picks[key]) { delete picks[k
 
 // closes an app's windows politely (like clicking X), so it can ask to save
 async function close(name) {
+  if (process.platform === 'linux') {   // (test machines: close the app's windows by their window class)
+    const { execFileSync } = require('child_process');
+    const want = (ALIASES[norm(name)] || norm(name)).split(' ')[0];
+    let ids = []; try { ids = execFileSync('xdotool', ['search', '--class', want]).toString().trim().split(/\s+/).filter(Boolean); } catch {}
+    for (const id of ids) { try { execFileSync('xdotool', ['windowkill', id]); } catch {} }
+    return ids.length ? { closed: [name] } : { notRunning: true };
+  }
   const out = await ps.run('Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object Id, ProcessName, MainWindowTitle | ConvertTo-Json -Compress');
   let procs = [];
   try { procs = JSON.parse(out || '[]'); } catch {}
@@ -162,7 +141,8 @@ async function close(name) {
   const want = ALIASES[norm(name)] || norm(name);
   const hits = procs.filter(p => p && (fit(want, p.ProcessName) >= 70 || fit(name, p.ProcessName) >= 70 || fit(want, p.MainWindowTitle) >= 85));
   if (!hits.length) return { notRunning: true };
-  for (const p of hits) await ps.run('$p = Get-Process -Id ([int]$env:NOVA_ARG0) -ErrorAction SilentlyContinue; if ($p) { [void]$p.CloseMainWindow() }', [p.Id]);
+  // all of them in one PowerShell start (each start costs a fraction of a second on Windows)
+  await ps.run('foreach ($id in ($env:NOVA_ARG0 -split \',\')) { $p = Get-Process -Id ([int]$id) -ErrorAction SilentlyContinue; if ($p) { [void]$p.CloseMainWindow() } }', [hits.map(p => p.Id).join(',')]);
   return { closed: [...new Set(hits.map(p => p.ProcessName))] };
 }
 

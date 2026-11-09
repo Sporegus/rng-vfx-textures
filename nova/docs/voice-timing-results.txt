@@ -1,0 +1,12 @@
+PASS "Nova, open Discord." -> heard "Nova Open Discord" (1 phrase)  speech end->text 737 ms, text->dispatch 31 ms, total 771 ms
+PASS "Nova, could you pull up Spotify for me?" -> heard "Nova, could you pull up Spotify for me?" (1 phrase)  speech end->text 793 ms, text->dispatch 2 ms, total 796 ms
+PASS "Nova, would you mind opening Notepad?" -> heard "Nova, would you mind opening Notepad?" (1 phrase)  speech end->text 752 ms, text->dispatch 2 ms, total 755 ms
+PASS "Nova, don't open Discord." -> heard "Nova, don't open Discord." (1 phrase)  speech end->text 714 ms, text->dispatch 1 ms, total 716 ms
+PASS "Nova, why is Discord so slow today?" -> heard "Nova, why is Discord so slow today?" (1 phrase)  speech end->text 761 ms, text->dispatch 2 ms, total 764 ms
+PASS "Nova, I love Spotify." -> heard "Novo, I love Spotify." (1 phrase)  speech end->text - ms, text->dispatch - ms, total - ms
+PASS "Nova, I'm so tired. Turn the volume down." -> heard "Nova, I'm so tired, turn the volume down." (1 phrase)  speech end->text 830 ms, text->dispatch 2 ms, total 832 ms
+PASS "Nova, thanks! Now open Discord." -> heard "Nova thinks, now open Discord." (1 phrase)  speech end->text 790 ms, text->dispatch 4 ms, total 803 ms
+PASS "Nova, open Discord. Actually, Spotify." -> heard "Nova Open Discord, actually, Spotify." (1 phrase)  speech end->text 860 ms, text->dispatch 2 ms, total 863 ms
+PASS "Nova, set a timer for ten minutes." -> heard "Nova set a timer for ten minutes." (1 phrase)  speech end->text 812 ms, text->dispatch 2 ms, total 814 ms
+voice: vits-piper-en_US-amy-low; recognizer: sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8
+silence 0.5s, mic pieces 32 ms: 10/10 right; split into several phrases: 0; median speech end->text 790 ms, text->dispatch 2 ms, total 796 ms

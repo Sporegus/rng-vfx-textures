@@ -8,10 +8,27 @@
 
 Tasks panel > Settings > **Microphone**, or right-click Nova > Microphone, or the tray. You can also use her own Voice & chat menu.
 
-- **On:** she's always listening for "Nova". Say "Nova" plus what you want ("Nova, open Spotify"), or just "Nova" and then the request. A small red dot by her head shows the mic is live. The first time, she downloads her offline speech model (about 650 MB, once).
+- **On:** she's always listening for "Nova". Say "Nova" plus what you want ("Nova, open Spotify"), or just "Nova" and then the request. (A small red dot by her head can show the mic is live: Settings > Microphone.) The first time, she downloads her offline speech model (about 650 MB, once).
 - **Off:** she only listens when you press push-to-talk (Ctrl+Alt+V).
 
 Speech is understood on your PC; nothing is sent anywhere or recorded. Pick or test the mic with right-click > Microphone > Pick and test a microphone.
+
+She waits for half a second of silence before she treats what you said as finished, then usually answers within about a quarter of a second more.
+
+## Talking to her naturally
+
+You don't need special wording. "Could you pull up Spotify?", "Spotify please", "I need Discord" and "would you mind opening Notepad" all open the app. She tells these apart:
+- **Don't:** "don't open Discord" or "open Discord, actually don't" does nothing.
+- **Questions and chat:** "why is Discord slow?" and "I love Spotify" get an answer, never a launch.
+- **Mixed:** "thanks! now open Discord" or "I'm so tired, turn the volume down" does the request.
+- **Corrections:** "open Discord, no wait, Spotify" opens only Spotify.
+- **Context:** "close it" right after opening something closes that.
+
+If the app is already open, she brings it to the front instead of starting another copy.
+
+## How fast is she?
+
+Tasks panel > Diagnostics > **Speed of recent requests** lists each request: how long the speech took to turn into text, how long she took to understand it and start, how long until it was confirmed, and the app's own start-up time. Run `npm run speed-check` to time opening Notepad and Calculator by hand vs through Nova on your PC. Details: `docs/SPEED_AND_UNDERSTANDING.md`.
 
 ## Reasoning mode: how much effort an answer gets
 

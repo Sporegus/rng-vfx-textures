@@ -1260,7 +1260,10 @@
   // this part asks for anything missing, checks before risky things, then does it.
   const B = window.NovaBrain;
   let lastStep = null;
-  const sayStep = (step, opts) => { const t = B.replyFor(step); return t ? say(t, opts) : Promise.resolve(); };
+  // the closing line of a step: for steps the core sent, the work is already done, so the core
+  // doesn't wait for the bubble's typing pause (it's shown all the same)
+  let coreStep = 0;
+  const sayStep = (step, opts) => { const t = B.replyFor(step); if (!t) return Promise.resolve(); const p = say(t, opts); return coreStep ? Promise.resolve() : p; };
   const seconds = (s) => s >= 3600 ? `${+(s / 3600).toFixed(1)} hr` : s >= 60 ? `${Math.round(s / 60)} min` : `${s} sec`;
   // seconds from now until a clock time like { h: 17, m: 30, day: 0 }
   function secondsUntil(at) {
@@ -1354,8 +1357,8 @@
         if (!await confirmStep(step, 'Close it')) return;
         for (const name of s.apps) {
           const w = await act('apps.close', { name });
-          if (w.notRunning) await say(`${name} isn't open right now.`);
-          else { sfx('ok'); await say(`Closed ${w.closed.join(', ')}. 👋`); }
+          const said = w.notRunning ? say(`${name} isn't open right now.`) : (sfx('ok'), say(`Closed ${w.closed.join(', ')}. 👋`));
+          if (!coreStep || s.apps.length > 1) await said;   // (the core doesn't wait for the typing pause)
         }
       });
       case 'web.open': return task(async () => {
@@ -1999,9 +2002,10 @@
         // a step the core already understood and checked; do it with the usual show
         coreApproved = !!m.approved;
         const before = lastSaid;
+        coreStep++;
         try { await doStep(m.step); api.core.pageDone(m.id, { ok: true, said: lastSaid !== before ? lastSaid : null }); if (lastSaid !== before) addHist('nova', lastSaid); }
         catch (e) { api.core.pageDone(m.id, { ok: false, error: e.message || String(e) }); }
-        finally { coreApproved = false; }
+        finally { coreApproved = false; coreStep--; }
         return;
       }
       case 'reminder': sfx('ok'); play('wave', 1500); ask(`⏰ ${m.text}${m.late ? ' (this was due while your PC was off)' : ''}`, [{ label: 'Done', value: 'ok', primary: true }], { quiet: true }); addHist('nova', '⏰ ' + m.text); return;
