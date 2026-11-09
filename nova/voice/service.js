@@ -7,6 +7,7 @@ const path = require('path');
 const models = require('./models');
 const { Ears, Mouth, EMOTIONAL } = require('./speech');
 const { Mind } = require('./mind');
+let utterances = 0;   // final phrases heard so far (ids for the core's dedupe)
 
 const port = process.parentPort;
 const send = (m) => port.postMessage(m);
@@ -201,7 +202,7 @@ port.on('message', async ({ data: m }) => {
       if (!ears || !listening) break;
       ears.feed(m.samples, {
         onSpeech: (on) => send({ type: 'speaking', on }),
-        onText: (text, seconds) => send({ type: 'heard', text, seconds }),
+        onText: (text, seconds) => send({ type: 'heard', text, seconds, utteranceId: `u${process.pid}-${++utterances}` }),   // one id per final phrase, so it runs once
       });
       break;
     case 'say': say(m.id, m.text, m.opts || {}); break;

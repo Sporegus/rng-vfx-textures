@@ -1467,7 +1467,7 @@
     }
   };
 
-  function onHeard(text) {
+  function onHeard(text, utteranceId) {
     const h = Wake.hear(text);
     const open = Date.now() < voice.follow || Date.now() < voice.ptt;
     if (!h.wake && !open) return; // not talking to her
@@ -1483,7 +1483,7 @@
     // a stray word or a cough while she was listening isn't a request
     if (!h.wake && said.split(' ').length < 2 && !/^(yes|yeah|yep|no|nope|stop|next|skip|pause|play|thanks|cancel|louder|quieter)$/.test(said)) return;
     voice.follow = 0; voice.ptt = 0; syncMic();
-    command(said, { voice: true });
+    command(said, { voice: true, utteranceId });
   }
 
   function answerAloud(said) {
@@ -1699,7 +1699,8 @@
         say(`I couldn't set up my ${m.what === 'chat' ? 'chat brain' : 'voice'}: ${m.message}. Check your internet and try again? 😔`, { ms: 7000 });
         break;
       case 'audio': if (settings.voice) VIO.play(m.samples, m.sampleRate, pitch() * (m.pitch || 1), m.gain || 1); break;
-      case 'heard': onHeard(m.text); break;
+      case 'heard': if (statusEl.dataset.state === 'transcribing') showStatus(null); onHeard(m.text, m.utteranceId); break;
+      case 'speaking': if (m.on && (settings.listen || Date.now() < voice.ptt)) showStatus('transcribing'); break;
       case 'sentence': { const c = voice.chats.get(m.id); if (c) c.sentence(m.text, m.mood); break; }
       case 'replied': { const c = voice.chats.get(m.id); if (c) c.done(m.text); break; }
       case 'fixed': { const w = voice.waits.get(m.id); if (w) { voice.waits.delete(m.id); w(m.text); } break; }

@@ -71,12 +71,11 @@ Real app, Linux virtual display, software rendering. **Not your PC**, so recheck
 
 Known defects:
 - Under the Linux harness the app doesn't exit on quit. The version from before tonight does the same there, so it isn't new; not checked on Windows.
-- Utterance IDs from the voice service aren't passed through yet. Dedupe relies on the service sending final text once.
 - Nova lives on the primary monitor only, as before.
 
 ## 8. Changed files, checkpoint and rollback
 
-- Branch `zinx-desktop-helper`. Commits: `7521b62` (core), `e6c7682` (Discord, research, jobs, games), `dc76bcb` (app integration, idle look, panel), then the tests/docs commit on top.
+- Branch `zinx-desktop-helper`. Commits: `7521b62` (core), `e6c7682` (Discord, research, jobs, games), `dc76bcb` (app integration, idle look, panel), `a7398c6` (tests and docs), `3e85452` (scheduling, presets, resources), plus a final small voice commit on top.
 - About 50 files and 5k lines: `core/` (new), `games/fixture/`, `art/idle/`, `src/novaidle.js`, `src/panel.*`, `panel-preload.js`, `scripts/check-windows.js`, `docs/`. Small edits to `main.js`, `preload.js`, `src/renderer.js`, `src/sprites.js`, `src/style.css`, `src/index.html`, `voice/index.js`, `package.json`.
 - **Rollback** to before the brain: `git checkout 6112ee0 -- .` inside the repo, or `git revert` the commits above. Your old data is untouched. The brain adds only `%APPDATA%\Nova\nova.db`, `logs\` and `keys\`. To get the old look back without rolling back: tray > Skin > any other look.
 
@@ -95,7 +94,7 @@ Known defects:
 
 ## 10. Next useful improvement
 
-Run the Windows check and the acceptance list on your PC. Those are the parts I couldn't run, and they're what makes her "fully functional" on your desktop. After that: pass utterance IDs from the voice service, and add a routine "record" button to the panel.
+Run the Windows check and the acceptance list on your PC. Those are the parts I couldn't run, and they're what makes her "fully functional" on your desktop. After that: a routine "record" button in the panel, and her voice (TTS) through the existing speech service when you're ready.
 
 ## 11. Assistant routes
 

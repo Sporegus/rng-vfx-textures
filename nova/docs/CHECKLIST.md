@@ -12,7 +12,7 @@
 
 ## B. Input and the bubble
 - ✅ Typed input: bubble menu box, Tasks panel box
-- ⛔ Microphone: the existing offline wake word and push-to-talk now feed the core. Not run here (no audio device or model). Utterance IDs from the voice service aren't passed yet, so dedupe relies on the service sending final text only.
+- ⛔ Microphone: the existing offline wake word and push-to-talk now feed the core, with one utterance ID per final phrase (dedupe), and the pill shows *Hearing you* while you speak. Not run here (no audio device or model).
 - ✅ Stop: bubble button, Ctrl+Alt+X, tray, spoken "stop". Measured 1.1 ms median round trip.
 - ✅ Bubble: what she heard (editable on approval cards), replies, Retry on errors, Allow once / Cancel, choices, history (≡). It doesn't take focus except when you type.
 - ✅ Status pill above her head (Thinking, Working, Needs your OK, Listening)
