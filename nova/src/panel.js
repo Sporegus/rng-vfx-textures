@@ -314,6 +314,11 @@
     order.value = (s.brainOrder || ['anthropic', 'openai', 'local']).join(',');
     order.addEventListener('change', () => P.query('settings:set', { brainOrder: order.value.split(',') }));
     kc.append(order);
+    kc.append(h('<label>On-device brain size</label>').firstChild);
+    const size = h(`<div><select data-cs><option value="auto">Auto (picks from your graphics card)</option><option value="small">Small (~1 GB, any PC)</option><option value="standard">Standard (~2.5 GB)</option><option value="medium">Medium (~4.7 GB, graphics card 7 GB+)</option><option value="large">Large (~9 GB, graphics card 11 GB+)</option></select><div class="muted">Bigger is smarter but slower to load and needs more memory; it downloads once. Turn it on: tray > Voice > Chat brain.</div></div>`).firstChild;
+    size.querySelector('[data-cs]').value = s.chatSize || 'auto';
+    size.querySelector('[data-cs]').addEventListener('change', (e) => P.query('settings:set', { chatSize: e.target.value }));
+    kc.append(size);
     view.append(kc);
 
     view.append(h('<h2>Microphone</h2><div class="muted">On: she\'s always listening for "Nova", then hears what you say next (a red dot by her head shows the mic is live). Off: she only listens when you press push-to-talk. Speech is understood on this PC; nothing is sent anywhere or recorded.</div>'));

@@ -7,7 +7,7 @@ const { utilityProcess, ipcMain, session, safeStorage } = require('electron');
 
 module.exports = function startVoice({ app, getWin, settings, saveSettings, actions }) {
   const root = path.join(app.getPath('userData'), 'models');
-  let proc = null, quitting = false, restarts = 0, chatReady = false, coreId = 0;
+  let proc = null, quitting = false, restarts = 0, chatReady = false, coreId = 0, chatInfo = null;
   const coreChats = new Map();
   const toPage = (m) => { const w = getWin(); if (w && !w.isDestroyed()) w.webContents.send('voice', m); };
 
@@ -78,7 +78,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
         if (w && m.type === 'replied') { coreChats.delete(m.id); w.resolve(m.text || ''); }
         return;
       }
-      if (m.type === 'status' && m.what === 'chat') chatReady = m.state === 'ready';
+      if (m.type === 'status' && m.what === 'chat') { chatReady = m.state === 'ready'; if (m.state === 'ready') chatInfo = { size: m.size, model: m.model, gpu: m.gpu, vramGB: m.vramGB }; }
       if (m.type === 'rpc') { const result = await answer(m.name, m.args || {}).catch((e) => e.message); if (proc) proc.postMessage({ type: 'rpc-reply', id: m.id, result }); return; }
       toPage(m);
     });
@@ -89,7 +89,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
       if (!quitting && restarts++ < 3) setTimeout(start, 3000);
     });
     const st = settings();
-    proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), voiceName: st.voiceName, chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null, eleven: eleven() });
+    proc.postMessage({ type: 'setup', root, voice: !!(st.voice || st.listen), voiceName: st.voiceName, chat: !!st.chat, light: !!st.earsLight, chatModel: st.chatModel || null, chatSize: st.chatSize || 'auto', eleven: eleven() });
   }
   // started on demand: only when voice is actually used (it holds speech models in memory)
   ipcMain.on('voice', (_, m) => {
@@ -115,6 +115,7 @@ module.exports = function startVoice({ app, getWin, settings, saveSettings, acti
     send: (m) => { if (!proc) start(); proc && proc.postMessage(m); },
     running: () => !!proc,
     chatReady: () => !!(proc && chatReady),
+    chatInfo: () => chatInfo,
     // the local chat brain, for the core's answers: ask(text, onText, signal) -> reply text
     ask(text, onText, signal) {
       return new Promise((resolve, reject) => {

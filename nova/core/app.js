@@ -273,7 +273,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'voice-out': return speechOut.status().ok ? { ok: true } : { ok: false, why: speechOut.status().reason };
       case 'apps': case 'windows': case 'control': return winOk ? { ok: true } : { ok: false, why: 'Windows only (the helper isn\'t available here).' };
       case 'screen': return !winOk ? { ok: false, why: 'Windows only.' } : { ok: true, why: settings().screenConsent ? 'always allowed (revocable)' : 'asks first' };
-      case 'answers': return anyBrain ? { ok: true, why: Object.entries(ch).filter(([, v]) => v.ok).map(([k]) => k).join(', ') } : { ok: false, why: 'Add an API key in Settings, or turn on the free on-device brain.' };
+      case 'answers': return anyBrain ? { ok: true, why: Object.entries(ch).filter(([, v]) => v.ok).map(([k]) => k === 'local' && voice.chatInfo && voice.chatInfo() ? `on-device (${voice.chatInfo().size}: ${voice.chatInfo().model}${voice.chatInfo().gpu ? ', graphics card' : ', processor'})` : k).join(', ') } : { ok: false, why: 'Add an API key in Settings, or turn on the free on-device brain.' };
       case 'documents': return { ok: true, why: anyBrain ? '' : 'saving answers works; new documents need a model' };
       case 'discord-post': return keys.has('discord-bot') ? { ok: true } : { ok: false, why: 'Needs your own bot token (Settings > Discord). Never posts as you.' };
       case 'jobs-cli': { const a = participants['claude-cli'].available(); return a.ok && !a.unchecked ? { ok: true, experimental: true } : { ok: false, why: a.reason || 'Install Claude Code (the "claude" command).' }; }
@@ -399,7 +399,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'settings': return settings();
       case 'shortcuts': return shortcutStatus();
       case 'settings:set': {
-        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize', 'listen'];
+        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize', 'listen', 'chatSize'];
+        if (arg.chatSize && !['auto', 'small', 'standard', 'medium', 'large'].includes(arg.chatSize)) throw new Error('Brain size is auto, small, standard, medium or large.');
         if (arg.textSize && !['small', 'normal', 'large', 'x-large'].includes(arg.textSize)) throw new Error('Text size is small, normal, large or x-large.');
         if (arg.reasoning && !['auto', 'quick', 'think', 'thorough'].includes(arg.reasoning)) throw new Error('Reasoning is auto, quick, think or thorough.');
         if (arg.performance && !['gaming', 'balanced', 'overnight'].includes(arg.performance)) throw new Error('Performance is gaming, balanced or overnight.');
@@ -407,6 +408,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
         const patch = Object.fromEntries(Object.entries(arg).filter(([k]) => allowed.includes(k)));
         saveSettings(patch);
         if ('performance' in patch) jobs.kick();
+        if ('chatSize' in patch && voice.chatInfo && voice.chatInfo()) voice.send({ type: 'reload-chat', size: patch.chatSize });
         return settings();
       }
       case 'say': return pipeline.input({ text: String(arg.text || ''), source: 'typed' }).then(() => ({ ok: true }));

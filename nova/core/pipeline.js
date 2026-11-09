@@ -298,6 +298,11 @@ function createPipeline(deps) {
         remember({ type: 'intent', intent: 'reminder', slots: step.slots });
         continue;
       }
+      // closing the window Nova herself runs in would close her too: say so once
+      if (step.intent === 'app.close' && (step.slots.apps || []).some(a => /^(?:windows )?(?:powershell|terminal|command prompt|cmd|electron|nova)$/i.test(String(a).trim()))) {
+        const v = await choose(task, `That's the window I'm running in, so closing it closes me too. Close it anyway?`, [{ label: 'Close it (and Nova)', value: 'yes' }, { label: 'Keep it open', value: 'no', primary: true }]);
+        if (v !== 'yes') { results.push(reply(task, 'Okay, I left it open.')); continue; }
+      }
       if (step.intent === 'app.open' && tools.get('app.open')) {
         for (const name of step.slots.apps) results.push(await openApp(task, name));
         continue;
@@ -348,6 +353,7 @@ function createPipeline(deps) {
     } else {
       // you asked for exactly this, and it's low impact: your request is the approval
       permissions.grant({ scope: { kind: 'task', id: task.id }, categories: [category], details: { direct: step.intent }, ttlMs: 10 * 60000 });
+      approved = true;   // decided here: the page doesn't ask again
     }
     const ok = permissions.check({ category, scope: { kind: 'task', id: task.id } });
     if (!ok.ok) throw new NovaError('denied', CATEGORY_TEXT.denied);

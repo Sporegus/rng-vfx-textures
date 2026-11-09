@@ -55,10 +55,10 @@ test('"open Discord, actually Spotify" opens only Spotify (test 8)', async () =>
 });
 
 test('"No, Spotify" replaces a pending request and cancels it (test 8)', async () => {
-  // Discord's launch waits on an approval that never comes; the correction cancels it
+  // organizing waits on an approval that never comes; the correction cancels it
   let release;
   const h = harness({ approveWith: () => new Promise(r => { release = r; }) });
-  const first = h.pipeline.input({ text: 'close discord' });      // asks first (risk: ask)
+  const first = h.pipeline.input({ text: 'organize my downloads' });      // asks first (risk: ask)
   await sleep(20);
   assert.ok(h.events.some(e => e.type === 'approve'));
   await h.pipeline.input({ text: 'no, open spotify' });
@@ -272,4 +272,19 @@ test('mic checks get a straight answer; questions about her never turn into a we
   await h.pipeline.input({ text: 'what do you think about pizza?' });
   assert.ok(h.replies().some(r => /can't really chat yet/.test(r)));
   assert.ok(!h.events.some(e => e.type === 'choose'), 'no "search the web?" offer');
+});
+
+test('closing an app doesn\'t ask (only deleting does); closing the window Nova runs in is flagged', async () => {
+  const h = harness();
+  await h.pipeline.input({ text: 'close spotify' });
+  assert.ok(!h.events.some(e => e.type === 'approve'), 'no approval card for closing');
+  const run = h.pageRuns.find(s => s.intent === 'app.close');
+  assert.ok(run && run.approved === true, 'the page is told not to ask again');
+  const h2 = harness({ chooseWith: () => 'no' });
+  await h2.pipeline.input({ text: 'close powershell' });
+  assert.ok(h2.events.some(e => e.type === 'choose' && /closing it closes me too/.test(e.question)));
+  assert.equal(h2.pageRuns.length, 0);
+  const h3 = harness({ approveWith: () => ({ allow: false }) });
+  await h3.pipeline.input({ text: 'clean up junk files' });
+  assert.ok(h3.events.some(e => e.type === 'approve'), 'deleting still asks');
 });

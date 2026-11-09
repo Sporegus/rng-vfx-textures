@@ -11,7 +11,7 @@ let utterances = 0;   // final phrases heard so far (ids for the core's dedupe)
 
 const port = process.parentPort;
 const send = (m) => port.postMessage(m);
-let root = null, ears = null, mind = null, listening = false, chatModel = null;
+let root = null, ears = null, mind = null, listening = false, chatModel = null, chatSize = 'auto';
 const mouths = {};
 let warnedSlow = false; // 'emotional' and/or 'classic', loaded when first needed
 // the mood clips ship with Nova; when packaged they sit outside the app archive so the voice engine can read them
@@ -112,9 +112,9 @@ async function mouthFor(voice) {
 async function setupMind() {
   if (busy.mind) return busy.mind;
   busy.mind = (async () => {
-    mind = new Mind(path.join(root, 'chat'), host, chatModel ? [chatModel] : undefined);
+    mind = new Mind(path.join(root, 'chat'), host, chatModel ? [chatModel] : undefined, chatSize);
     const info = await mind.load(progress('chat'));
-    send({ type: 'status', what: 'chat', state: 'ready', gpu: info.gpu || false });
+    send({ type: 'status', what: 'chat', state: 'ready', gpu: info.gpu || false, size: info.size, model: path.basename(info.file || ''), vramGB: info.vramGB });
   })().catch((e) => { busy.mind = null; mind = null; send({ type: 'error', what: 'chat', message: e.message }); });
   return busy.mind;
 }
@@ -188,7 +188,7 @@ async function chat(id, text, opts) {
 port.on('message', async ({ data: m }) => {
   switch (m.type) {
     case 'setup':
-      root = m.root; chatModel = m.chatModel || null; elevenCreds = m.eleven || null;
+      root = m.root; chatModel = m.chatModel || null; chatSize = m.chatSize || 'auto'; elevenCreds = m.eleven || null;
       send({ type: 'status', what: 'models', have: { voice: ((models.have(root, 'clone') && models.have(root, 'vocos')) || models.have(root, 'voiceEmo') || models.have(root, 'voice')) && models.have(root, 'vad') && (models.have(root, 'ears') || models.have(root, 'earsLight')) } });
       if (m.voice) setupVoice(m.light, m.voiceName);
       if (m.chat) setupMind();
@@ -196,6 +196,11 @@ port.on('message', async ({ data: m }) => {
     case 'get':
       if (m.what === 'voice') setupVoice(m.light, m.voiceName);
       if (m.what === 'chat') setupMind();
+      break;
+    // a different brain size was picked: let go of the current one and load the new one
+    case 'reload-chat':
+      chatSize = m.size || 'auto';
+      if (mind) { try { mind.model && mind.model.dispose(); } catch {} mind = null; busy.mind = null; send({ type: 'status', what: 'chat', state: 'loading' }); setupMind(); }
       break;
     case 'listen': listening = !!m.on; if (ears && !listening) ears.reset(); break;
     case 'audio':

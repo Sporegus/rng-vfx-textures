@@ -61,7 +61,7 @@
     'app.open': { risk: 'auto', needs: ['apps'], examples: [
       'open {app}', 'launch {app}', 'start {app}', 'run {app}', 'can you open {app}', 'fire up {app}', 'boot up {app}', 'open up {app} for me',
       'i want to use {app}', 'pull up {app}', 'get {app} open', 'load {app}'] },
-    'app.close': { risk: 'ask', needs: ['apps'], examples: [
+    'app.close': { risk: 'auto', needs: ['apps'], examples: [
       'close {app}', 'quit {app}', 'kill {app}', 'shut down {app}', 'exit {app}', 'close out of {app}', 'stop {app}', 'end {app}', 'force close {app}'] },
     'web.open': { risk: 'auto', needs: ['apps'], examples: [
       'open {site}', 'go to {site}', 'take me to {site}', 'pull up {site}', 'open {site} in the browser', 'visit {site}', 'load {site} website'] },

@@ -31,10 +31,18 @@ const MODELS = {
 
 // The chat model. Bigger is smarter but needs more memory; the first one that
 // downloads is used. (These are Hugging Face model names, read by node-llama-cpp.)
+// Her local chat brains, smallest to largest. Bigger is smarter but needs more memory:
+//   small     ~1 GB   any PC
+//   standard  ~2.5 GB 12 GB+ RAM (the default before)
+//   medium    ~4.7 GB a graphics card with 7 GB+ video memory
+//   large     ~9 GB   a graphics card with 11 GB+ video memory
 const MINDS = {
+  large: ['hf:bartowski/Qwen2.5-14B-Instruct-GGUF:Q4_K_M', 'hf:lmstudio-community/Qwen2.5-14B-Instruct-GGUF:Q4_K_M'],
+  medium: ['hf:bartowski/Qwen2.5-7B-Instruct-GGUF:Q4_K_M', 'hf:lmstudio-community/Qwen2.5-7B-Instruct-GGUF:Q4_K_M'],
   big: ['hf:unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M', 'hf:Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M'],
   small: ['hf:Qwen/Qwen2.5-1.5B-Instruct-GGUF:Q4_K_M'],
 };
+const MIND_SIZES = { small: ['small'], standard: ['big', 'small'], medium: ['medium', 'big', 'small'], large: ['large', 'medium', 'big', 'small'] };
 
 // The natural voice (Orpheus TTS, 3B, about 2 GB) and its sound decoder (SNAC).
 // Several copies of the same model are listed in case one goes missing.
@@ -125,4 +133,4 @@ async function ensureOrpheus(root, onProgress) {
   return { gguf, snac };
 }
 
-module.exports = { MODELS, MINDS, ORPHEUS, SNAC, ensure, ensureOrpheus, have, where };
+module.exports = { MODELS, MINDS, MIND_SIZES, ORPHEUS, SNAC, ensure, ensureOrpheus, have, where };

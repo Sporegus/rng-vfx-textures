@@ -4,7 +4,7 @@
 // something it writes a plain request ("open roblox") that goes back through
 // the command brain, so the same safety rules apply.
 const os = require('os');
-const { MINDS } = require('./models');
+const { MINDS, MIND_SIZES } = require('./models');
 const MOODS = ['cute', 'happy', 'excited', 'sad', 'calm', 'confused', 'proud', 'pouty', 'shy', 'love'];
 
 let L = null; // node-llama-cpp, loaded on first use
@@ -29,26 +29,32 @@ ${name ? `The user's name is ${name}.\n` : ''}${facts.length ? 'Things you remem
 class Mind {
   // host: { task(command), weather(place), remember(fact), memory() } — all async
   // uris: which models to try (defaults to the best fit for this PC's memory)
-  constructor(dir, host, uris) { this.dir = dir; this.host = host; this.uris = uris; this.ready = false; this.lastAt = 0; }
+  // size: 'auto' (picked from this PC's graphics card and memory) or small / standard / medium / large
+  constructor(dir, host, uris, size = 'auto') { this.dir = dir; this.host = host; this.uris = uris; this.size = size; this.ready = false; this.lastAt = 0; }
 
   // downloads the model the first time (onProgress(done, total)), then loads it
   async load(onProgress) {
     L = L || await import('node-llama-cpp');
+    this.llama = await L.getLlama();
     const gb = os.totalmem() / 1e9;
-    const uris = this.uris || (gb >= 12 ? [...MINDS.big, ...MINDS.small] : MINDS.small);
+    let vram = 0;
+    try { vram = this.llama.gpu ? (await this.llama.getVramState()).total / 1e9 : 0; } catch {}
+    const auto = vram >= 11 ? 'large' : vram >= 7 ? 'medium' : gb >= 12 ? 'standard' : 'small';
+    this.chosen = MIND_SIZES[this.size] ? this.size : auto;
+    const uris = this.uris || MIND_SIZES[this.chosen].flatMap(k => MINDS[k]);
     let file = null, err = null;
     for (const uri of uris) {
       try { file = await L.resolveModelFile(uri, { directory: this.dir, cli: false, onProgress: ({ downloadedSize, totalSize }) => onProgress && onProgress(downloadedSize, totalSize) }); break; }
       catch (e) { err = e; }
     }
     if (!file) throw err || new Error('Could not download a chat model');
-    this.llama = await L.getLlama();
     this.model = await this.llama.loadModel({ modelPath: file });
+    this.file = file; this.vram = vram;
     this.context = await this.model.createContext({ contextSize: 4096 });
     this.sequence = this.context.getSequence();
     await this.fresh();
     this.ready = true;
-    return { file, gpu: this.llama.gpu };
+    return { file, gpu: this.llama.gpu, size: this.chosen, vramGB: Math.round(vram * 10) / 10 };
   }
 
   async fresh() {
