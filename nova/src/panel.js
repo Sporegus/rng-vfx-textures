@@ -31,7 +31,7 @@
     render();
   }
   async function render() {
-    const fn = { tasks, jobs, memory, settings, capability, diagnostics, projects, refs, routines }[tab] || tasks;
+    const fn = { tasks, jobs, memory, settings, capability, diagnostics, projects, refs, routines, phone }[tab] || tasks;
     try { await fn(); } catch (e) { view.innerHTML = `<div class="card">Couldn't load this: ${esc(e.message)}</div>`; }
     const o = await P.query('overview');
     const n = o.waits.length;
@@ -165,6 +165,36 @@
     view.append(dv);
     view.append(h(`<h2>Events</h2>`));
     view.append(h(`<div class="card events">${events.slice(-80).map(e => `${new Date(e.t).toLocaleTimeString()}  ${esc(e.kind)}  ${esc(JSON.stringify(e.data || {})).slice(0, 220)}`).join('<br>')}</div>`));
+  }
+
+  // ------------------------------------------------------------------ phone dashboard
+  let pairing = null;
+  async function phone() {
+    const [st, devs, aud] = await Promise.all([P.query('remote:status'), P.query('remote:devices'), P.query('remote:audit')]);
+    view.innerHTML = '';
+    view.append(h(`<h2>Phone dashboard</h2><div class="muted">See tasks and jobs, send instructions, answer approvals and press Stop from your phone's browser. Your PC does the work. It's off unless you turn it on, it never opens router ports or changes your firewall (Windows may ask once whether to allow Nova on private networks), and it can't see your screen or hear your mic.</div>`));
+    const c = h(`<div class="card grid"><label>Listen on</label><div class="row" style="margin:0"><select data-m>
+      <option value="off">Off</option><option value="lan">My home network${st.lan.length ? ' (' + esc(st.lan[0]) + ')' : ' (none found)'}</option><option value="local">This PC only (for testing)</option><option value="custom">Another address I set up (e.g. Tailscale for away from home)</option></select>
+      <input data-a placeholder="100.x.y.z" value="${esc((st.settings || {}).address || '')}" style="width:150px"></div>
+      <label>Status</label><div>${st.running ? `<span class="state live">on</span> <span class="mono">${esc(st.url)}</span>` : '<span class="muted">off</span>'}</div>
+      ${st.running ? `<label>Certificate</label><div class="mono">${esc(st.fingerprint)}</div>` : ''}</div>`).firstChild;
+    c.querySelector('[data-m]').value = (st.settings || {}).mode || 'off';
+    c.querySelector('[data-a]').style.display = c.querySelector('[data-m]').value === 'custom' ? '' : 'none';
+    c.querySelector('[data-m]').addEventListener('change', async (e) => { c.querySelector('[data-a]').style.display = e.target.value === 'custom' ? '' : 'none'; if (e.target.value !== 'custom') { try { await P.query('remote:set', { mode: e.target.value }); } catch (er) { alert(er.message.replace(/^Error invoking remote method[^:]*: (Error: )?/, '')); } render(); } });
+    c.querySelector('[data-a]').addEventListener('change', async (e) => { try { await P.query('remote:set', { mode: 'custom', address: e.target.value.trim() }); } catch (er) { alert(er.message.replace(/^Error invoking remote method[^:]*: (Error: )?/, '')); } render(); });
+    view.append(c);
+    if (st.running) {
+      const row = h('<div class="row"></div>').firstChild;
+      row.append(btn('Pair a phone', 'primary', async () => { pairing = await P.query('remote:pair'); render(); }));
+      view.append(row);
+      if (pairing && pairing.expires > Date.now()) view.append(h(`<div class="card approval"><div class="title">On your phone, open <span class="mono">${esc(pairing.url)}</span> and enter</div><div style="font: 800 40px/1.2 var(--mono); letter-spacing: 8px; margin: 8px 0">${esc(pairing.code)}</div><div class="muted">Works once, for 2 minutes. Your phone will warn about the certificate (it's your PC's own); check it shows this fingerprint: <span class="mono">${esc(pairing.fingerprint)}</span>. Then allow the phone here when Nova asks.</div></div>`));
+    }
+    view.append(h('<h2>Paired phones</h2>'));
+    if (!devs.length) view.append(h('<div class="empty">None.</div>'));
+    else view.append(table(['Name', 'Paired', 'Last seen', 'Until', ''], devs.map(d => [esc(d.name), when(d.created), when(d.lastSeen), d.revoked ? '<span class="state failed">removed</span>' : when(d.expires), d.active ? `<button class="danger" data-rv="${esc(d.id)}">Remove</button>` : ''])));
+    view.querySelectorAll('[data-rv]').forEach(b => b.addEventListener('click', () => P.query('remote:revoke', { id: b.dataset.rv }).then(render)));
+    view.append(h('<h2>What phones did</h2>'));
+    view.append(h(`<div class="log">${aud.map(a => esc(`${new Date(a.t).toLocaleString()}  ${a.device}  ${a.action}  ${a.result}`)).join('\n') || 'Nothing yet.'}</div>`));
   }
 
   // ------------------------------------------------------------------ routines and reminders

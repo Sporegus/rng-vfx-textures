@@ -23,6 +23,7 @@ const { createJobs } = require('./jobs');
 const { createScheduler } = require('./schedule');
 const { createSpeechOut } = require('./speech-out');
 const { createResources } = require('./resources');
+const { createRemote, revisionOf } = require('./remote/server');
 const modes = require('./modes');
 const { createGames, electronAdapter } = require('./games');
 const participantsMod = require('./participants');
@@ -83,8 +84,11 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   const remember = (who, text, taskId) => { history.push({ who, text: String(text).slice(0, 2000), taskId, t: Date.now() }); if (history.length > 100) history.shift(); };
   const pendingWait = (kind, data, timeoutMs = 10 * 60000) => new Promise((resolve) => {
     const wid = data.id || id(kind);
-    waits.set(wid, { resolve, kind, data: { ...data, id: wid } });
-    both(kind, { ...data, id: wid });
+    const full = { ...data, id: wid };
+    full.revision = revisionOf({ kind, ...full });   // a phone approval must match this exact card
+    waits.set(wid, { resolve, kind, data: full });
+    both(kind, full);
+    if (typeof remoteChanged === 'function') remoteChanged();
     setTimeout(() => { if (waits.has(wid)) { waits.delete(wid); both('closed', { id: wid }); resolve(kind === 'approve' ? { allow: false, expired: true } : null); } }, timeoutMs);
   });
   const ui = {
@@ -110,7 +114,9 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
     waits.delete(wid);
     both('closed', { id: wid });
     w.resolve(value);
+    if (typeof remoteChanged === 'function') remoteChanged();
   });
+  let remoteChanged = null;
 
   // the page's own abilities (menus, files, timers...) run there, after the core has checked them
   const pageWaits = new Map();
@@ -304,6 +310,12 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'reminder:cancel': return reminders.cancel(arg.id);
       case 'notifications': return notifications.digest({ markSeen: false });
       case 'important:set': saveSettings({ important: { apps: arg.apps || [], contacts: arg.contacts || [], topics: arg.topics || [] } }); return settings().important;
+      case 'remote:status': return { ...remote.status(), settings: settings().remote || { mode: 'off' }, lan: remote.lanAddresses() };
+      case 'remote:set': { const mode = ['off', 'local', 'lan', 'custom'].includes(arg.mode) ? arg.mode : 'off'; if (mode === 'custom' && !/^\d{1,3}(\.\d{1,3}){3}$/.test(String(arg.address || ''))) throw new Error('Enter the address to listen on (like 100.101.102.103 for Tailscale).'); saveSettings({ remote: { mode, address: mode === 'custom' ? arg.address : null, port: 47620 } }); return startRemote(); }
+      case 'remote:pair': if (!remote.status().running) throw new Error('Turn the phone dashboard on first.'); return remote.newPairing();
+      case 'remote:devices': return remote.devices();
+      case 'remote:revoke': return remote.revoke(arg.id);
+      case 'remote:audit': return remote.audit(40);
       case 'workflows': return workflows.list().map(w => ({ ...w, plan: w.steps.map(workflows.describeStep) }));
       case 'workflow:edit': return workflows.edit(arg.name, { steps: arg.steps, why: 'edited in the panel' });
       case 'workflow:revert': return workflows.revert(arg.name);
@@ -416,9 +428,48 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
 
   // restart: only jobs with a valid restart-resume approval continue
   jobs.recover().then((r) => { jobs.kick(); return r; }).then((r) => { if (r.length) log.event('jobs.recovered', { count: r.length, resumed: r.filter(x => x.resumed).length }); }).catch(() => {});
+  // ---- the phone dashboard: the same tasks, jobs and approvals, reached over HTTPS after pairing
+  let hostLocked = false, lastDigest = 'Nothing new.';
+  const refreshDigest = () => notifications.digest({ markSeen: false }).then(d => { lastDigest = d.text; }).catch(() => {});
+  refreshDigest(); const digestTimer = setInterval(refreshDigest, 60000); digestTimer.unref && digestTimer.unref();
+  const remote = createRemote({ store, log, dir, host: {
+    state: () => ({
+      host: { name: os.hostname(), locked: hostLocked, paused: !!settings().paused, performance: settings().performance || 'balanced' },
+      active: tasks.active().map(t => ({ text: t.text, state: t.state })),
+      recent: store.tasks(12).map(t => ({ text: t.text, state: t.state, created: t.created })),
+      jobs: jobs.list().filter(j => j.state !== 'draft').slice(0, 15).map(j => ({ id: j.id, goal: j.goal, state: j.state, nextAction: j.nextAction, stopReason: j.stopReason, cycles: j.usage.cycles, maxCycles: j.budgets.maxCycles, artifacts: j.state === 'completed' ? (j.contract.files || []).filter(f => { try { return fs.existsSync(path.join(j.contract.workspace, f)); } catch { return false; } }) : [] })),
+      approvals: [...waits.values()].map(w => ({ kind: w.kind, ...w.data })),
+      digest: lastDigest,
+    }),
+    waits: () => [...waits.values()].map(w => ({ kind: w.kind, ...w.data })),
+    approve: (wid, value) => ui.answer(wid, value),
+    input: (text, meta) => pipeline.input({ text, source: 'remote', utteranceId: 'remote-' + meta.requestId }),
+    stop: (why) => stop(why),
+    job: async (op, jid) => op === 'pause' ? jobs.pauseJob(jid) : op === 'resume' ? jobs.resume(jid) : op === 'cancel' ? (jobs.cancel(jid) || { ok: false, reason: 'No such job.' }) : jobs.control('finish_step'),
+    artifact: (jid, file) => {
+      const j = jobs.job(jid);
+      if (!j || j.state === 'draft' || !(j.contract.files || []).includes(file)) return null;
+      const p = path.resolve(j.contract.workspace, file);
+      if (!(p + '').startsWith(path.resolve(j.contract.workspace) + path.sep) || !fs.existsSync(p)) return null;
+      return p;
+    },
+    confirmPairing: async ({ name, ip }) => {
+      const d = await pendingWait('approve', { title: `Pair "${name}" with Nova?`, lines: [`A phone at ${ip} entered your pairing code.`, 'It will see your tasks and jobs, send instructions, answer approvals and press Stop.', 'It can\'t see your screen or hear your microphone. You can remove it any time (Tasks panel > Phone).'], categories: ['relay'] }, 120000);
+      return !!(d && d.allow);
+    },
+  } });
+  remoteChanged = () => remote.changed();
+  tasks.on(() => remote.changed());
+  jobs.on(() => remote.changed());
+  pipeline.onStop(() => remote.bumpEpoch());   // a Stop on the PC wins over anything the phone sent before it
+  try { const pm = require('electron').powerMonitor; for (const [ev, v] of [['lock-screen', true], ['unlock-screen', false], ['suspend', true], ['resume', false]]) pm.on(ev, () => { hostLocked = v; remote.changed(); }); } catch {}
+  deps2.remote = remote;
+  const startRemote = () => { const r = settings().remote || { mode: 'off' }; return remote.start({ mode: r.mode || 'off', address: r.address || null, port: r.port || 47620 }).catch(e => { log.event('remote.start_failed', { message: e.message }); return { running: false, error: e.message }; }); };
+  startRemote();
+
   log.event('core.started', { platform: process.platform, winHelper: win.available() });
 
-  return { pipeline, store, log, jobs, games, stop, openPanel, close() { clearInterval(remTimer); try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
+  return { pipeline, store, log, jobs, games, stop, openPanel, close() { clearInterval(remTimer); clearInterval(digestTimer); try { remote.stop(); } catch {} try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
 }
 
 module.exports = { startCore, secrets };

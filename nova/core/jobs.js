@@ -445,6 +445,15 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     }
     return started;
   }
+  // pause one job (others keep going)
+  function pauseJob(jobId) {
+    const ctl = running.get(jobId), j = store.job(jobId);
+    if (!j) return { ok: false, reason: 'No such job.' };
+    if (['completed', 'cancelled', 'failed', 'draft'].includes(j.state)) return { ok: false, reason: `It's ${j.state}.` };
+    if (ctl) ctl.ac.abort();
+    pause(j, 'You paused it.');
+    return { ok: true };
+  }
   function setPriority(jobId, p) {
     if (!RANK.hasOwnProperty(p)) throw new NovaError('invalid', 'Priority is high, normal or low.');
     const j = store.job(jobId); if (!j) throw new NovaError('not_found', 'No such job.');
@@ -454,7 +463,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
   function search(q) { const t = String(q || '').toLowerCase().trim(); return store.jobs().filter(j => !t || [j.goal, j.notes, j.stopReason, j.nextAction].some(x => String(x || '').toLowerCase().includes(t))); }
 
   return {
-    kick, setPriority, setNotes, search, diff,
+    kick, setPriority, setNotes, search, diff, pauseJob,
     draft, card, approve, validateContract, inScope, run, resume, cancel, control, recover, summary, digest, verify, draftFromRequest,
     job: (id) => store.job(id), events: (id) => store.events(id), list: () => store.jobs(),
     update(jobId, patch) {
