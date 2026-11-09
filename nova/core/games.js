@@ -226,6 +226,14 @@ function createGames({ store, permissions, log, launch, sessions, guardFor }) {
       log && log.event('game.refused', { reasons: pol.reasons });
       return reply(task, `I won't do that: it ${pol.reasons.join(' and ')}. I can still help you plan, find guides, or look at what's on screen.`, { blocked: true });
     }
+    // goals you want to track for a game (just notes: nothing plays)
+    const g = text.match(/^(?:my goal (?:in|for)|track (?:a |my )?goal (?:in|for)|set (?:a |my )?goal (?:in|for))\s+(.+?)\s+(?:is|:|to)\s+(.+)$/i);
+    if (g && store) { const game = g[1].trim(), goal = g[2].trim().slice(0, 200); store.remember(`game_goal:${game.toLowerCase()}:${Date.now()}`, 'game_goal', { game, goal, at: Date.now(), done: false }); return reply(task, `Noted your goal in ${game}: ${goal}. Ask "what are my goals" any time; I can look up guides for it too.`); }
+    if (/^(?:what are|show|list) my (?:game )?goals/i.test(text) && store) {
+      const want = (text.match(/(?:in|for) (.+?)\??$/i) || [])[1];
+      const goals = store.recall('game_goal').map(r => r.value).filter(x => !want || x.game.toLowerCase() === want.toLowerCase().trim());
+      return reply(task, goals.length ? goals.map(x => `• ${x.game}: ${x.goal}`).join('\n') : 'No game goals yet. Say "my goal in <game> is …".');
+    }
     if (/\broblox\b/i.test(text)) return roblox(task, text, { ui, reply });
     if (/\broutines?\b/i.test(text)) return routines(task, text, { ui, approve, reply });
     const all = profiles();

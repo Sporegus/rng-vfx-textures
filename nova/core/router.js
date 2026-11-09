@@ -123,6 +123,7 @@ function route(raw, ctx = {}) {
   if (/^(research|investigate|look into|find out|compare)\b/i.test(low) || /^look up\b.*\b(cite|sources?)\b/i.test(low)) return { kind: 'research', question: text.replace(/^(research|investigate|look into|look up|find out|compare)\s+/i, '').replace(/\s+(and|with) (cite|give me|show|list) (the |your )?sources\.?$|\s+and cite (them|it|sources)\.?$/i, ''), text };
 
   // ---- games
+  if (/^(?:my goal (?:in|for)|track (?:a |my )?goal (?:in|for)|set (?:a |my )?goal (?:in|for))\s+.+?\s+(?:is|:|to)\s+.+$/i.test(text) || /^(?:what are|show|list) my (?:game )?goals(?: (?:in|for) .+)?\??$/i.test(low)) return { kind: 'game', text };
   if (/\broblox\b/i.test(low) && /\b(join|experience|game|play)\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
   if (/\broblox\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
   if (/\b(aim ?bot|executor|anti-?afk|wall ?hack|cheat engine|speed ?hack|dupe glitch)\b/i.test(low)) return { kind: 'game', text };

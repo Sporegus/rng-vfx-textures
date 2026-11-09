@@ -151,7 +151,8 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     const a = participants[participantId];
     if (!a) throw new NovaError('blocked', `${participantId} isn't available.`);
     const text = envelopeText(env);
-    const scope = inScope(j, text, participantId);
+    // scope is checked on Nova's own words; attachments are verbatim project files (already inside the job's folder)
+    const scope = inScope(j, envelopeText({ ...env, attachments: [] }), participantId);
     if (!scope.ok) throw new NovaError('blocked', `I didn't send that to ${participantId}: it ${scope.reasons.join(', ')}.`, { outOfScope: scope.reasons });
     const outId = id('out');
     const rec = store.outboxIntent({ id: outId, jobId: j.id, iteration, destination: participantId, payloadHash: sha256(text) });
@@ -171,7 +172,8 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     catch (e) { store.outboxSet(outId, e.category === 'cancelled' ? 'unknown' : 'failed', { error: e.message }); throw e; }
     // a turn that's still running or stuck isn't a result
     if (res.status === 'running') { store.outboxSet(outId, 'unknown', { note: 'still running' }); throw new NovaError('blocked', `${participantId} is still working; I'll check again before sending anything else.`, { pause: true }); }
-    store.outboxSet(outId, 'sent', { result: res });
+    store.outboxSet(outId, 'sent', { result: res, attachments: (env.attachments || []).map(a => ({ name: a.name, sha256: a.sha256, bytes: a.bytes, included: a.content != null })) });
+    if (env.attachments && env.attachments.length) event(j, 'attachments.delivered', { iteration, to: participantId, files: env.attachments.map(a => ({ name: a.name, sha256: a.sha256.slice(0, 16), included: a.content != null })) });
     if (signal && signal.aborted) throw new NovaError('cancelled', 'Stopped.');   // it arrived, but the job was paused or cancelled meanwhile
     if (res.usage) { j.usage.tokens += (res.usage.input || 0) + (res.usage.output || 0); if (res.usage.costUsd) j.usage.spendUsd += res.usage.costUsd; }
     if (res.status === 'limit') throw new NovaError('blocked', `${participantId} hit a usage limit. The job is paused until it resets.`, { pause: true, limit: true });
@@ -201,6 +203,14 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     };
     j.context = ctx;
     return [`Goal: ${ctx.goal}`, `Done when (exact): ${ctx.criteria.join('; ') || '(see files/tests)'}`, ctx.constraints.length ? `Constraints (exact): ${ctx.constraints.join('; ')}` : '', done.length ? `Steps so far:\n${done.join('\n')}` : 'This is the first step.', ctx.open ? `Last review: ${ctx.open}` : '', `Latest checks: ${ctx.checks}`].filter(Boolean).join('\n');
+  }
+  // the deliverables themselves go with the evidence (text files up to 20 KB are included verbatim)
+  function attachmentsOf(j, check) {
+    return (check.files || []).filter(f => !f.missing).slice(0, 10).map((f) => {
+      let content = null;
+      try { const b = fs.readFileSync(path.join(j.contract.workspace, f.name)); if (b.length <= 20000 && !b.includes(0)) content = b.toString('utf8'); } catch {}
+      return { name: f.name, sha256: f.sha256, bytes: f.size, content };
+    });
   }
   const roleOf = (j, role) => (j.contract.participants.find(p => p.role === role) || {}).id;
   const parseJson = (s) => { try { return JSON.parse((String(s).match(/\{[\s\S]*\}/) || ['null'])[0]); } catch { return null; } };
@@ -280,10 +290,22 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
           context: `Task: ${p.task}\nImplementer said:\n${String(impl.output).slice(0, 3000)}\nNova's checks (revision ${check.revision}): ${check.passed ? 'PASS' : 'FAIL'}${check.missing.length ? '; missing ' + check.missing.join(', ') : ''}${check.tests ? '\nTest output:\n' + check.tests.output.slice(-1500) : ''}`,
           expectedOutput: 'JSON: {"verdict": "accept" | "reject", "corrections": "...", "critical": true|false}',
           evidence: check.files.map(f => ({ name: f.name, sha256: f.sha256, summary: f.missing ? 'missing' : `${f.size} bytes` })),
+          attachments: attachmentsOf(j, check),
         }, ac.signal);
         const v = parseJson(rv.output) || { verdict: 'reject', corrections: 'The review wasn\'t in the expected format.' };
         review = { verdict: v.verdict, corrections: v.corrections || '', critical: v.critical !== false, check };
         j.usage.cycles++;
+        // a reviewer that says opposite things about the same unchanged files isn't progress
+        const seen = { ...((j.checkpoint && j.checkpoint.verdicts) || {}) };
+        const prevV = seen[check.revision];
+        seen[check.revision] = v.verdict;
+        if (prevV && prevV !== v.verdict) {
+          j.usage.contradictions = (j.usage.contradictions || 0) + 1;
+          event(j, 'contradiction', { revision: check.revision, before: prevV, now: v.verdict });
+          if (j.usage.contradictions >= 2) return finish(j, 'blocked', 'The reviewer keeps contradicting itself about the same unchanged files; it needs your call.', check);
+          review.corrections = `Note: you said "${prevV}" about these exact files before and "${v.verdict}" now. Be consistent: name the specific defect, or accept. ` + review.corrections;
+        }
+        j.checkpoint = { ...(j.checkpoint || {}), verdicts: Object.fromEntries(Object.entries(seen).slice(-20)) };
         // 5. progress or stall?
         const fingerprint = sha256(check.revision + (check.tests ? check.tests.output.slice(-500) : ''));
         if (fingerprint === lastFingerprint) j.usage.noProgress++; else j.usage.noProgress = 0;
@@ -295,7 +317,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
           if (j.usage.replans < 1) { j.usage.replans++; j.usage.noProgress = 0; review.corrections = 'No measurable progress in the last cycles. Try a different approach. ' + review.corrections; event(j, 'replan', {}); }
           else return finish(j, 'blocked', `No progress after ${j.budgets.noProgressCycles} cycles, even after a new approach.`, check);
         }
-        checkpoint(j, { review, fingerprint, iteration });
+        checkpoint(j, { review, fingerprint, iteration, verdicts: (j.checkpoint || {}).verdicts });
       }
     } catch (e) {
       if (e.category === 'cancelled' || ac.signal.aborted) { const cur = store.job(j.id); return cur && cur.state === 'cancelled' ? cur : pause(j, 'Paused.'); }

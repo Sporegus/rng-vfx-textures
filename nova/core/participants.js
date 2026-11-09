@@ -25,6 +25,7 @@ function envelopeText(env) {
     `Expected output: ${env.expectedOutput}`,
     env.evidence && env.evidence.length ? `Evidence:\n${env.evidence.map(e => `- ${e.name}${e.sha256 ? ` (sha256 ${e.sha256.slice(0, 12)})` : ''}: ${e.summary || ''}`).join('\n')}` : '',
     env.unresolved && env.unresolved.length ? `Unresolved:\n${env.unresolved.map(u => '- ' + u).join('\n')}` : '',
+    env.attachments && env.attachments.length ? `Attachments (the actual files, as checked by Nova):\n${env.attachments.map(a => `--- ${a.name} (sha256 ${a.sha256.slice(0, 16)}, ${a.bytes} bytes) ---\n${a.content != null ? a.content : '[binary or too large: not included; the hash identifies the exact file]'}`).join('\n')}` : '',
   ].filter(Boolean).join('\n\n');
 }
 

@@ -221,3 +221,20 @@ browserTest('"record a routine" then "replay it until 1 coin" in the pipeline (t
     assert.deepEqual(g.adapter.held(), []);
   } finally { await g.browser.close(); }
 });
+
+test('coaching works without any automated play; goals are tracked as notes (P2 #27)', async () => {
+  const { createResearch } = require('../research');
+  const store = openStore(':memory:');
+  const games = createGames({ store, launch: async () => {} });
+  const research = createResearch({ minGapMs: 0, fetchImpl: async (url) => /duckduckgo/.test(url) ? { ok: true, json: async () => ({ Heading: 'Parry', AbstractText: 'Parrying deflects an attack if timed during the opening frames of the enemy swing; follow with a riposte.', AbstractURL: 'https://eldenring.wiki.fextralife.com/Parry', AbstractSource: 'Fextralife' }) } : { ok: true, json: async () => ({ query: { search: [] } }) } });
+  const h = harness();
+  const pipeline = createPipeline({ tasks: h.tasks, permissions: h.permissions, tools: h.tools, log: h.log, brain, ui: h.ui, page: { run: async () => ({}) }, llm: null, games, research });
+  await pipeline.input({ text: 'research how parrying works in elden ring' });
+  const r = h.replies().join('\n');
+  assert.match(r, /riposte/);
+  assert.match(r, /fextralife/i);
+  assert.ok(!h.events.some(e => e.type === 'approve'), 'no game control was asked for');
+  await pipeline.input({ text: 'my goal in elden ring is beat margit without summons' });
+  await pipeline.input({ text: 'what are my goals' });
+  assert.ok(h.replies().some(x => /elden ring: beat margit without summons/.test(x)));
+});

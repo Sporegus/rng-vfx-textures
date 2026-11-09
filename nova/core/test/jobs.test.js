@@ -308,3 +308,54 @@ test('read-only diff shows what changed since the job started (git projects)', a
   assert.ok(d.since && d.untracked.includes('add.js'));
   assert.match(d.undo, /checkout/);
 });
+
+test('the reviewer gets the actual deliverables as attachments, with hashes recorded as delivered (P2 #23)', async () => {
+  let seen = null;
+  const s = setup({ reviewer: async (env) => { seen = env; return { status: 'complete', output: '{"verdict":"accept"}' }; } });
+  s.jobs.approve(s.j);
+  const done = await s.jobs.run(s.j.id);
+  assert.equal(done.state, 'completed');
+  const a = seen.attachments.find(x => x.name === 'add.js');
+  const crypto = require('crypto');
+  assert.equal(a.sha256, crypto.createHash('sha256').update(fs.readFileSync(path.join(s.dir, 'add.js'))).digest('hex'));
+  assert.match(a.content, /exports\.add/);
+  const { envelopeText } = require('../participants');
+  assert.match(envelopeText(seen), /--- add\.js \(sha256 [0-9a-f]{16}, \d+ bytes\) ---\nexports\.add/);
+  const ev = s.jobs.events(s.j.id).find(e => e.kind === 'attachments.delivered');
+  assert.equal(ev.data.files[0].name, 'add.js');
+  assert.equal(ev.data.files[0].included, true);
+});
+
+test('a reviewer contradicting itself on unchanged files is caught and, if repeated, needs you', async () => {
+  let n = 0;
+  const s = setup({
+    implementer: async () => { fs.writeFileSync(path.join(s.dir, 'add.js'), 'exports.add=(a,b)=>a-b;\n'); return { status: 'complete', output: 'same thing again' }; },
+    reviewer: async () => ({ status: 'complete', output: ++n % 2 ? '{"verdict":"accept","critical":false}' : '{"verdict":"reject","corrections":"nope","critical":true}' }),
+  });
+  s.jobs.approve(s.j);
+  const done = await s.jobs.run(s.j.id);
+  assert.equal(done.state, 'blocked');
+  assert.match(done.stopReason, /contradicting itself/);
+  assert.ok(s.jobs.events(s.j.id).filter(e => e.kind === 'contradiction').length >= 2);
+});
+
+test('a stalled job stops without stopping other eligible jobs (P2 #25)', async () => {
+  // one coordinator (as in the app), two jobs; the assistants behave per job
+  const store = openStore(':memory:');
+  const permissions = createPermissions({ store, log: createLog() });
+  const dirs = { stuck: project(), fine: project() };
+  const byJob = {};
+  const parts = {
+    gpt: fixture('gpt', 'planner', async (env) => ({ status: 'complete', output: /Last review: accept/.test(env.context) ? '{"done":true}' : '{"task":"write add.js"}' })),
+    claude: fixture('claude', 'implementer', async (env) => { if (byJob[env.jobId] === 'fine') fs.writeFileSync(path.join(dirs.fine, 'add.js'), 'exports.add=(a,b)=>a+b;\n'); return { status: 'complete', output: 'done' }; }),
+    rev: fixture('rev', 'reviewer', async (env) => ({ status: 'complete', output: byJob[env.jobId] === 'fine' ? '{"verdict":"accept"}' : '{"verdict":"reject","critical":true}' })),
+  };
+  const jobs = createJobs({ store, permissions, participants: parts });
+  const mk = (name) => { const j = jobs.draft(name, { workspace: dirs[name], files: ['add.js'], testCommand: [process.execPath, 'check.js'], participants: [{ id: 'gpt', role: 'planner' }, { id: 'claude', role: 'implementer' }, { id: 'rev', role: 'reviewer' }] }); byJob[j.id] = name; jobs.approve(j); return j; };
+  const stuck = mk('stuck'), fine = mk('fine');
+  jobs.setPriority(stuck.id, 'high');
+  assert.deepEqual(jobs.kick(), [stuck.id], 'the stuck one goes first');
+  for (let i = 0; i < 300 && store.job(fine.id).state !== 'completed'; i++) await new Promise(r => setTimeout(r, 20));
+  assert.equal(store.job(stuck.id).state, 'blocked');
+  assert.equal(store.job(fine.id).state, 'completed', 'the queue moved on to the independent job');
+});
