@@ -26,6 +26,8 @@ function route(raw, ctx = {}) {
   const low = text.toLowerCase();
   if (!text) return { kind: 'empty' };
   if (STOP.test(low)) return { kind: 'stop' };
+  // "wait": drop what's pending right now (an open question or approval), but don't pause background jobs
+  if (/^(?:wait|hold on|hang on|one sec(?:ond)?|wait a (?:sec(?:ond)?|minute|moment))[.!]?$/i.test(low)) return { kind: 'hold' };
 
   // ---- corrections
   const mid = text.match(MID_CORRECTION);

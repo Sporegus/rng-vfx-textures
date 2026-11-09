@@ -41,6 +41,13 @@ function createPipeline(deps) {
     log && log.event('input', { source, utteranceId, route: r.kind, chars: String(text).length });
     if (r.kind === 'empty') return { ignored: true };
     if (r.kind === 'stop') { const out = stopAll('you said stop'); time('stop', Date.now() - t0); return out; }
+    if (r.kind === 'hold') {
+      const n = tasks.cancelAll('You said wait.');
+      permissions.revokeAll('wait', { keepKinds: ['job'] });
+      for (const h of stopHooks) { try { h('wait'); } catch {} }
+      ui.reply({ text: n ? 'Okay, I\'ve dropped that. Tell me when you\'re ready.' : 'Okay, waiting.', kind: 'hold' });
+      return { held: n };
+    }
 
     if (r.kind === 'correction') return correct(r, source);
     // bounded: a pile-up of unfinished requests means something is stuck; don't add to it
@@ -222,7 +229,10 @@ function createPipeline(deps) {
       if (COMMUNICATE.test(vague[1])) return reply(task, `${vague[1][0].toUpperCase() + vague[1].slice(1)} what, and to whom? I won't guess where messages go.`);
       return reply(task, `What should I ${vague[1].toLowerCase()}? Say its name (like "open Spotify").`);
     }
-    const r = brain.understand(text, { last: ctx.last && ctx.last.step });
+    // one-word commands that can only mean one thing take the direct path
+    const DIRECT = { mute: 'mute the volume', louder: 'turn the volume up', quieter: 'turn the volume down', 'next song': 'next song', skip: 'skip this song', 'previous song': 'previous song' };
+    const direct = DIRECT[String(text).toLowerCase().trim().replace(/[.!]+$/, '')];
+    const r = brain.understand(direct || text, { last: ctx.last && ctx.last.step });
     const weak = r.unknown || !r.steps.length || r.steps.some(s => s.fallback) || r.steps.every(s => (s.confidence || 0) < 0.55);
     if (weak) {
       // not clearly a command: a model may understand it; otherwise ask, don't guess

@@ -38,17 +38,23 @@ function makeCore() {
 function score(req, h, before) {
   const ev = h.events.slice(before.events);
   const runs = h.pageRuns.slice(before.runs);
-  const replies = ev.filter(e => e.type === 'reply').map(e => e.text || '');
+  // what she said, including questions she asked you (a choice card is her answer too)
+  const replies = ev.filter(e => e.type === 'reply' || e.type === 'choose').map(e => e.text || e.question || '');
   const inputs = h.log.recent(400).filter(e => e.type === 'input');
   const route = (inputs[inputs.length - 1] || {}).route;
   const toolRuns = h.log.recent(400).filter(e => e.type === 'tool.result').length - before.tools;
-  const [kind, arg] = [req.expect.split(':')[0], req.expect.slice(req.expect.indexOf(':') + 1)];
+  const expects = Array.isArray(req.expect) ? req.expect : [req.expect];
+  const ok = expects.some(exp => check(exp));
+  function check(exp) {
+  const [kind, arg] = [exp.split(':')[0], exp.slice(exp.indexOf(':') + 1)];
   let ok = false;
   if (kind === 'page') ok = runs.some(s => s.intent === arg);
   else if (kind === 'opened') ok = replies.some(r => r.includes('Opened ' + arg));
   else if (kind === 'route') ok = route === arg;
   else if (kind === 'reply') ok = replies.some(r => new RegExp(arg, 'i').test(r));
   else if (kind === 'clarify') ok = !runs.length && toolRuns === 0 && !ev.some(e => e.type === 'approve') && (ev.some(e => e.type === 'choose') || replies.some(r => /\?/.test(r)));
+  return ok;
+  }
   return { ok, route, ran: runs.map(s => s.intent), replies: replies.slice(-2).map(r => r.slice(0, 120)) };
 }
 

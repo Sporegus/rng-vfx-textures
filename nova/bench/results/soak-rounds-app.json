@@ -1,0 +1,46 @@
+{
+  "ran": "2026-11-09T11:02:13.376Z",
+  "note": "renderer/total working set (MB), JS heap (MB), DOM nodes after forced GC; 150 requests + 50 menus + 10 Stops per round; Linux virtual display, software rendering",
+  "rows": [
+    [
+      "start",
+      {
+        "renderer": 167,
+        "total": 756,
+        "procs": 7,
+        "heap": 10,
+        "nodes": 36
+      }
+    ],
+    [
+      "after round 1",
+      {
+        "renderer": 200,
+        "total": 753,
+        "procs": 6,
+        "heap": 10,
+        "nodes": 36
+      }
+    ],
+    [
+      "after round 2",
+      {
+        "renderer": 205,
+        "total": 755,
+        "procs": 6,
+        "heap": 10,
+        "nodes": 36
+      }
+    ],
+    [
+      "after round 3",
+      {
+        "renderer": 210,
+        "total": 762,
+        "procs": 6,
+        "heap": 10,
+        "nodes": 36
+      }
+    ]
+  ]
+}

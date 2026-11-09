@@ -154,8 +154,15 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     // scope is checked on Nova's own words; attachments are verbatim project files (already inside the job's folder)
     const scope = inScope(j, envelopeText({ ...env, attachments: [] }), participantId);
     if (!scope.ok) throw new NovaError('blocked', `I didn't send that to ${participantId}: it ${scope.reasons.join(', ')}.`, { outOfScope: scope.reasons });
-    const outId = id('out');
-    const rec = store.outboxIntent({ id: outId, jobId: j.id, iteration, destination: participantId, payloadHash: sha256(text) });
+    let outId = id('out');
+    let rec = store.outboxIntent({ id: outId, jobId: j.id, iteration, destination: participantId, payloadHash: sha256(text) });
+    // an earlier attempt the assistant clearly refused (an error reply, so it was never processed) may be sent again,
+    // under a new attempt number; only an interrupted or timed-out send is uncertain
+    for (let n = 2; !rec.created && rec.existing.state === 'failed' && n < 20; n++) {
+      outId = id('out');
+      rec = store.outboxIntent({ id: outId, jobId: j.id, iteration: `${iteration}#${n}`, destination: participantId, payloadHash: sha256(text) });
+      if (rec.created) event(j, 'resend_after_refusal', { iteration, attempt: n });
+    }
     if (!rec.created) {
       // this exact handoff was already attempted: use its result if we have it, never send twice
       const prev = rec.existing;
@@ -169,7 +176,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
     setState(j, 'waiting_on_assistant', `waiting on ${participantId} (${env.destinationRole})`);
     let res;
     try { res = await a.send(env, { signal, workspace: j.contract.workspace }); }
-    catch (e) { store.outboxSet(outId, e.category === 'cancelled' ? 'unknown' : 'failed', { error: e.message }); throw e; }
+    catch (e) { store.outboxSet(outId, ['cancelled', 'timeout'].includes(e.category) || e.ambiguous ? 'unknown' : 'failed', { error: e.message }); throw e; }
     // a turn that's still running or stuck isn't a result
     if (res.status === 'running') { store.outboxSet(outId, 'unknown', { note: 'still running' }); throw new NovaError('blocked', `${participantId} is still working; I'll check again before sending anything else.`, { pause: true }); }
     store.outboxSet(outId, 'sent', { result: res, attachments: (env.attachments || []).map(a => ({ name: a.name, sha256: a.sha256, bytes: a.bytes, included: a.content != null })) });

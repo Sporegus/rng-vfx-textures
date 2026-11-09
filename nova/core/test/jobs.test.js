@@ -359,3 +359,26 @@ test('a stalled job stops without stopping other eligible jobs (P2 #25)', async 
   assert.equal(store.job(stuck.id).state, 'blocked');
   assert.equal(store.job(fine.id).state, 'completed', 'the queue moved on to the independent job');
 });
+
+test('a provider outage blocks the job without losing its state; it resumes from where it was (P2 #29)', async () => {
+  const { apiModel } = require('../participants');
+  const store = openStore(':memory:');
+  let up = false;
+  const provider = { name: 'fake', available: () => ({ ok: true }), chat: async () => { if (!up) { const { NovaError } = require('../util'); throw new NovaError('unavailable', 'Fake provider is down (503).'); } return { text: '{"task":"write add.js"}', usage: {} }; } };
+  const s = setup({ store });
+  s.parts.gpt = apiModel('gpt', 'planner', provider, 'fake-api');
+  const jobs = createJobs({ store, permissions: s.permissions, participants: s.parts });
+  jobs.approve(s.j);
+  const blocked = await jobs.run(s.j.id);
+  assert.equal(blocked.state, 'blocked');
+  assert.match(blocked.stopReason, /down/);
+  const saved = store.job(s.j.id);
+  assert.equal(saved.contract.workspace, s.dir, 'contract intact');
+  assert.equal(saved.usage.cycles, 0);
+  up = true;
+  provider.chat = async (req) => ({ text: /Last review: accept/.test(req.messages[0].content) ? '{"done":true}' : '{"task":"write add.js"}', usage: {} });
+  const r = await jobs.resume(s.j.id);
+  assert.equal(r.ok, true);
+  for (let i = 0; i < 100 && store.job(s.j.id).state !== 'completed'; i++) await new Promise(res => setTimeout(res, 20));
+  assert.equal(store.job(s.j.id).state, 'completed');
+});

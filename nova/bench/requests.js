@@ -30,7 +30,8 @@ module.exports = [
   { cat: 'ambiguous', text: 'put it there', expect: 'clarify' },
   { cat: 'ambiguous', text: 'do the second option', expect: 'clarify' },
   { cat: 'ambiguous', text: 'send it', expect: 'clarify' },
-  { cat: 'ambiguous', text: 'open spot', expect: 'clarify' },
+  // a unique prefix of an installed app is grounded (not a guess): asking or opening it are both correct
+  { cat: 'ambiguous', text: 'open spot', expect: ['clarify', 'opened:Spotify'] },
   // project / personal knowledge
   { cat: 'project', text: "let's work on black sun", expect: 'route:project' },
   { cat: 'project', text: 'find the mask reference I saved', expect: 'route:reference' },

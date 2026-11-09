@@ -193,14 +193,19 @@ test('vague requests are clarified, never guessed; messages never go to a guesse
 });
 
 test('a low-confidence guess is checked with you and never reported as done (P2 #2)', async () => {
-  const h = harness({ chooseWith: (q) => /Did you mean: mute the sound\?/.test(q.question) ? 'no' : null });
-  await h.pipeline.input({ text: 'mute' });
-  assert.ok(h.events.some(e => e.type === 'choose' && /Did you mean: mute the sound/.test(e.question)));
+  const h = harness({ chooseWith: (q) => /Did you mean: turn the volume (down|up)\?|Did you mean: change the volume\?/.test(q.question) ? 'no' : null });
+  await h.pipeline.input({ text: 'make it quieter in here' });
+  assert.ok(h.events.some(e => e.type === 'choose' && /Did you mean: (turn the volume|change the volume)/.test(e.question)));
   assert.equal(h.pageRuns.length, 0);
-  assert.ok(!h.replies().some(r => /Muted/.test(r)), 'never claims it muted');
+  assert.ok(!h.replies().some(r => /quieter|turned|lowered/i.test(r) && !/Did you mean/.test(r)), 'never claims it did it');
   const h2 = harness({ chooseWith: () => 'yes' });
-  await h2.pipeline.input({ text: 'mute' });
+  await h2.pipeline.input({ text: 'make it quieter in here' });
   assert.ok(h2.pageRuns.some(s => s.intent === 'volume'));
+  // a one-word command that can only mean one thing runs directly
+  const h3 = harness();
+  await h3.pipeline.input({ text: 'mute' });
+  assert.ok(h3.pageRuns.some(s => s.intent === 'volume' && s.slots.cmd === 'mute'));
+  assert.ok(!h3.events.some(e => e.type === 'choose'));
 });
 
 test('"the second option" answers the open question, and only that (P2 #9)', async () => {
@@ -239,4 +244,21 @@ test('reasoning modes map to real request settings; Auto escalates once when uns
   assert.equal(modes.pickReasoning('auto', 'why does my build fail when I add this plugin'), 'think');
   assert.equal(modes.pickReasoning('auto', 'research and compare the two engines with sources'), 'thorough');
   assert.equal(modes.pickReasoning('quick', 'research everything'), 'quick', 'an explicit mode wins');
+});
+
+test('"wait" drops a pending approval without doing it or pausing jobs; a repeated utterance runs once (P2 #9)', async () => {
+  let release, hang = true;
+  const h = harness({ approveWith: () => hang ? new Promise(r => { release = r; }) : { allow: true } });
+  const p = h.pipeline.input({ text: 'organize my downloads', source: 'voice', utteranceId: 'u-1' });
+  await new Promise(r => setTimeout(r, 20));
+  await h.pipeline.input({ text: 'wait', source: 'voice', utteranceId: 'u-2' });
+  release && release({ allow: true });   // a late click can't revive it
+  await p;
+  hang = false;
+  assert.equal(h.pageRuns.length, 0, 'nothing ran');
+  assert.ok(h.replies().some(r => /dropped that/.test(r)));
+  await h.pipeline.input({ text: 'organize my downloads', source: 'voice', utteranceId: 'u-3' });
+  const before = h.pageRuns.length;
+  await h.pipeline.input({ text: 'organize my downloads', source: 'voice', utteranceId: 'u-3' });
+  assert.equal(h.pageRuns.length, before, 'the same utterance is not acted on twice');
 });
