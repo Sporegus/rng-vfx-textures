@@ -321,9 +321,11 @@
     kc.append(size);
     view.append(kc);
 
-    view.append(h('<h2>Microphone</h2><div class="muted">On: she\'s always listening for "Nova", then hears what you say next (a red dot by her head shows the mic is live). Off: she only listens when you press push-to-talk. Speech is understood on this PC; nothing is sent anywhere or recorded.</div>'));
-    const mc = h(`<div class="card grid"><label>Microphone</label><div class="row" style="margin:0"><select data-mic><option value="1">On: always listening for "Nova"</option><option value="0">Off: push-to-talk only</option></select></div><label>Push to talk</label><div class="mono">${esc(((s.shortcuts || {}).ptt) || 'Control+Alt+V')}</div><label>Which mic / test it</label><div class="muted">Right-click Nova > Microphone > Pick and test a microphone</div></div>`).firstChild;
+    view.append(h('<h2>Microphone</h2><div class="muted">On: she\'s always listening for "Nova", then hears what you say next. Off: she only listens when you press push-to-talk. Speech is understood on this PC; nothing is sent anywhere or recorded.</div>'));
+    const mc = h(`<div class="card grid"><label>Microphone</label><div class="row" style="margin:0"><select data-mic><option value="1">On: always listening for "Nova"</option><option value="0">Off: push-to-talk only</option></select></div><label>Live-mic dot</label><div><select data-dot><option value="0">Hidden</option><option value="1">Show a small red dot by her head while listening</option></select></div><label>Push to talk</label><div class="mono">${esc(((s.shortcuts || {}).ptt) || 'Control+Alt+V')}</div><label>Which mic / test it</label><div class="muted">Right-click Nova > Microphone > Pick and test a microphone</div></div>`).firstChild;
     mc.querySelector('[data-mic]').value = s.listen ? '1' : '0';
+    mc.querySelector('[data-dot]').value = s.showMicDot ? '1' : '0';
+    mc.querySelector('[data-dot]').addEventListener('change', (e) => P.query('settings:set', { showMicDot: e.target.value === '1' }));
     mc.querySelector('[data-mic]').addEventListener('change', (e) => P.query('settings:set', { listen: e.target.value === '1' }).then(render));
     view.append(mc);
     view.append(h('<h2>Appearance</h2>'));

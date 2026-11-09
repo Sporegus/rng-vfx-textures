@@ -1,0 +1,884 @@
+{
+  "label": "after-core-2",
+  "ran": "2026-11-09T18:32:28.917Z",
+  "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz ×4, 17 GB, linux 6.18.44-fc-v310, Node v22.22.0",
+  "note": "Fake PC (no Windows), no model provider, no network. Measures Nova's own routing/pipeline overhead and decision accuracy, not app launches or model answers.",
+  "requests": [
+    {
+      "cat": "direct",
+      "text": "open notepad",
+      "expect": "opened:Notepad",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [],
+      "reply": "Opened Notepad. ✅",
+      "warm": {
+        "n": 7,
+        "median": 0.92,
+        "p95": 2.31,
+        "max": 2.31
+      },
+      "cold": {
+        "total": 77.199796,
+        "request": 28.623324
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "turn the volume up",
+      "expect": "page:volume",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "volume"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.51,
+        "p95": 1.52,
+        "max": 1.52
+      },
+      "cold": {
+        "total": 82.926895,
+        "request": 24.569759
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "what time is it",
+      "expect": "page:time",
+      "needs": null,
+      "ok": true,
+      "route": "question",
+      "ran": [
+        "time"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.95,
+        "p95": 2.09,
+        "max": 2.09
+      },
+      "cold": {
+        "total": 76.643262,
+        "request": 34.530371
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "what is 12 times 7",
+      "expect": "page:math",
+      "needs": null,
+      "ok": true,
+      "route": "question",
+      "ran": [
+        "math"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.93,
+        "p95": 1.28,
+        "max": 1.28
+      },
+      "cold": {
+        "total": 72.586367,
+        "request": 30.701958
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "set a timer for 5 minutes",
+      "expect": "page:timer",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "timer"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.69,
+        "p95": 2.06,
+        "max": 2.06
+      },
+      "cold": {
+        "total": 61.809206,
+        "request": 19.68896
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "dark mode",
+      "expect": "page:theme",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "theme"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.62,
+        "p95": 1.24,
+        "max": 1.24
+      },
+      "cold": {
+        "total": 60.501107,
+        "request": 18.545936
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "mute",
+      "expect": "page:volume",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "volume"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.58,
+        "p95": 1.03,
+        "max": 1.03
+      },
+      "cold": {
+        "total": 66.065117,
+        "request": 18.871813
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "pause the music",
+      "expect": "page:media.control",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "media.control"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.55,
+        "p95": 1.1,
+        "max": 1.1
+      },
+      "cold": {
+        "total": 63.246749,
+        "request": 20.544187
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "open my downloads folder",
+      "expect": "page:folder.open",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "folder.open"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.67,
+        "p95": 2.33,
+        "max": 2.33
+      },
+      "cold": {
+        "total": 63.303016,
+        "request": 20.572347
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "take a screenshot",
+      "expect": "page:screenshot",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "screenshot"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.55,
+        "p95": 1.13,
+        "max": 1.13
+      },
+      "cold": {
+        "total": 60.763279,
+        "request": 18.564966
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "organize my downloads",
+      "expect": "page:organize",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "organize"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.94,
+        "p95": 1.64,
+        "max": 1.64
+      },
+      "cold": {
+        "total": 64.317721,
+        "request": 20.248888
+      }
+    },
+    {
+      "cat": "direct",
+      "text": "find my resume",
+      "expect": "page:files.find",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "files.find"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.64,
+        "p95": 1.52,
+        "max": 1.52
+      },
+      "cold": {
+        "total": 63.124961,
+        "request": 18.842903
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "hi nova",
+      "expect": "page:chat.hello",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "chat.hello"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.65,
+        "p95": 2.05,
+        "max": 2.05
+      },
+      "cold": {
+        "total": 64.332292,
+        "request": 20.734896
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "how are you",
+      "expect": "page:chat.how",
+      "needs": null,
+      "ok": true,
+      "route": "question",
+      "ran": [
+        "chat.how"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.75,
+        "p95": 1.27,
+        "max": 1.27
+      },
+      "cold": {
+        "total": 75.406078,
+        "request": 20.348378
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "thanks",
+      "expect": "page:chat.thanks",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "chat.thanks"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 0.7,
+        "p95": 1.28,
+        "max": 1.28
+      },
+      "cold": {
+        "total": 62.296203,
+        "request": 19.053488
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "tell me a joke",
+      "expect": "page:fun.joke",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [
+        "fun.joke"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 1.21,
+        "p95": 2.26,
+        "max": 2.26
+      },
+      "cold": {
+        "total": 65.673046,
+        "request": 18.715579
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "what can you do",
+      "expect": "page:help",
+      "needs": null,
+      "ok": true,
+      "route": "question",
+      "ran": [
+        "help"
+      ],
+      "reply": null,
+      "warm": {
+        "n": 7,
+        "median": 1.14,
+        "p95": 3.03,
+        "max": 3.03
+      },
+      "cold": {
+        "total": 68.549692,
+        "request": 23.749895
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "why is the sky blue",
+      "expect": "reply:(chat brain|search|model|brain)",
+      "needs": "a model or web search",
+      "ok": true,
+      "route": "question",
+      "ran": [],
+      "reply": "Okay!",
+      "warm": {
+        "n": 7,
+        "median": 0.75,
+        "p95": 1.7,
+        "max": 1.7
+      },
+      "cold": {
+        "total": 61.673818,
+        "request": 19.016521
+      }
+    },
+    {
+      "cat": "conversation",
+      "text": "write me a short poem about rain",
+      "expect": "reply:(chat brain|model|brain|can't write)",
+      "needs": "a model",
+      "ok": true,
+      "route": "compose",
+      "ran": [],
+      "reply": "Writing, rewriting and translating need a chat brain: add an API key in Tasks panel > Settings, or turn on the free one ",
+      "warm": {
+        "n": 7,
+        "median": 0.44,
+        "p95": 0.98,
+        "max": 0.98
+      },
+      "cold": {
+        "total": 57.393542,
+        "request": 12.778339
+      }
+    },
+    {
+      "cat": "ambiguous",
+      "text": "open the thing",
+      "expect": "clarify",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [],
+      "reply": "What should I open? Say its name (like \"open Spotify\").",
+      "warm": {
+        "n": 7,
+        "median": 0.48,
+        "p95": 0.84,
+        "max": 0.84
+      },
+      "cold": {
+        "total": 58.381951,
+        "request": 14.717904
+      }
+    },
+    {
+      "cat": "ambiguous",
+      "text": "put it there",
+      "expect": "clarify",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [],
+      "reply": "What should I put? Say its name (like \"open Spotify\").",
+      "warm": {
+        "n": 7,
+        "median": 0.45,
+        "p95": 0.91,
+        "max": 0.91
+      },
+      "cold": {
+        "total": 60.019575,
+        "request": 14.104754
+      }
+    },
+    {
+      "cat": "ambiguous",
+      "text": "do the second option",
+      "expect": "clarify",
+      "needs": null,
+      "ok": true,
+      "route": "pick",
+      "ran": [],
+      "reply": "Which options do you mean? I don't have a question open right now.",
+      "warm": {
+        "n": 7,
+        "median": 0.78,
+        "p95": 1.12,
+        "max": 1.12
+      },
+      "cold": {
+        "total": 51.136028,
+        "request": 7.576066
+      }
+    },
+    {
+      "cat": "ambiguous",
+      "text": "send it",
+      "expect": "clarify",
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [],
+      "reply": "Send what, and to whom? I won't guess where messages go.",
+      "warm": {
+        "n": 7,
+        "median": 0.48,
+        "p95": 0.78,
+        "max": 0.78
+      },
+      "cold": {
+        "total": 57.838034,
+        "request": 14.05811
+      }
+    },
+    {
+      "cat": "ambiguous",
+      "text": "open spot",
+      "expect": [
+        "clarify",
+        "opened:Spotify"
+      ],
+      "needs": null,
+      "ok": true,
+      "route": "command",
+      "ran": [],
+      "reply": "Opened Spotify. ✅",
+      "warm": {
+        "n": 7,
+        "median": 1.09,
+        "p95": 1.82,
+        "max": 1.82
+      },
+      "cold": {
+        "total": 66.639276,
+        "request": 24.100352
+      }
+    },
+    {
+      "cat": "project",
+      "text": "let's work on black sun",
+      "expect": "route:project",
+      "needs": null,
+      "ok": true,
+      "route": "project",
+      "ran": [],
+      "reply": "I don't have a project called \"black sun\" yet, and I won't guess. Add it in Tasks panel > Projects (its folders and what",
+      "warm": {
+        "n": 7,
+        "median": 0.59,
+        "p95": 1.02,
+        "max": 1.02
+      },
+      "cold": {
+        "total": 56.727463,
+        "request": 12.10858
+      }
+    },
+    {
+      "cat": "project",
+      "text": "find the mask reference I saved",
+      "expect": "route:reference",
+      "needs": null,
+      "ok": true,
+      "route": "reference",
+      "ran": [],
+      "reply": "I don't have a saved reference matching \"mask\".",
+      "warm": {
+        "n": 7,
+        "median": 1.09,
+        "p95": 2.05,
+        "max": 2.05
+      },
+      "cold": {
+        "total": 80.282678,
+        "request": 15.933057
+      }
+    },
+    {
+      "cat": "research",
+      "text": "research the parry window in elden ring",
+      "expect": "route:research",
+      "needs": "web access",
+      "ok": true,
+      "route": "research",
+      "ran": [],
+      "reply": "Okay!",
+      "warm": {
+        "n": 7,
+        "median": 0.94,
+        "p95": 1.7,
+        "max": 1.7
+      },
+      "cold": {
+        "total": 75.111331,
+        "request": 13.890395
+      }
+    },
+    {
+      "cat": "research",
+      "text": "look up roblox studio terrain tools and cite sources",
+      "expect": "route:research",
+      "needs": "web access",
+      "ok": true,
+      "route": "research",
+      "ran": [],
+      "reply": "Okay!",
+      "warm": {
+        "n": 7,
+        "median": 0.91,
+        "p95": 2.67,
+        "max": 2.67
+      },
+      "cold": {
+        "total": 58.525891,
+        "request": 14.693135
+      }
+    },
+    {
+      "cat": "screen",
+      "text": "what's on my screen",
+      "expect": "route:screen",
+      "needs": "Windows",
+      "ok": true,
+      "route": "screen",
+      "ran": [],
+      "reply": "Screen reading only works on Windows.",
+      "warm": {
+        "n": 7,
+        "median": 0.64,
+        "p95": 0.88,
+        "max": 0.88
+      },
+      "cold": {
+        "total": 49.360612,
+        "request": 7.082905
+      }
+    },
+    {
+      "cat": "screen",
+      "text": "explain this error",
+      "expect": "route:screen",
+      "needs": "Windows",
+      "ok": true,
+      "route": "screen",
+      "ran": [],
+      "reply": "Screen reading only works on Windows.",
+      "warm": {
+        "n": 7,
+        "median": 0.47,
+        "p95": 0.85,
+        "max": 0.85
+      },
+      "cold": {
+        "total": 48.470421,
+        "request": 6.624177
+      }
+    },
+    {
+      "cat": "screen",
+      "text": "read the selected text",
+      "expect": "route:screen",
+      "needs": "Windows",
+      "ok": true,
+      "route": "screen",
+      "ran": [],
+      "reply": "Screen reading only works on Windows.",
+      "warm": {
+        "n": 7,
+        "median": 0.43,
+        "p95": 0.85,
+        "max": 0.85
+      },
+      "cold": {
+        "total": 49.431466,
+        "request": 7.089395
+      }
+    },
+    {
+      "cat": "workflow",
+      "text": "coordinate chatgpt and claude on my inventory tool",
+      "expect": "route:job",
+      "needs": null,
+      "ok": true,
+      "route": "job",
+      "ran": [],
+      "reply": "I drafted a job card in the Tasks panel. Pick the project folder and what \"done\" means, then approve it once and I'll ru",
+      "warm": {
+        "n": 7,
+        "median": 0.91,
+        "p95": 1.35,
+        "max": 1.35
+      },
+      "cold": {
+        "total": 54.279414,
+        "request": 7.528216
+      }
+    },
+    {
+      "cat": "workflow",
+      "text": "play the test game for 1 minute",
+      "expect": "route:game",
+      "needs": null,
+      "ok": true,
+      "route": "game",
+      "ran": [],
+      "reply": "I can't open Nova coin fixture (local test game) on this setup.",
+      "warm": {
+        "n": 7,
+        "median": 0.8,
+        "p95": 2.17,
+        "max": 2.17
+      },
+      "cold": {
+        "total": 58.802352,
+        "request": 15.010673
+      }
+    },
+    {
+      "cat": "workflow",
+      "text": "why isnt my game working",
+      "expect": "route:troubleshoot",
+      "needs": null,
+      "ok": true,
+      "route": "troubleshoot",
+      "ran": [],
+      "reply": "Which project or app? Say \"let's work on <project>\" first, or name it. For a project I can run its check and read the er",
+      "warm": {
+        "n": 7,
+        "median": 0.78,
+        "p95": 2.98,
+        "max": 2.98
+      },
+      "cold": {
+        "total": 54.262758,
+        "request": 11.857322
+      }
+    },
+    {
+      "cat": "control",
+      "text": "what are you doing",
+      "expect": "route:status",
+      "needs": null,
+      "ok": true,
+      "route": "status",
+      "ran": [],
+      "reply": "Nothing right now. I'm all yours!",
+      "warm": {
+        "n": 7,
+        "median": 0.75,
+        "p95": 1.27,
+        "max": 1.27
+      },
+      "cold": {
+        "total": 48.964347,
+        "request": 4.747969
+      }
+    },
+    {
+      "cat": "control",
+      "text": "pause everything",
+      "expect": "route:jobs",
+      "needs": null,
+      "ok": true,
+      "route": "jobs",
+      "ran": [],
+      "reply": "Nothing was running.",
+      "warm": {
+        "n": 7,
+        "median": 1.28,
+        "p95": 1.76,
+        "max": 1.76
+      },
+      "cold": {
+        "total": 47.515805,
+        "request": 5.194584
+      }
+    },
+    {
+      "cat": "control",
+      "text": "stop",
+      "expect": "route:stop",
+      "needs": null,
+      "ok": true,
+      "route": "stop",
+      "ran": [],
+      "reply": "Okay, stopped.",
+      "warm": {
+        "n": 7,
+        "median": 0.14,
+        "p95": 0.45,
+        "max": 0.45
+      },
+      "cold": {
+        "total": 47.402065,
+        "request": 2.951973
+      }
+    }
+  ],
+  "summary": {
+    "direct": {
+      "correct": 12,
+      "of": 12,
+      "warmMedianMs": 0.64,
+      "coldMedianMs": 63.3
+    },
+    "conversation": {
+      "correct": 7,
+      "of": 7,
+      "warmMedianMs": 0.75,
+      "coldMedianMs": 64.33
+    },
+    "ambiguous": {
+      "correct": 5,
+      "of": 5,
+      "warmMedianMs": 0.48,
+      "coldMedianMs": 58.38
+    },
+    "project": {
+      "correct": 2,
+      "of": 2,
+      "warmMedianMs": 0.59,
+      "coldMedianMs": 56.73
+    },
+    "research": {
+      "correct": 2,
+      "of": 2,
+      "warmMedianMs": 0.91,
+      "coldMedianMs": 58.53
+    },
+    "screen": {
+      "correct": 3,
+      "of": 3,
+      "warmMedianMs": 0.47,
+      "coldMedianMs": 49.36
+    },
+    "workflow": {
+      "correct": 3,
+      "of": 3,
+      "warmMedianMs": 0.8,
+      "coldMedianMs": 54.28
+    },
+    "control": {
+      "correct": 3,
+      "of": 3,
+      "warmMedianMs": 0.75,
+      "coldMedianMs": 47.52
+    },
+    "all": {
+      "correct": 37,
+      "of": 37
+    }
+  },
+  "soak": {
+    "requests": 600,
+    "stopsEvery": 25,
+    "heapStartMB": 7.7,
+    "heapEndMB": 8.3,
+    "samples": [
+      {
+        "i": 100,
+        "heapMB": 8,
+        "activeTasks": 0,
+        "events": 369
+      },
+      {
+        "i": 200,
+        "heapMB": 8,
+        "activeTasks": 0,
+        "events": 738
+      },
+      {
+        "i": 300,
+        "heapMB": 8.1,
+        "activeTasks": 0,
+        "events": 1117
+      },
+      {
+        "i": 400,
+        "heapMB": 8.2,
+        "activeTasks": 0,
+        "events": 1493
+      },
+      {
+        "i": 500,
+        "heapMB": 8.3,
+        "activeTasks": 0,
+        "events": 1859
+      },
+      {
+        "i": 600,
+        "heapMB": 8.4,
+        "activeTasks": 0,
+        "events": 2237
+      }
+    ],
+    "activeTasksAtEnd": 0,
+    "note": "events grow because the benchmark harness records every UI event on purpose; tasks/handles must return to 0",
+    "activeHandles": 2
+  }
+}

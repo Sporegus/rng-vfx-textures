@@ -9,7 +9,9 @@
 // Everything else goes to the existing command brain (brain/brain.js).
 'use strict';
 
-const clean = (t) => String(t || '').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').trim().replace(/^(hey |ok |okay )?nova[,!.: ]*/i, '').replace(/\s+/g, ' ').replace(/[.!]+$/, '').trim();
+// swearing used for emphasis ("get the fuck out of the way") isn't part of what you want done
+const CURSE = /\b(?:the )?(?:fuck(?:ing|in'?)?|f\*+k(?:ing)?|freaking|frickin'?|friggin'?|bloody|goddamn|damn(?:ed)?|the hell|the heck)\b/gi;
+const clean = (t) => String(t || '').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').trim().replace(/^(hey |ok |okay )?nova[,!.: ]*/i, '').replace(CURSE, ' ').replace(/\s+/g, ' ').replace(/[.!]+$/, '').trim();
 
 const STOP = /^(stop|stop it|stop that|stop everything|cancel|cancel (that|it|everything)|abort|halt|never ?mind|forget it|quit it|freeze|hold on|wait stop|nova stop)$/i;
 // "X, actually Y" / "X no wait Y" / "X I mean Y" inside one utterance
@@ -71,6 +73,10 @@ function route(raw, ctx = {}) {
   if (/^(read|read me|read out) (the |this |my )?(selected|selection|highlighted)( text)?$/i.test(low)) return { kind: 'screen', ask: 'selection', text };
   const find = low.match(/^(?:help me )?(?:find|where is|where's|show me) (?:the )?(.+?) (button|menu|tab|option|setting|icon|link)$/);
   if (find) return { kind: 'screen', ask: 'find', target: `${find[1]} ${find[2]}`, text };
+
+  // ---- about Nova herself: move aside or hide
+  if (/^(?:(?:get|move|go|step) )?(?:out of (?:the|my) way|outta (?:the|my) way)$|^(?:move|scoot|shift|step)(?: over| aside| away| to the side| out of the way)?$|^(?:you'?re|youre|you are) in (?:the|my) way$|^(?:get|move) (?:off|away from) (?:my|the) (?:screen|window|stuff)$|^(?:move|go) to the (?:other|left|right) side$/i.test(low)) return { kind: 'self', op: 'move', text };
+  if (/^(?:go away|hide|go hide|hide yourself|disappear|vanish|leave me alone|get lost)$/i.test(low)) return { kind: 'self', op: 'hide', text };
 
   // ---- answering her own pending question by position ("the second option", "the first one")
   const nth = low.match(/^(?:(?:do|pick|choose|take|go with|use|select)\s+)?(?:the\s+)?(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:one|option|choice)$/);

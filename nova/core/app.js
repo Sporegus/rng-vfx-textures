@@ -399,7 +399,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'settings': return settings();
       case 'shortcuts': return shortcutStatus();
       case 'settings:set': {
-        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize', 'listen', 'chatSize'];
+        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize', 'listen', 'chatSize', 'showMicDot'];
         if (arg.chatSize && !['auto', 'small', 'standard', 'medium', 'large'].includes(arg.chatSize)) throw new Error('Brain size is auto, small, standard, medium or large.');
         if (arg.textSize && !['small', 'normal', 'large', 'x-large'].includes(arg.textSize)) throw new Error('Text size is small, normal, large or x-large.');
         if (arg.reasoning && !['auto', 'quick', 'think', 'thorough'].includes(arg.reasoning)) throw new Error('Reasoning is auto, quick, think or thorough.');

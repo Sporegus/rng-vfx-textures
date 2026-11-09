@@ -1407,6 +1407,9 @@
       case 'fun.dice': return dice(s.sides);
       case 'fun.8ball': return eightBall();
       case 'fun.teleport': return teleportTo(clamp(mouse.x, 40, W - 40), H);
+      // "get out of the way": to the other side of the screen, away from where you're working
+      case 'nova.move': { closeBubble(); const away = mouse.x < W / 2 ? W - 110 : 110; await teleportTo(away, H); return say(pick(['Out of your way! 💨', 'Scooting over!', 'Better? 🙂']), { ms: 1800 }); }
+      case 'nova.hide': { await say('Okay, hiding! Press Ctrl+Alt+Z to bring me back. 👋', { ms: 1800 }); await sleep(1500); closeBubble(); return api.hide(); }
       case 'fun.sleep': closeBubble(); z.asleep = true; return;
       case 'chat.hello': play('wave', 1500); return sayStep(step);
       case 'chat.thanks': pet(); return sayStep(step);
@@ -1677,7 +1680,7 @@
 
   // pick the microphone, see its level, mute it, and test it (nothing is recorded or kept)
   const micDot = document.createElement('span'); micDot.className = 'micdot hidden'; micDot.title = 'Microphone on: listening for "Nova"'; zEl.append(micDot);
-  const micReport = (state, extra = {}) => { micDot.classList.toggle('hidden', !(VIO.micOn && !VIO.muted)); if (api.core && api.core.mic) api.core.mic({ state, device: VIO.micLabel || null, muted: VIO.muted, ...extra }); };
+  const micReport = (state, extra = {}) => { micDot.classList.toggle('hidden', !(settings.showMicDot && VIO.micOn && !VIO.muted)); if (api.core && api.core.mic) api.core.mic({ state, device: VIO.micLabel || null, muted: VIO.muted, ...extra }); };
   async function micMenu() {
     let mics = [];
     try { mics = await VIO.listMics(); } catch {}
@@ -1858,6 +1861,7 @@
   api.onSettings((s) => {
     const was = settings;
     settings = s; applyTheme(); applyTextSize(); lastKey = '';
+    micDot.classList.toggle('hidden', !(s.showMicDot && VIO.micOn && !VIO.muted));
     if (!voice.service) return;
     if ((s.voice && !was.voice) || (s.listen && !was.listen)) { if (!voice.ready) { voice.announce = true; if (!voice.have) say('Getting my ears ready: a one-time download of my speech model (about 650 MB). It all runs on your PC; I\'ll tell you when I can hear you. ⬇️', { ms: 7000 }); api.voice.send({ type: 'get', what: 'voice', light: s.earsLight, voiceName: s.voiceName }); } }
     if (s.listen !== was.listen && !s.listen) say('Microphone off. Press Ctrl+Alt+V if you want me to listen once. 🔇', { ms: 3000 });

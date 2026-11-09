@@ -1,5 +1,5 @@
 {
-  "ran": "2026-11-09T18:25:51.173Z",
+  "ran": "2026-11-09T18:32:23.605Z",
   "browser": "Chromium (Playwright, headless)",
   "results": [
     {
@@ -10,7 +10,7 @@
         "actions": 19,
         "falls": 0,
         "observations": 20,
-        "ms": 7469,
+        "ms": 7421,
         "coins": 5,
         "total": 5
       },
@@ -24,7 +24,7 @@
         "actions": 23,
         "falls": 1,
         "observations": 28,
-        "ms": 9697,
+        "ms": 9740,
         "coins": 5,
         "total": 5
       },
@@ -38,7 +38,7 @@
         "actions": 3,
         "falls": 0,
         "observations": 5,
-        "ms": 1293,
+        "ms": 1266,
         "coins": 0,
         "total": 5
       },
@@ -47,7 +47,7 @@
     {
       "case": "stop",
       "status": "stopped",
-      "releaseMs": 23
+      "releaseMs": 2
     },
     {
       "case": "routine",
@@ -56,7 +56,7 @@
       "stats": {
         "loops": 3,
         "actions": 17,
-        "ms": 7601,
+        "ms": 7598,
         "coins": 1
       }
     },

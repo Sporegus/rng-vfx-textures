@@ -288,3 +288,38 @@ test('closing an app doesn\'t ask (only deleting does); closing the window Nova 
   await h3.pipeline.input({ text: 'clean up junk files' });
   assert.ok(h3.events.some(e => e.type === 'approve'), 'deleting still asks');
 });
+
+test('"get the fuck out of the way" moves Nova aside; it never becomes a junk cleanup', async () => {
+  const h = harness();
+  await h.pipeline.input({ text: 'get the fuck out of the way', source: 'voice' });
+  assert.deepEqual(h.pageRuns.map(s => s.intent), ['nova.move']);
+  assert.ok(!h.events.some(e => e.type === 'approve'));
+  await h.pipeline.input({ text: 'go away' });
+  assert.equal(h.pageRuns[1].intent, 'nova.hide');
+  const { route } = require('../router');
+  assert.equal(route('open the fucking spotify').text, 'open spotify');
+});
+
+test('without a chat brain, a half-sure match for something that asks permission is confirmed first', async () => {
+  const h = harness({ chooseWith: () => 'no' });
+  await h.pipeline.input({ text: 'move out of the way please now' });   // a fuzzy one
+  const h2 = harness({ chooseWith: (q) => /Did you mean/.test(q.question) ? 'no' : null });
+  await h2.pipeline.input({ text: 'tidy my stuff' });                    // clean.junk at ~0.64
+  assert.ok(h2.events.some(e => e.type === 'choose' && /Did you mean: clean up junk files\?|Did you mean:/.test(e.question)));
+  assert.ok(!h2.events.some(e => e.type === 'approve'), 'no approval card for a guess');
+  assert.equal(h2.pageRuns.length, 0);
+});
+
+test('with a chat brain, messy speech is interpreted into a command she knows (then the usual checks apply)', async () => {
+  const m = llm.mock([JSON.stringify({ command: 'clean up junk files' })]);
+  const h = harness({ llm: m, approveWith: () => ({ allow: false }) });
+  await h.pipeline.input({ text: 'yo my pc is so cluttered with crap can u sort that', source: 'voice' });
+  assert.match(m.calls[0].system, /Examples of commands Nova understands/);
+  assert.ok(h.events.some(e => e.type === 'approve'), 'deleting still needs your OK');
+  assert.equal(h.pageRuns.length, 0);
+  const m2 = llm.mock([JSON.stringify({ ask: 'Do you want me to close the window or move it?' })]);
+  const h2 = harness({ llm: m2 });
+  await h2.pipeline.input({ text: 'deal with that thing over there' });
+  assert.ok(h2.replies().some(r => /close the window or move it/.test(r)));
+  assert.equal(h2.pageRuns.length, 0);
+});
