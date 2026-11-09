@@ -1,0 +1,154 @@
+{
+  "label": "baseline",
+  "ran": "2026-11-09T10:14:33.506Z",
+  "machine": "Intel(R) Xeon(R) Processor @ 2.10GHz ×4, 17 GB RAM, linux",
+  "display": "virtual display (Xvfb), software rendering (--disable-gpu)",
+  "note": "Not the target Windows PC. Use for before/after comparison on the same machine.",
+  "cold": {
+    "runs": [
+      {
+        "windowReadyMs": 487,
+        "firstAnswerMs": 62.700000000186265,
+        "launchToAnswerMs": 857
+      },
+      {
+        "windowReadyMs": 401,
+        "firstAnswerMs": 68.70000000018626,
+        "launchToAnswerMs": 778
+      },
+      {
+        "windowReadyMs": 409,
+        "firstAnswerMs": 70.70000000018626,
+        "launchToAnswerMs": 788
+      }
+    ],
+    "launchToAnswer": {
+      "n": 3,
+      "median": 788,
+      "p95": 857,
+      "max": 857
+    },
+    "firstAnswer": {
+      "n": 3,
+      "median": 68.7,
+      "p95": 70.7,
+      "max": 70.7
+    }
+  },
+  "idleMetrics": [
+    {
+      "type": "Browser",
+      "name": "",
+      "mb": 169,
+      "cpu": 0
+    },
+    {
+      "type": "GPU",
+      "name": "GPU",
+      "mb": 90,
+      "cpu": 0
+    },
+    {
+      "type": "Utility",
+      "name": "Network Service",
+      "mb": 75,
+      "cpu": 0
+    },
+    {
+      "type": "Tab",
+      "name": "",
+      "mb": 325,
+      "cpu": 0
+    },
+    {
+      "type": "Utility",
+      "name": "Nova voice",
+      "mb": 108,
+      "cpu": 0
+    },
+    {
+      "type": "Utility",
+      "name": "Audio Service",
+      "mb": 70,
+      "cpu": 0
+    },
+    {
+      "type": "Utility",
+      "name": "Video Capture",
+      "mb": 66,
+      "cpu": 0
+    }
+  ],
+  "warmAnswer": {
+    "n": 30,
+    "median": 40.2,
+    "p95": 46.2,
+    "max": 58.6
+  },
+  "stopRoundTrip": {
+    "n": 15,
+    "median": 0.7,
+    "p95": 4.4,
+    "max": 4.4
+  },
+  "soak": {
+    "requests": 150,
+    "menus": 50,
+    "stops": 10,
+    "seconds": 16
+  },
+  "afterSoakMetrics": [
+    {
+      "type": "Browser",
+      "name": "",
+      "mb": 183,
+      "cpu": 1.8
+    },
+    {
+      "type": "GPU",
+      "name": "GPU",
+      "mb": 112,
+      "cpu": 14.6
+    },
+    {
+      "type": "Utility",
+      "name": "Network Service",
+      "mb": 75,
+      "cpu": 0
+    },
+    {
+      "type": "Tab",
+      "name": "",
+      "mb": 749,
+      "cpu": 14.2
+    },
+    {
+      "type": "Utility",
+      "name": "Nova voice",
+      "mb": 108,
+      "cpu": 0
+    },
+    {
+      "type": "Utility",
+      "name": "Audio Service",
+      "mb": 71,
+      "cpu": 0.2
+    }
+  ],
+  "windowsAfterSoak": 1,
+  "rendererHeapMB": 10,
+  "byLook": {
+    "idle": {
+      "rendererMB": 426,
+      "gpuMB": 90,
+      "totalMB": 1004,
+      "rendererCpu": 0
+    },
+    "holo": {
+      "rendererMB": 142,
+      "gpuMB": 94,
+      "totalMB": 723,
+      "rendererCpu": 0
+    }
+  }
+}

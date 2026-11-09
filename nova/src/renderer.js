@@ -334,15 +334,15 @@
     const s = sc(), pad = S.padOf(settings.skin); // (her drawn look has a bigger canvas)
     const cw = (S.W + pad.x * 2) * s, ch = (S.H + pad.top) * s;
     const isVideo = !!S.skinOf(settings.skin).video;
-    const dpr = isVideo ? (window.devicePixelRatio || 1) : 1;   // her hologram is high-res art: draw at the screen's real pixels
-    if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) {
-      cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); cv.style.width = cw + 'px'; cv.style.height = ch + 'px'; lastKey = '';
-    }
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; cv.style.width = cw + 'px'; cv.style.height = ch + 'px'; lastKey = ''; }
     zEl.classList.toggle('video', isVideo);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const live = S.skinOf(settings.skin).live;   // (the new Nova moves every frame)
+    // her hologram plays as a video element over this spot (far less memory than drawing it into the canvas)
+    if (isVideo && window.NovaIdle) NovaIdle.show(zEl, { x: pad.x * s, y: pad.top * s, scale: s, W: S.W, GROUND: S.GROUND, HEAD_TOP: S.HEAD_TOP });
+    else if (window.NovaIdle) NovaIdle.hide();
+    const live = S.skinOf(settings.skin).live && !isVideo;   // (the new Nova moves every frame; the video moves itself)
     const key = [anim, S.frameIndex(a, z.frame), settings.skin, settings.hat, z.facing, blink].join('|');
-    if (live || key !== lastKey) {
+    if (isVideo) { if (lastKey !== 'video') { ctx.clearRect(0, 0, cv.width, cv.height); lastKey = 'video'; } }
+    else if (live || key !== lastKey) {
       ctx.clearRect(0, 0, cv.width, cv.height);
       const voiceLevel = window.NovaVoiceIO && NovaVoiceIO.talking ? NovaVoiceIO.loudness() : z.talking ? 0.12 + 0.5 * Math.abs(Math.sin(now / 90)) : 0;
       const mouth = live && window.Nova2 ? (Nova2.mouthFor(voiceLevel, now) || (['cheer', 'love', 'wave', 'dance'].includes(anim) ? 'smile' : null)) : null;
@@ -434,8 +434,8 @@
     const r = cv.getBoundingClientRect();
     const x = Math.floor(cx - r.left), y = Math.floor(cy - r.top);
     if (x < 0 || y < 0 || x >= r.width || y >= r.height) return false;
-    const k = cv.width / r.width;   // her hologram look draws at the screen's real pixels (125%/150% scaling)
-    try { return ctx.getImageData(Math.floor(x * k), Math.floor(y * k), 1, 1).data[3] > 0; } catch { return true; }
+    if (S.skinOf(settings.skin).video && window.NovaIdle) return NovaIdle.hit(x, y);   // her silhouette mask
+    try { return ctx.getImageData(x, y, 1, 1).data[3] > 0; } catch { return true; }
   }
   let drag = null, press = null, clickTimer = null;
   const samples = [];

@@ -135,6 +135,7 @@ html, body {
 
 /* ---------------------------------------------------------------- the hologram idle look (already glowing: no extra filter) */
 #nova.video canvas { image-rendering: auto; filter: none; animation: none; }
+#nova.video video { display: block; }   /* her hologram idle (src/novaidle.js) */
 
 /* ---------------------------------------------------------------- what she's doing, right above her head */
 #status {
