@@ -136,7 +136,7 @@ test('a model plan that tries something risky still needs your approval (tests 1
 
 test('a model cannot name a tool that does not exist or pass bad args', async () => {
   const h = harness({ llm: llm.mock([JSON.stringify({ steps: [{ tool: 'shell.exec', args: { cmd: 'format c:' } }] })]) });
-  const r = await h.pipeline.input({ text: 'do the thing' });
+  const r = await h.pipeline.input({ text: 'handle my stuff please' });
   assert.equal(r.error, 'invalid');
 });
 
@@ -181,4 +181,62 @@ test('a name you gave an app is used when opening it', async () => {
   const p = createPipeline({ tasks: h.tasks, permissions: h.permissions, tools: h.tools, log: h.log, brain, ui: h.ui, page: { run: async () => ({}) }, llm: null, appAlias: (n) => n.toLowerCase() === 'browser' ? 'Google Chrome' : null });
   await p.input({ text: 'open browser' });
   assert.ok(h.replies().some(r => /Opened Google Chrome/.test(r)), h.replies().join(' | '));
+});
+
+test('vague requests are clarified, never guessed; messages never go to a guessed place (P2 #1, #2)', async () => {
+  const h = harness();
+  for (const t of ['send it', 'open the thing', 'put it there']) await h.pipeline.input({ text: t });
+  assert.equal(h.pageRuns.length, 0);
+  assert.ok(!h.events.some(e => e.type === 'approve'));
+  assert.ok(h.replies().some(r => /Send what, and to whom\? I won't guess/.test(r)));
+  assert.ok(h.replies().some(r => /What should I open\?/.test(r)));
+});
+
+test('a low-confidence guess is checked with you and never reported as done (P2 #2)', async () => {
+  const h = harness({ chooseWith: (q) => /Did you mean: mute the sound\?/.test(q.question) ? 'no' : null });
+  await h.pipeline.input({ text: 'mute' });
+  assert.ok(h.events.some(e => e.type === 'choose' && /Did you mean: mute the sound/.test(e.question)));
+  assert.equal(h.pageRuns.length, 0);
+  assert.ok(!h.replies().some(r => /Muted/.test(r)), 'never claims it muted');
+  const h2 = harness({ chooseWith: () => 'yes' });
+  await h2.pipeline.input({ text: 'mute' });
+  assert.ok(h2.pageRuns.some(s => s.intent === 'volume'));
+});
+
+test('"the second option" answers the open question, and only that (P2 #9)', async () => {
+  const h = harness({ chooseWith: () => new Promise(() => {}) });   // you haven't clicked anything
+  const p = h.pipeline.input({ text: 'why is the sky blue' });     // no brain: "Search the web instead?" [Search the web, No thanks]
+  await new Promise(r => setTimeout(r, 30));
+  await h.pipeline.input({ text: 'the first one' });
+  await p;
+  assert.ok(h.pageRuns.some(s => s.intent === 'web.search'), 'the first option (search) ran');
+  assert.ok(h.events.some(e => e.type === 'answered' && e.value === 'web'), 'the open card was closed with that answer');
+  const h2 = harness();
+  await h2.pipeline.input({ text: 'do the second option' });
+  assert.ok(h2.replies().some(r => /don't have a question open/.test(r)));
+});
+
+test('writing requests go to a model; without one she says so plainly', async () => {
+  const h = harness();
+  await h.pipeline.input({ text: 'write me a short poem about rain' });
+  assert.ok(h.replies().some(r => /Writing, rewriting and translating need a chat brain/.test(r)));
+  assert.equal(h.pageRuns.length, 0, 'not turned into a note');
+  const h2 = harness({ llm: llm.mock(['Rain taps the glass…']) });
+  await h2.pipeline.input({ text: 'write me a short poem about rain' });
+  assert.ok(h2.replies().some(r => /Rain taps/.test(r)));
+});
+
+test('reasoning modes map to real request settings; Auto escalates once when unsure (P2 #16)', async () => {
+  const m = llm.mock(["I'm not sure, it depends.", 'Because of how cache lines work: …']);
+  const h = harness({ llm: m });
+  await h.pipeline.input({ text: 'is a linked list faster than an array?' });
+  assert.equal(m.calls.length, 2, 'escalated once');
+  assert.equal(m.calls[0].maxTokens, 500);
+  assert.equal(m.calls[1].maxTokens, 1500);
+  assert.ok(h.log.recent(100).some(e => e.type === 'reasoning.escalated'));
+  const modes = require('../modes');
+  assert.equal(modes.pickReasoning('auto', 'what time is it in tokyo'), 'quick');
+  assert.equal(modes.pickReasoning('auto', 'why does my build fail when I add this plugin'), 'think');
+  assert.equal(modes.pickReasoning('auto', 'research and compare the two engines with sources'), 'thorough');
+  assert.equal(modes.pickReasoning('quick', 'research everything'), 'quick', 'an explicit mode wins');
 });

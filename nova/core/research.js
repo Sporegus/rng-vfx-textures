@@ -61,6 +61,7 @@ function createResearch({ fetchImpl = fetch, log, now = () => new Date(), minGap
     if (!res.ok) throw new NovaError('failed', `${host} said ${res.status}`);
     const v = asJson ? await res.json() : await res.text();
     cache.set(key, { t: Date.now(), v });
+    while (cache.size > 100) cache.delete(cache.keys().next().value);   // bounded: oldest first
     return v;
   }
 

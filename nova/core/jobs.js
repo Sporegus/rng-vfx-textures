@@ -16,6 +16,9 @@ const { execFile } = require('child_process');
 const { id, NovaError, sha256, sleep } = require('./util');
 const { envelopeText } = require('./participants');
 
+// background helpers (test commands, assistant CLIs) shouldn't compete with what you're doing
+function lowPriority(child) { try { if (child && child.pid) require('os').setPriority(child.pid, require('os').constants.priority.PRIORITY_BELOW_NORMAL); } catch {} }
+
 const JOB_STATES = ['draft', 'queued', 'running', 'waiting_on_assistant', 'verifying', 'paused', 'blocked', 'completed', 'cancelled', 'failed'];
 const DEFAULT_BUDGETS = { maxHours: 8, maxCycles: 20, maxRetries: 2, noProgressCycles: 3, maxSpendUsd: null };
 
@@ -132,6 +135,7 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
       const child = execImpl(cmd[0], cmd.slice(1), { cwd: j.contract.workspace, timeout: 10 * 60000, windowsHide: true, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, ...(j.contract.testEnv || {}) } }, (e, out, err) => {
         resolve({ passed: !e, code: e ? (e.code || 1) : 0, output: (String(out) + String(err)).slice(-3000) });
       });
+      lowPriority(child);
       if (signal) signal.addEventListener('abort', () => { try { child.kill(); } catch {} }, { once: true });
     });
   }
@@ -429,11 +433,13 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
   }
   // the queue: approved jobs start in priority order, a few at a time (default one)
   const RANK = { high: 0, normal: 1, low: 2 };
+  const limit = () => (typeof maxConcurrent === 'function' ? maxConcurrent() : maxConcurrent);
   function kick() {
-    if (running.size >= maxConcurrent) return [];
+    const max = limit();
+    if (running.size >= max) return [];
     const next = store.jobs(['queued']).filter(j => !running.has(j.id)).sort((a, b) => (RANK[a.priority || 'normal'] - RANK[b.priority || 'normal']) || a.created - b.created);
     const started = [];
-    for (const j of next.slice(0, maxConcurrent - running.size)) {
+    for (const j of next.slice(0, max - running.size)) {
       started.push(j.id);
       run(j.id).catch(e => log && log.event('job.run_error', { job: j.id, message: e.message })).finally(() => setTimeout(kick, 0));
     }
@@ -464,4 +470,4 @@ function createJobs({ store, permissions, log, participants = {}, now = () => Da
   };
 }
 
-module.exports = { createJobs, JOB_STATES, DEFAULT_BUDGETS, OUT_OF_SCOPE };
+module.exports = { createJobs, JOB_STATES, DEFAULT_BUDGETS, OUT_OF_SCOPE, lowPriority };

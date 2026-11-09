@@ -41,14 +41,14 @@ function anthropic({ key, model = 'claude-sonnet-5-5', maxTokens = 1024, fetchIm
   return {
     name: 'anthropic', model, vision: true,
     available: () => key() ? { ok: true } : { ok: false, reason: 'No Anthropic API key saved (Settings > Brain).' },
-    async chat({ system, messages, onText, signal, timeoutMs = 60000 }) {
+    async chat({ system, messages, onText, signal, timeoutMs = 60000, maxTokens: perCall }) {
       const k = key();
       if (!k) throw new NovaError('unavailable', 'No Anthropic API key saved.');
       return withTimeout(timeoutMs, signal, async (sig) => {
         const res = await fetchImpl('https://api.anthropic.com/v1/messages', {
           method: 'POST', signal: sig,
           headers: { 'content-type': 'application/json', 'x-api-key': k, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: messages.map(toAnthropic), stream: true }),
+          body: JSON.stringify({ model, max_tokens: perCall || maxTokens, system, messages: messages.map(toAnthropic), stream: true }),
         });
         if (!res.ok) throw httpError('Anthropic', res.status, await res.text().catch(() => ''));
         let text = '', usage = {};
@@ -71,14 +71,14 @@ function openai({ key, model = 'gpt-5-mini', maxTokens = 1024, fetchImpl = fetch
   return {
     name: 'openai', model, vision: true,
     available: () => key() ? { ok: true } : { ok: false, reason: 'No OpenAI API key saved (Settings > Brain).' },
-    async chat({ system, messages, onText, signal, timeoutMs = 60000 }) {
+    async chat({ system, messages, onText, signal, timeoutMs = 60000, maxTokens: perCall }) {
       const k = key();
       if (!k) throw new NovaError('unavailable', 'No OpenAI API key saved.');
       return withTimeout(timeoutMs, signal, async (sig) => {
         const res = await fetchImpl('https://api.openai.com/v1/chat/completions', {
           method: 'POST', signal: sig,
           headers: { 'content-type': 'application/json', authorization: 'Bearer ' + k },
-          body: JSON.stringify({ model, max_completion_tokens: maxTokens, stream: true, stream_options: { include_usage: true },
+          body: JSON.stringify({ model, max_completion_tokens: perCall || maxTokens, stream: true, stream_options: { include_usage: true },
             messages: [{ role: 'system', content: system }, ...messages.map(toOpenAI)] }),
         });
         if (!res.ok) throw httpError('OpenAI', res.status, await res.text().catch(() => ''));

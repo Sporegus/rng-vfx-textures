@@ -70,6 +70,29 @@ function route(raw, ctx = {}) {
   const find = low.match(/^(?:help me )?(?:find|where is|where's|show me) (?:the )?(.+?) (button|menu|tab|option|setting|icon|link)$/);
   if (find) return { kind: 'screen', ask: 'find', target: `${find[1]} ${find[2]}`, text };
 
+  // ---- answering her own pending question by position ("the second option", "the first one")
+  const nth = low.match(/^(?:(?:do|pick|choose|take|go with|use|select)\s+)?(?:the\s+)?(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:one|option|choice)$/);
+  if (nth) return { kind: 'pick', index: { first: 0, '1st': 0, second: 1, '2nd': 1, third: 2, '3rd': 2, fourth: 3, '4th': 3, last: -1 }[nth[1]], text };
+
+  // ---- projects and saved references
+  const proj = text.match(/^(?:let'?s|lets|i want to|time to|can we)\s+(?:work on|open|continue(?: with)?|get back to|switch to)\s+(?:the\s+|my\s+)?(.+?)(?:\s+project)?[.!]?$/i) || text.match(/^(?:open|switch to|load)\s+(?:the\s+|my\s+)?project\s+(.+?)[.!]?$/i) || text.match(/^(?:open|switch to|load)\s+(?:the\s+|my\s+)?(.+?)\s+project[.!]?$/i);
+  if (proj) return { kind: 'project', name: proj[1].trim(), text };
+  if (/\breferences?\b/i.test(low) || /^(?:save|remember|keep)\s+(?:this|that)\s+(?:link|image|picture|page|file|screenshot)\b/i.test(low)) {
+    const save = text.match(/^(?:save|remember|keep|store)\s+(?:this|that|the)?\s*(link|image|picture|page|file|screenshot|it)?\s*(?:as\s+(?:an?\s+)?(.+?)\s+reference|for\s+(?:the\s+)?(.+?))?(?:\s+(?:in|for)\s+(?:the\s+)?(.+?)(?:\s+project)?)?[.!]?$/i);
+    if (save && /^(save|remember|keep|store)\b/i.test(low)) return { kind: 'reference', op: 'save', what: (save[1] || 'it').toLowerCase(), tag: (save[2] || save[3] || '').trim() || null, project: save[4] || null, text };
+    const find2 = text.match(/^(?:find|show|get|open|where(?:'s| is))\s+(?:me\s+)?(?:the\s+|my\s+)?(.+?)\s+references?(?:\s+i\s+saved)?[?.!]?$/i) || text.match(/^(?:find|show|get|open)\s+(?:me\s+)?(?:the\s+|my\s+)?(?:references?|refs?)\s+(?:for|about|of)\s+(.+?)[?.!]?$/i);
+    if (find2) return { kind: 'reference', op: 'find', query: find2[1].trim(), text };
+  }
+
+  // ---- troubleshooting ("why isn't this working?")
+  if (/^(?:why (?:is|isn'?t|is not|does|doesn'?t|does not|won'?t|will not|can'?t|cannot|did|didn'?t)|what'?s wrong with|how (?:do|can) i fix|help me fix|fix)\b.*\b(work|working|load|loading|open|opening|start|starting|launch|crash|crashing|broken|error|errors|fail|failing|freez\w*|lag\w*|run|running)\b/i.test(low)) return { kind: 'troubleshoot', text };
+
+  // ---- writing, rewriting, translating, summarizing: a model's job, not a command
+  if (/^(?:please\s+|can you\s+|could you\s+)?(?:write|draft|compose|rewrite|reword|translate|summari[sz]e|proofread|brainstorm|outline|paraphrase)\b/i.test(low) && !/^(?:please\s+)?write (?:down|this down|that down|a note|me a note|it down)\b/i.test(low)) return { kind: 'compose', text };
+
+  // ---- research (before games: "look up roblox studio ... cite sources" is research)
+  if (/^(research|investigate|look into|find out|compare)\b/i.test(low) || /^look up\b.*\b(cite|sources?)\b/i.test(low)) return { kind: 'research', question: text.replace(/^(research|investigate|look into|look up|find out|compare)\s+/i, '').replace(/\s+(and|with) (cite|give me|show|list) (the |your )?sources\.?$|\s+and cite (them|it|sources)\.?$/i, ''), text };
+
   // ---- games
   if (/\broblox\b/i.test(low) && /\b(join|experience|game|play)\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
   if (/\broblox\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
@@ -77,9 +100,6 @@ function route(raw, ctx = {}) {
   if (/\broutines?\b/i.test(low) && /\b(record|replay|run|play|do|repeat)\b/i.test(low)) return { kind: 'game', text };
   if (/\b(test|fixture|coin) game\b/i.test(low)) return { kind: 'game', text };
   if (/\b(play|beat|grind|farm|repeat)\b.*\b(game|level|objective|until|counter|times)\b/i.test(low)) return { kind: 'game', text };
-
-  // ---- research
-  if (/^(research|investigate|look into|find out|compare)\b/i.test(low) || /^look up\b.*\b(cite|sources?)\b/i.test(low)) return { kind: 'research', question: text.replace(/^(research|investigate|look into|look up|find out|compare)\s+/i, '').replace(/\s+(and|with) (cite|give me|show|list) (the |your )?sources\.?$|\s+and cite (them|it|sources)\.?$/i, ''), text };
 
   // ---- questions: answered, not googled
   if ((QUESTION.test(low) || AUX_QUESTION.test(low) || /\?$/.test(text)) && !/^(can you|could you|would you|will you) (open|launch|start|play|find|close|turn|set|organi[sz]e|clean|show|move|put)\b/i.test(low)) {

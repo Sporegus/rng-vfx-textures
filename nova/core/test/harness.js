@@ -26,6 +26,7 @@ function harness({ installed = ['Discord', 'Spotify', 'Notepad', 'Google Chrome'
     reply: (e) => events.push({ type: 'reply', ...e }),
     approve: async (card) => { events.push({ type: 'approve', ...card }); return approveWith(card); },
     choose: async (q) => { events.push({ type: 'choose', ...q }); return chooseWith(q); },
+    answer: (wid, value) => { events.push({ type: 'answered', id: wid, value }); },
     openPanel: (tab) => events.push({ type: 'panel', tab }),
   };
   const pageRuns = [];

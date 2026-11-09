@@ -82,6 +82,7 @@
   const parts = [];
   const GLYPH_HEART = ['.X.X.', 'XXXXX', 'XXXXX', '.XXX.', '..X..'];
   function emit(kind, x, y, n = 8) {
+    if (settings.performance === 'gaming') return;   // Gaming profile: no particle effects
     const s = S.skinOf(settings.skin);
     for (let i = 0; i < n; i++) {
       const p = { x, y, vx: rand(-80, 80), vy: rand(-220, -60), life: rand(0.6, 1.2), t: 0, size: Math.ceil(sc() * rand(0.7, 1.4)), kind };
@@ -1785,7 +1786,7 @@
     return a <= b ? cur >= a && cur < b : cur >= a || cur < b;
   }
   function brain() {
-    if (isQuiet()) { if (!z.asleep && !busy && bubble.classList.contains('hidden')) z.sitting = true; return; }
+    if (isQuiet() || settings.performance === 'gaming') { if (!z.asleep && !busy && bubble.classList.contains('hidden')) z.sitting = true; return; }   // quiet hours / Gaming profile: she sits still
     if (busy || z.mode !== 'stand' || z.walk || z.hold || z.chase || z.hiding || drag || press) return;
     if (!bubble.classList.contains('hidden')) { lastInteraction = now; return; }
     if (!z.asleep && now - lastInteraction > 180000) { z.asleep = true; z.sitting = false; return; }

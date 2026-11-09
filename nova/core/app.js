@@ -20,6 +20,8 @@ const { createResearch } = require('./research');
 const { createJobs } = require('./jobs');
 const { createScheduler } = require('./schedule');
 const { createSpeechOut } = require('./speech-out');
+const { createResources } = require('./resources');
+const modes = require('./modes');
 const { createGames, electronAdapter } = require('./games');
 const participantsMod = require('./participants');
 const llm = require('./llm');
@@ -89,6 +91,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
     reply: (e) => { if (e.text) remember('nova', e.text, e.taskId); both('reply', e); },
     approve: (card) => pendingWait('approve', card),          // never auto-approved: only your click (or spoken yes) answers
     choose: (q) => pendingWait('choose', q),
+    // the pipeline answered its own open question ("the second option")
+    answer: (wid, value) => { const w = waits.get(wid); if (!w) return; waits.delete(wid); both('closed', { id: wid }); w.resolve(value); },
     openPanel: (tab, extra) => openPanel(tab, extra),
     // a found control, in screen pixels -> her overlay's coordinates, so she can point at it
     highlight: (r) => {
@@ -134,7 +138,10 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
     ...demoParticipants(),
   };
   participants['claude-cli'].probe().catch(() => {});
-  const jobs = createJobs({ store, permissions, log, participants });
+  // resource pressure and the performance profile decide how many background jobs may run
+  const resources = createResources({ log, onChange: (st) => { if (st.level === 'high') toPage('jobnote', { text: `Easing off: ${st.reason}. New background jobs wait until it clears.`, important: false }); else jobs.kick(); } });
+  resources.start();
+  const jobs = createJobs({ store, permissions, log, participants, maxConcurrent: () => resources.status().level === 'high' ? 0 : modes.performance(settings().performance).jobsConcurrent });
   jobs.on((j) => toPanel('job', { job: j }));
   // short job updates in the bubble ("claude-cli is implementing i2"), at most one per job every 20 s, never in quiet hours
   const noted = new Map();
@@ -181,7 +188,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   });
 
   const appAlias = (n) => { const hit = store.recall('app_alias').find(r => r.value && r.value.alias === String(n).toLowerCase().trim()); return hit ? hit.value.app : null; };
-  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias });
+  const pipeline = createPipeline({ tasks, permissions, tools, log, llm: chooser, brain, ui, page, jobs, discord, screen: screenCtx, games, research, appAlias, settings });
   // her future voice: off (no provider) until a real one is set up; Stop always silences it
   const speechOut = createSpeechOut({ log });
   pipeline.onStop(() => { speechOut.stop('stop');  win.releaseAll(); games.stop(); for (const [wid, w] of waits) { waits.delete(wid); both('closed', { id: wid }); w.resolve(w.kind === 'approve' ? { allow: false, cancelled: true } : null); } toPage('stopped', {}); });
@@ -289,6 +296,8 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
         activeTasks: tasks.active().map(t => ({ text: t.text, state: t.state, kind: t.kind })),
         lastTool: [...log.recent(300)].reverse().find(e => e.type === 'tool.result' || e.type === 'tool.error') || null,
         speech: speechOut.status(),
+        pressure: resources.status(),
+        modes: { reasoning: settings().reasoning || 'auto', performance: settings().performance || 'balanced', jobsAllowedAtOnce: resources.status().level === 'high' ? 0 : modes.performance(settings().performance).jobsConcurrent },
         resources: (() => {
           const m = app.getAppMetrics();
           const cpu = m.reduce((a, p) => a + (p.cpu ? p.cpu.percentCPUUsage : 0), 0);
@@ -319,10 +328,14 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'settings': return settings();
       case 'shortcuts': return shortcutStatus();
       case 'settings:set': {
-        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display'];
+        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance'];
+        if (arg.reasoning && !['auto', 'quick', 'think', 'thorough'].includes(arg.reasoning)) throw new Error('Reasoning is auto, quick, think or thorough.');
+        if (arg.performance && !['gaming', 'balanced', 'overnight'].includes(arg.performance)) throw new Error('Performance is gaming, balanced or overnight.');
         if (arg.shortcuts) { const ok = /^((Control|Ctrl|Alt|Shift|Super|CommandOrControl)\+)+([A-Z0-9]|F\d{1,2}|Space|Escape|Pause|Insert|Home|End|PageUp|PageDown)$/i; for (const [k, v] of Object.entries(arg.shortcuts)) if (!['menu', 'hide', 'ptt', 'stop'].includes(k) || !ok.test(String(v))) throw new Error(`"${v}" isn't a shortcut Nova can use (try something like Control+Alt+V).`); arg = { ...arg, shortcuts: { ...settings().shortcuts, ...arg.shortcuts } }; }
         const patch = Object.fromEntries(Object.entries(arg).filter(([k]) => allowed.includes(k)));
-        saveSettings(patch); return settings();
+        saveSettings(patch);
+        if ('performance' in patch) jobs.kick();
+        return settings();
       }
       case 'say': return pipeline.input({ text: String(arg.text || ''), source: 'typed' }).then(() => ({ ok: true }));
       case 'stop': return stop('panel');
@@ -358,7 +371,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
   jobs.recover().then((r) => { jobs.kick(); return r; }).then((r) => { if (r.length) log.event('jobs.recovered', { count: r.length, resumed: r.filter(x => x.resumed).length }); }).catch(() => {});
   log.event('core.started', { platform: process.platform, winHelper: win.available() });
 
-  return { pipeline, store, log, jobs, games, stop, openPanel, close() { try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
+  return { pipeline, store, log, jobs, games, stop, openPanel, close() { try { resources.stop(); } catch {} try { scheduler.stop(); } catch {} try { win.stop(); } catch {} try { store.close(); } catch {} } };
 }
 
 module.exports = { startCore, secrets };

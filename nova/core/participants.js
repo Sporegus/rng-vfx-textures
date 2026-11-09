@@ -61,6 +61,7 @@ function claudeCli(id, role, { cwd, bin = 'claude', timeoutMs = 30 * 60000, exec
           let j = null; try { j = JSON.parse(out); } catch {}
           resolve({ status: j && j.is_error ? 'failed' : 'complete', output: j ? String(j.result || '') : String(out), usage: j && j.usage ? { input: j.usage.input_tokens, output: j.usage.output_tokens, costUsd: j.total_cost_usd } : {} });
         });
+        try { require('os').setPriority(child.pid, require('os').constants.priority.PRIORITY_BELOW_NORMAL); } catch {}   // a background helper
         if (signal) signal.addEventListener('abort', () => { try { child.kill(); } catch {} }, { once: true });
       });
     },
