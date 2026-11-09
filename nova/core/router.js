@@ -111,7 +111,9 @@ function route(raw, ctx = {}) {
     if (find2) return { kind: 'reference', op: 'find', query: find2[1].trim(), text };
   }
 
-  // ---- troubleshooting ("why isn't this working?")
+  // ---- troubleshooting ("why isn't this working?", "check again", "fix it")
+  if (/^(?:check (?:it )?again|run the check again|is it fixed(?: now)?|did that (?:fix|work)(?: it)?)\??$/i.test(low)) return { kind: 'troubleshoot', op: 'recheck', text };
+  if (/^(?:fix it|fix that|try to fix it|can you fix it)\??$/i.test(low)) return { kind: 'troubleshoot', op: 'fix', text };
   if (/^(?:why (?:is|isn'?t|is not|does|doesn'?t|does not|won'?t|will not|can'?t|cannot|did|didn'?t)|what'?s wrong with|how (?:do|can) i fix|help me fix|fix)\b.*\b(work|working|load|loading|open|opening|start|starting|launch|crash|crashing|broken|error|errors|fail|failing|freez\w*|lag\w*|run|running)\b/i.test(low)) return { kind: 'troubleshoot', text };
 
   // ---- writing, rewriting, translating, summarizing: a model's job, not a command

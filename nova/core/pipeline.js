@@ -175,7 +175,12 @@ function createPipeline(deps) {
       } }) : blocked('Routines aren\'t set up.');
       case 'project': return deps.projects ? deps.projects.handle(task, r, { ui, approve, reply, choose }) : blocked('Project profiles aren\'t set up yet.');
       case 'reference': return deps.references ? deps.references.handle(task, r, { ui, approve, reply, choose }) : blocked('The reference inbox isn\'t set up yet.');
-      case 'troubleshoot': return deps.troubleshoot ? deps.troubleshoot.handle(task, r, { ui, approve, reply, choose, answer }) : answer(task, r.text);
+      case 'troubleshoot': {
+        if (!deps.troubleshoot) return answer(task, r.text);
+        if (r.op === 'recheck') return deps.troubleshoot.recheck(task, { reply });
+        if (r.op === 'fix') { const j = deps.troubleshoot.draftFix(task); if (!j) return reply(task, 'There\'s no failing check to fix right now. Ask "why isn\'t <project> working?" first.'); ui.openPanel('jobs', { jobId: j.id }); return reply(task, 'I drafted a fix job in the Tasks panel: it works only in the project folder and is done only when the same check passes. Pick who implements it, then approve it once.'); }
+        return deps.troubleshoot.handle(task, r, { ui, approve, reply, choose, answer: llm && llm.pick() ? (t, q, o) => answer(t, q, o) : null });
+      }
       case 'question': {
         // things she knows herself (math, time, weather, what she can do) don't need a model or the web
         const own = deps.brain && deps.brain.understand(r.text);
