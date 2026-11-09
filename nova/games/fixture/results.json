@@ -1,0 +1,53 @@
+{
+  "ran": "2026-11-09T09:05:56.237Z",
+  "browser": "Chromium (Playwright, headless)",
+  "results": [
+    {
+      "case": "complete seed 7",
+      "status": "completed",
+      "reason": "Collected 5/5 coins (read from the game's own counter).",
+      "stats": {
+        "actions": 19,
+        "falls": 0,
+        "observations": 20,
+        "ms": 7741,
+        "coins": 5,
+        "total": 5
+      },
+      "evidence": 19
+    },
+    {
+      "case": "recover",
+      "status": "completed",
+      "reason": "Collected 5/5 coins (read from the game's own counter).",
+      "stats": {
+        "actions": 23,
+        "falls": 1,
+        "observations": 29,
+        "ms": 9850,
+        "coins": 5,
+        "total": 5
+      },
+      "evidence": 24
+    },
+    {
+      "case": "blur",
+      "status": "paused",
+      "reason": "The game lost focus, so I let go of the keys and paused.",
+      "stats": {
+        "actions": 3,
+        "falls": 0,
+        "observations": 5,
+        "ms": 1350,
+        "coins": 0,
+        "total": 5
+      },
+      "evidence": 3
+    },
+    {
+      "case": "stop",
+      "status": "stopped",
+      "releaseMs": 27
+    }
+  ]
+}

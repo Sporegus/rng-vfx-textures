@@ -70,6 +70,9 @@ function route(raw, ctx = {}) {
 
   // ---- games
   if (/\broblox\b/i.test(low) && /\b(join|experience|game|play)\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
+  if (/\broblox\b/i.test(low) && !/^(open|launch|start) roblox$/i.test(low)) return { kind: 'game', text };
+  if (/\b(aim ?bot|executor|anti-?afk|wall ?hack|cheat engine|speed ?hack|dupe glitch)\b/i.test(low)) return { kind: 'game', text };
+  if (/\b(test|fixture|coin) game\b/i.test(low)) return { kind: 'game', text };
   if (/\b(play|beat|grind|farm|repeat)\b.*\b(game|level|objective|until|counter|times)\b/i.test(low)) return { kind: 'game', text };
 
   // ---- research

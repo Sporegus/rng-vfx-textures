@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  Nova's game test fixture: a small, deterministic, local game (no network).
+  Hold arrow keys / WASD to move the cyan square. Collect the gold coins.
+  The red pit sends you back to the start and costs a life (the failure/recovery case).
+  It pauses when the window loses focus. ?seed=N changes the coin layout.
+  The HUD is plain text so it can be read the same way a game's UI would be (UI text or OCR).
+-->
+<html><head><meta charset="utf-8"><title>Nova Coin Fixture</title>
+<style>
+  html,body{margin:0;background:#0b1420;color:#cfe8ff;font:16px system-ui,sans-serif;overflow:hidden}
+  #hud{position:fixed;left:0;top:0;right:0;height:32px;line-height:32px;padding:0 12px;background:#081019;letter-spacing:.02em}
+  canvas{position:fixed;left:0;top:32px;display:block}
+  #paused{position:fixed;inset:32px 0 0 0;display:none;align-items:center;justify-content:center;font-size:40px;background:rgba(0,0,0,.55)}
+</style></head>
+<body>
+<div id="hud">Coins: 0/0 · Lives: 3 · State: ready</div>
+<canvas id="c" width="640" height="448"></canvas>
+<div id="paused">PAUSED</div>
+<script>
+'use strict';
+const W = 640, H = 448, SIZE = 24, SPEED = 220;     // px/s while a key is held
+const seed0 = Number(new URLSearchParams(location.search).get('seed') || 7);
+let seed = seed0;
+const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+const pit = { x: 280, y: 180, w: 80, h: 90 };
+const start = { x: 40, y: 40 };
+const coins = [];
+while (coins.length < 5) {
+  const c = { x: 40 + Math.floor(rnd() * (W - 80)), y: 40 + Math.floor(rnd() * (H - 80)), got: false };
+  const nearPit = c.x > pit.x - 30 && c.x < pit.x + pit.w + 30 && c.y > pit.y - 30 && c.y < pit.y + pit.h + 30;
+  if (!nearPit && Math.hypot(c.x - start.x, c.y - start.y) > 60) coins.push(c);
+}
+const g = { x: start.x, y: start.y, lives: 3, state: 'playing', recoverUntil: 0, falls: 0 };
+const held = new Set();
+const KEYS = { ArrowLeft: 'l', a: 'l', ArrowRight: 'r', d: 'r', ArrowUp: 'u', w: 'u', ArrowDown: 'd', s: 'd' };
+addEventListener('keydown', (e) => { const k = KEYS[e.key]; if (k) { held.add(k); e.preventDefault(); } });
+addEventListener('keyup', (e) => { const k = KEYS[e.key]; if (k) held.delete(k); });
+addEventListener('blur', () => { held.clear(); if (g.state === 'playing' || g.state === 'recovering') { g.prev = g.state; g.state = 'paused'; } });
+addEventListener('focus', () => { if (g.state === 'paused') g.state = g.prev || 'playing'; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) dispatchEvent(new Event('blur')); });
+// the failure case on demand: a "gust" shoves the player into the pit (tests use it to force a fall mid-run)
+window.fixtureGust = () => { g.x = pit.x + 10; g.y = pit.y + 10; };
+// tests (and a person) can pause/resume explicitly too
+window.fixturePause = (p) => { if (p) dispatchEvent(new Event('blur')); else dispatchEvent(new Event('focus')); };
+const ctx = document.getElementById('c').getContext('2d');
+let last = performance.now();
+function tick(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  if (g.state === 'recovering' && t > g.recoverUntil) g.state = 'playing';
+  if (g.state === 'playing') {
+    const v = SPEED * dt;
+    if (held.has('l')) g.x -= v; if (held.has('r')) g.x += v;
+    if (held.has('u')) g.y -= v; if (held.has('d')) g.y += v;
+    g.x = Math.max(0, Math.min(W - SIZE, g.x)); g.y = Math.max(0, Math.min(H - SIZE, g.y));
+    for (const c of coins) if (!c.got && Math.abs(g.x + SIZE / 2 - c.x) < 20 && Math.abs(g.y + SIZE / 2 - c.y) < 20) c.got = true;
+    if (g.x + SIZE > pit.x && g.x < pit.x + pit.w && g.y + SIZE > pit.y && g.y < pit.y + pit.h) {
+      g.lives--; g.falls++; g.x = start.x; g.y = start.y; held.clear();
+      g.state = g.lives > 0 ? 'recovering' : 'over'; g.recoverUntil = t + 600;
+    }
+    if (coins.every(c => c.got)) g.state = 'won';
+  }
+  ctx.fillStyle = '#0f1d2e'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#d0342c'; ctx.fillRect(pit.x, pit.y, pit.w, pit.h);
+  ctx.fillStyle = '#ffd23f'; for (const c of coins) if (!c.got) { ctx.beginPath(); ctx.arc(c.x, c.y, 9, 0, 7); ctx.fill(); }
+  ctx.fillStyle = g.state === 'recovering' ? '#5fa8b8' : '#00e5ff'; ctx.fillRect(Math.round(g.x), Math.round(g.y), SIZE, SIZE);
+  const got = coins.filter(c => c.got).length;
+  document.getElementById('hud').textContent = `Coins: ${got}/${coins.length} · Lives: ${g.lives} · State: ${g.state}`;
+  document.getElementById('paused').style.display = g.state === 'paused' ? 'flex' : 'none';
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body></html>
