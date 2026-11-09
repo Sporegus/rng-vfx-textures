@@ -262,3 +262,14 @@ test('"wait" drops a pending approval without doing it or pausing jobs; a repeat
   await h.pipeline.input({ text: 'organize my downloads', source: 'voice', utteranceId: 'u-3' });
   assert.equal(h.pageRuns.length, before, 'the same utterance is not acted on twice');
 });
+
+test('mic checks get a straight answer; questions about her never turn into a web search', async () => {
+  const h = harness();
+  await h.pipeline.input({ text: 'can you hear me?', source: 'voice' });
+  assert.ok(h.replies().some(r => /Yes, I can hear you/.test(r)));
+  await h.pipeline.input({ text: 'are you there?' });
+  assert.ok(h.replies().some(r => /I'm here/.test(r)));
+  await h.pipeline.input({ text: 'what do you think about pizza?' });
+  assert.ok(h.replies().some(r => /can't really chat yet/.test(r)));
+  assert.ok(!h.events.some(e => e.type === 'choose'), 'no "search the web?" offer');
+});

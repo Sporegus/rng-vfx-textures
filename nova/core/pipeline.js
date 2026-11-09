@@ -17,6 +17,12 @@ const INTENT_CATEGORY = {
 const CONSEQUENTIAL = new Set(['files_delete', 'files_write', 'communicate', 'call', 'audio_out', 'relay', 'game', 'control']);
 
 const MAX_ACTIVE = 8;
+// short questions she can answer without a chat brain
+const QUICK = [
+  [/^(?:nova )?(?:can|do) you hear me(?: now| okay| ok| alright)?$|^(?:is this|is the mic|is my mic) (?:working|on)$|^(?:mic )?test(?:ing)?(?: 1 2 3| one two three)?$/, (src) => src === 'voice' ? 'Yes, I can hear you loud and clear! 🎙️' : "I can read you! (That came in typed, though. Use the mic or Ctrl+Alt+V and I'll tell you if I can hear you.)"],
+  [/^(?:are you (?:there|listening|awake|on|working|ok|okay|alive)|you there|hello|hey|hi)$/, "I'm here! What do you need? 💙"],
+  [/^(?:what(?:'s| is) your name|who are you)$/, "I'm Nova, your desktop assistant. 💙"],
+];
 function createPipeline(deps) {
   const { tasks, permissions, tools, log, llm, brain, ui, page } = deps;
   const seen = new Map();             // utteranceId -> time, so a final transcript runs once
@@ -203,6 +209,9 @@ function createPipeline(deps) {
         return deps.troubleshoot.handle(task, r, { ui, approve, reply, choose, answer: llm && llm.pick() ? (t, q, o) => answer(t, q, o) : null });
       }
       case 'question': {
+        // mic checks and "are you there?" get a straight answer, no model needed
+        const quick = QUICK.find(([re]) => re.test(String(r.text).toLowerCase().replace(/[?!.,]+/g, '').trim()));
+        if (quick) return reply(task, typeof quick[1] === 'function' ? quick[1](source) : quick[1]);
         // things she knows herself (math, time, weather, what she can do) don't need a model or the web
         const own = deps.brain && deps.brain.understand(r.text);
         if (own && own.steps && own.steps.length && own.steps.every(s => s.confidence >= 0.9 && !s.fallback && s.ready)) return command(task, r.text, source);
@@ -415,6 +424,8 @@ function createPipeline(deps) {
   async function answer(task, text, { current = false, data = null, image = null, sources = null } = {}) {
     const p = llm && llm.pick({ vision: !!image });
     if (!p) {
+      // a question about her (or you two): a web search is no answer to that
+      if (/\b(you|your|yourself|you're|youre)\b/i.test(text) && !(arguments[2] && arguments[2].current)) return reply(task, "I can't really chat yet: my chat brain isn't set up. Add an API key in Tasks panel > Settings, or turn on the free one (tray > Voice > Chat brain). I can still do things for you, like open apps, set timers or find files.", { error: 'unavailable' });
       if (arguments[2] && arguments[2].compose) return reply(task, 'Writing, rewriting and translating need a chat brain: add an API key in Tasks panel > Settings, or turn on the free one (tray > Voice > Chat brain).', { error: 'unavailable' });
       if (sources && sources.length) return reply(task, sourcesText(sources), { links: sources });
       const v = await choose(task, current ? `I don't have live search or a chat brain set up, so I can't look that up myself. Search the web for it?` : `I don't have a chat brain set up yet (Settings > Brain), so I can't answer that well. Search the web instead?`, [{ label: 'Search the web', value: 'web' }, { label: 'No thanks', value: 'no' }]);
