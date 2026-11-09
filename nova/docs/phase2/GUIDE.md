@@ -4,6 +4,15 @@
 
 **Talk** · **Reasoning mode** · **Performance profile** · **Tasks…** · **Pause / Resume Nova** · **Microphone** (push to talk, listen for "Nova", mute, pick and test a mic) · **Settings…** · **Hide** · **Quit**. The tray icon has the same modes plus Skin, Size and Monitor.
 
+## Microphone
+
+Tasks panel > Settings > **Microphone**, or right-click Nova > Microphone, or the tray. You can also use her own Voice & chat menu.
+
+- **On:** she's always listening for "Nova". Say "Nova" plus what you want ("Nova, open Spotify"), or just "Nova" and then the request. A small red dot by her head shows the mic is live. The first time, she downloads her offline speech model (about 650 MB, once).
+- **Off:** she only listens when you press push-to-talk (Ctrl+Alt+V).
+
+Speech is understood on your PC; nothing is sent anywhere or recorded. Pick or test the mic with right-click > Microphone > Pick and test a microphone.
+
 ## Reasoning mode: how much effort an answer gets
 
 | Mode | What it really changes |

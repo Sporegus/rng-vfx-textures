@@ -1646,7 +1646,7 @@
     const on = (b) => (b ? 'on' : 'off');
     const v = await ask('Voice & chat:', [
       { icon: '🔊', label: `Talk out loud: ${on(settings.voice)}`, value: 'talk', on: settings.voice },
-      { icon: '👂', label: `Listen for "Nova": ${on(settings.listen)}`, value: 'listen', on: settings.listen },
+      { icon: '👂', label: `Microphone (always listening for "Nova"): ${on(settings.listen)}`, value: 'listen', on: settings.listen },
       { icon: '🎙️', label: `Microphone${VIO.muted ? ' (muted)' : ''}`, value: 'mic' },
       { icon: '🎤', label: 'Change my voice', value: 'pick' },
       { icon: '🧠', label: `Chat brain: ${voice.chat ? 'on' : settings.chat ? 'downloading' : 'off'}`, value: 'chat', on: voice.chat },
@@ -1676,7 +1676,8 @@
   }
 
   // pick the microphone, see its level, mute it, and test it (nothing is recorded or kept)
-  const micReport = (state, extra = {}) => { if (api.core && api.core.mic) api.core.mic({ state, device: VIO.micLabel || null, muted: VIO.muted, ...extra }); };
+  const micDot = document.createElement('span'); micDot.className = 'micdot hidden'; micDot.title = 'Microphone on: listening for "Nova"'; zEl.append(micDot);
+  const micReport = (state, extra = {}) => { micDot.classList.toggle('hidden', !(VIO.micOn && !VIO.muted)); if (api.core && api.core.mic) api.core.mic({ state, device: VIO.micLabel || null, muted: VIO.muted, ...extra }); };
   async function micMenu() {
     let mics = [];
     try { mics = await VIO.listMics(); } catch {}
@@ -1715,7 +1716,7 @@
       }
       micReport('tested', { peak: Math.round(rec.peak * 1000) / 1000, heard: text ? true : false });
       const msg = !loud ? 'That was very quiet. Is the right microphone picked, and is it unmuted in Windows?'
-        : text ? `I heard: “${text}” 👂` : voice.ready ? 'I could hear sound, but couldn\'t make out words.' : 'Your mic works (I can hear sound). My speech model isn\'t on yet, so I can\'t show the words. Turn on Listen for "Nova" or press Ctrl+Alt+V once.';
+        : text ? `I heard: “${text}” 👂` : voice.ready ? 'I could hear sound, but couldn\'t make out words.' : 'Your mic works (I can hear sound). My speech model isn\'t on yet, so I can\'t show the words. Turn the microphone on in my settings, or press Ctrl+Alt+V once.';
       const again = await ask(msg, [{ label: 'Test again', value: 'test' }, back], { quiet: true });
       return again === 'test' ? micMenu() : again === '__back' ? voiceMenu() : null;
     }
@@ -1858,7 +1859,8 @@
     const was = settings;
     settings = s; applyTheme(); applyTextSize(); lastKey = '';
     if (!voice.service) return;
-    if ((s.voice && !was.voice) || (s.listen && !was.listen)) { if (!voice.ready) { voice.announce = true; api.voice.send({ type: 'get', what: 'voice', light: s.earsLight, voiceName: s.voiceName }); } }
+    if ((s.voice && !was.voice) || (s.listen && !was.listen)) { if (!voice.ready) { voice.announce = true; if (!voice.have) say('Getting my ears ready: a one-time download of my speech model (about 650 MB). It all runs on your PC; I\'ll tell you when I can hear you. ⬇️', { ms: 7000 }); api.voice.send({ type: 'get', what: 'voice', light: s.earsLight, voiceName: s.voiceName }); } }
+    if (s.listen !== was.listen && !s.listen) say('Microphone off. Press Ctrl+Alt+V if you want me to listen once. 🔇', { ms: 3000 });
     // picked in the tray: say hi in the new voice (the menu does its own hello)
     if (s.voiceName !== was.voiceName && voice.ready && s.voice && bubble.classList.contains('hidden')) speak(pick(['Hiii! Do you like this voice? 💕', 'Hey! How do I sound now?', 'Ta-da! New voice! ✨']));
     if (s.chat && !was.chat && !voice.chat) { voice.announceChat = true; api.voice.send({ type: 'get', what: 'chat' }); }

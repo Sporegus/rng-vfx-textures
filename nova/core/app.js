@@ -399,7 +399,7 @@ function startCore({ app, getWin, settings, saveSettings, actions, voice, shortc
       case 'settings': return settings();
       case 'shortcuts': return shortcutStatus();
       case 'settings:set': {
-        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize'];
+        const allowed = ['screenConsent', 'quietHours', 'brainOrder', 'anthropicModel', 'openaiModel', 'presets', 'shortcuts', 'display', 'reasoning', 'performance', 'textSize', 'listen'];
         if (arg.textSize && !['small', 'normal', 'large', 'x-large'].includes(arg.textSize)) throw new Error('Text size is small, normal, large or x-large.');
         if (arg.reasoning && !['auto', 'quick', 'think', 'thorough'].includes(arg.reasoning)) throw new Error('Reasoning is auto, quick, think or thorough.');
         if (arg.performance && !['gaming', 'balanced', 'overnight'].includes(arg.performance)) throw new Error('Performance is gaming, balanced or overnight.');

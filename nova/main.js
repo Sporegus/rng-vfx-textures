@@ -175,7 +175,7 @@ function buildTrayMenu() {
     check('Sound', 'sound'),
     { label: 'Voice', submenu: [
       check('Talk out loud', 'voice'),
-      check('Listen for "Nova"', 'listen'),
+      check('Microphone on (always listening for "Nova")', 'listen'),
       { label: 'Push to talk', accelerator: settings.shortcuts.ptt, click: () => send('ptt', Date.now()) },
       { type: 'separator' },
       radio('Nova (her own voice, free)', 'voiceName', 'nova'),
@@ -262,7 +262,7 @@ ipcMain.on('context-menu', (e, state = {}) => {
     { label: paused ? 'Resume Nova' : 'Pause Nova', click: () => setPaused(!paused) },
     { label: 'Microphone', submenu: [
       { label: 'Push to talk', accelerator: settings.shortcuts.ptt, click: () => send('ptt', Date.now()) },
-      { label: 'Listen for "Nova" (experimental)', type: 'checkbox', checked: !!settings.listen, click: (m) => saveSettings({ listen: m.checked }) },
+      { label: 'Microphone on (always listening for "Nova")', type: 'checkbox', checked: !!settings.listen, click: (m) => saveSettings({ listen: m.checked }) },
       { label: state.muted ? 'Unmute microphone' : 'Mute microphone', click: () => send('mic-mute') },
       { label: 'Pick and test a microphone…', click: () => send('mic-menu') },
     ] },
